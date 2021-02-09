@@ -1,9 +1,9 @@
-data "aws_ami" "window2019" {
+data "aws_ami" "GrayMeta-Iris-Anywhere" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = ["Windows_Server-2019-English-Full-Base-**"]
+    values = ["GrayMeta-Iris-Anywhere-*"]
   }
 
   filter {
@@ -16,5 +16,5 @@ data "aws_ami" "window2019" {
     values = ["ebs"]
   }
 
-  owners = ["amazon"]
+  owners = ["913397769129"]
 }

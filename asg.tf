@@ -18,7 +18,7 @@ resource "aws_autoscaling_group" "iris" {
 
   launch_template {
     id      = aws_launch_template.iris.id
-    version = "$$Latest"
+    version = "$Latest"
   }
 
   enabled_metrics = [
@@ -37,7 +37,7 @@ resource "aws_autoscaling_group" "iris" {
     "GroupTotalInstances",
   ]
 
-  tags = ["${data.null_data_source.tags.*.outputs}"]
+  tags = flatten(["${data.null_data_source.tags.*.outputs}"])
 
   lifecycle {
     ignore_changes = [
@@ -48,7 +48,7 @@ resource "aws_autoscaling_group" "iris" {
 
 resource "aws_launch_template" "iris" {
   name_prefix            = var.hostname_prefix
-  image_id               = coalesce(var.base_ami, data.aws_ami.window2019.id)
+  image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = ["${aws_security_group.iris.id}"]

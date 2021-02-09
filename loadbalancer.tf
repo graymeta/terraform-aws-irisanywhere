@@ -5,7 +5,7 @@ resource "aws_lb" "iris_alb" {
   subnets                    = var.subnet_id
   enable_deletion_protection = false
 
-  tags {
+  tags = {
     Name = "Iris-${var.hostname_prefix}-ALB"
   }
 }
@@ -55,7 +55,7 @@ resource "aws_lb_target_group" "port443" {
     unhealthy_threshold = 2
   }
 
-  tags {}
+  tags = {}
 }
 
 resource "aws_lb_listener_rule" "port443" {
@@ -68,7 +68,8 @@ resource "aws_lb_listener_rule" "port443" {
   }
 
   condition {
-    field  = "path-pattern"
-    values = ["/"]
+    path_pattern {
+      values = ["/"]
+    }
   }
 }
