@@ -1,12 +1,13 @@
 resource "aws_lb" "iris_alb" {
-  name_prefix                = "iris-"
+  name_prefix                = var.hostname_prefix
   internal                   = false
   security_groups            = ["${aws_security_group.iris.id}"]
   subnets                    = var.subnet_id
   enable_deletion_protection = false
 
   tags = {
-    Name = "Iris-${var.hostname_prefix}-ALB"
+    Name   = "Iris-${var.hostname_prefix}-${var.instance_type}-ALB"
+    Source = "terraform"
   }
 }
 

@@ -6,7 +6,7 @@ variable "base_ami" {
 
 variable "hostname_prefix" {
   type = string
-  description = "Creates a unique name beginning with the specified prefix."
+  description = "Creates a unique name beginning with the specified prefix. Cannot be longer than 6 characters."
 }
 
 variable "instance_type" {

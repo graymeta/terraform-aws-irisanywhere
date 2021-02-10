@@ -9,8 +9,8 @@
     {
       "Effect": "Allow",
       "Action": [
-      "autoscaling:DescribeAutoScalingInstances",
-      "autoscaling:SetInstanceProtection"
+      "autoscaling:*",
+      "cloudwatch:*"
       ],
       "Resource": "*"
     }
