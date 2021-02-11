@@ -83,3 +83,29 @@ resource "aws_launch_template" "iris" {
     create_before_destroy = true
   }
 }
+
+resource "aws_autoscaling_policy" "out" {
+  name                   = "${var.hostname_prefix}-ScaleOut"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = var.asg_scaleout_cooldown
+  autoscaling_group_name = aws_autoscaling_group.iris.name
+}
+
+resource "aws_cloudwatch_metric_alarm" "out" {
+  alarm_name          = "${var.hostname_prefix}-ScaleOut"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods  = var.asg_scaleout_evaluation
+  metric_name         = "IrisAvailableSessions"
+  namespace           = "AWS/EC2"
+  period              = var.asg_check_interval
+  statistic           = "Sum"
+  threshold           = var.asg_scaleout_threshold
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.iris.name
+  }
+
+  alarm_description = "This metric monitors iris anywhere available sessions"
+  alarm_actions     = [aws_autoscaling_policy.out.arn]
+}

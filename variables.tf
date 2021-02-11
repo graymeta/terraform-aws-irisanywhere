@@ -1,7 +1,7 @@
 variable "base_ami" {
   type        = string
-  default     = ""
   description = "The AMI from which to launch the instance."
+  default     = ""
 }
 
 variable "hostname_prefix" {
@@ -21,25 +21,28 @@ variable "key_name" {
 
 variable "os_disk_type" {
   type        = string
-  default     = "gp2"
   description = "EBS volume type."
+  default     = "gp2"
 }
+
 variable "os_disk_size" {
-  type        = string
-  default     = "100"
+  type        = number
   description = "EBS volume size."
+  default     = "100"
 }
 
 variable "size_desired" {
-  type        = string
+  type        = number
   description = "The number of EC2 instances that should be running in the group."
 }
+
 variable "size_max" {
-  type        = string
+  type        = number
   description = "Maximum size of the Auto Scaling Group."
 }
+
 variable "size_min" {
-  type        = string
+  type        = number
   description = "Minimum size of the Auto Scaling Group."
 }
 
@@ -51,6 +54,30 @@ variable "subnet_id" {
 variable "ssl_certificate_arn" {
   type        = string
   description = "The ARN of the default SSL server certificate."
+}
+
+variable "asg_check_interval" {
+  type        = number
+  description = "Autoscale check interval.  Default 300"
+  default     = 300
+}
+
+variable "asg_scaleout_threshold" {
+  type        = number
+  description = "Scale out if the number of sessions drop below.  Default: 5"
+  default     = 5
+}
+
+variable "asg_scaleout_cooldown" {
+  type        = number
+  description = "Scale out cooldown period. Default: 300"
+  default     = 300
+}
+
+variable "asg_scaleout_evaluation" {
+  type        = number
+  description = "Scale out evaluation periods: Default: 2"
+  default     = 2
 }
 
 variable "tags" {
