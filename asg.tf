@@ -9,12 +9,13 @@ data "null_data_source" "tags" {
 }
 
 resource "aws_autoscaling_group" "iris" {
-  name                = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
-  desired_capacity    = var.size_desired
-  max_size            = var.size_max
-  min_size            = var.size_min
-  vpc_zone_identifier = var.subnet_id
-  target_group_arns   = ["${aws_lb_target_group.port443.id}"]
+  name                    = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
+  desired_capacity        = var.size_desired
+  disable_api_termination = true
+  max_size                = var.size_max
+  min_size                = var.size_min
+  vpc_zone_identifier     = var.subnet_id
+  target_group_arns       = ["${aws_lb_target_group.port443.id}"]
 
   launch_template {
     id      = aws_launch_template.iris.id
