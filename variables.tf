@@ -62,10 +62,22 @@ variable "asg_check_interval" {
   default     = 300
 }
 
-variable "asg_scaleout_threshold" {
+variable "asg_scalein_threshold" {
   type        = number
-  description = "Scale out if the number of sessions drop below.  Default: 5"
+  description = "Scale in if the number of sessions drop below.  Default: 5"
   default     = 5
+}
+
+variable "asg_scalein_cooldown" {
+  type        = number
+  description = "Scale out cooldown period. Default: 300"
+  default     = 300
+}
+
+variable "asg_scalein_evaluation" {
+  type        = number
+  description = "Scale out evaluation periods: Default: 2"
+  default     = 2
 }
 
 variable "asg_scaleout_cooldown" {
@@ -78,6 +90,12 @@ variable "asg_scaleout_evaluation" {
   type        = number
   description = "Scale out evaluation periods: Default: 2"
   default     = 2
+}
+
+variable "asg_scaleout_threshold" {
+  type        = number
+  description = "Scale out if the number of sessions drop below.  Default: 5"
+  default     = 5
 }
 
 variable "tags" {

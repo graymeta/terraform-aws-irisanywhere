@@ -47,12 +47,13 @@ resource "aws_lb_target_group" "port443" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   health_check {
-    path                = "/healthz"
+    path                = "/"
+    port                = "9000"
     interval            = 30
     timeout             = 5
     protocol            = "HTTP"
     matcher             = "200"
-    healthy_threshold   = 5
+    healthy_threshold   = 3
     unhealthy_threshold = 2
   }
 

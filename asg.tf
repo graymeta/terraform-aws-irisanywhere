@@ -109,3 +109,29 @@ resource "aws_cloudwatch_metric_alarm" "out" {
   alarm_description = "This metric monitors iris anywhere available sessions"
   alarm_actions     = [aws_autoscaling_policy.out.arn]
 }
+
+resource "aws_autoscaling_policy" "in" {
+  name                   = "${var.hostname_prefix}-ScaleIn"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = var.asg_scalein_cooldown
+  autoscaling_group_name = aws_autoscaling_group.iris.name
+}
+
+resource "aws_cloudwatch_metric_alarm" "in" {
+  alarm_name          = "${var.hostname_prefix}-ScaleIn"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.asg_scalein_evaluation
+  metric_name         = "IrisAvailableSessions"
+  namespace           = "AWS/EC2"
+  period              = var.asg_check_interval
+  statistic           = "Sum"
+  threshold           = var.asg_scalein_threshold
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.iris.name
+  }
+
+  alarm_description = "This metric monitors iris anywhere available sessions"
+  alarm_actions     = [aws_autoscaling_policy.in.arn]
+}
