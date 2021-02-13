@@ -40,11 +40,13 @@ resource "aws_lb_listener" "port443" {
   }
 }
 
+# TODO: Change the port back to 443
 resource "aws_lb_target_group" "port443" {
-  name_prefix = "iris-"
-  port        = "443"
-  protocol    = "HTTP"
-  vpc_id      = data.aws_subnet.subnet.0.vpc_id
+  name_prefix                   = "iris-"
+  port                          = "80"
+  protocol                      = "HTTP"
+  vpc_id                        = data.aws_subnet.subnet.0.vpc_id
+  #load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
     path                = "/"

@@ -9,13 +9,13 @@ data "null_data_source" "tags" {
 }
 
 resource "aws_autoscaling_group" "iris" {
-  name                    = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
-  desired_capacity        = var.size_desired
-  max_size                = var.size_max
-  min_size                = var.size_min
-  protect_from_scale_in   = true
-  vpc_zone_identifier     = var.subnet_id
-  target_group_arns       = ["${aws_lb_target_group.port443.id}"]
+  name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
+  desired_capacity      = var.size_desired
+  max_size              = var.size_max
+  min_size              = var.size_min
+  protect_from_scale_in = true
+  vpc_zone_identifier   = var.subnet_id
+  target_group_arns     = ["${aws_lb_target_group.port443.id}"]
 
   launch_template {
     id      = aws_launch_template.iris.id
@@ -47,13 +47,23 @@ resource "aws_autoscaling_group" "iris" {
   }
 }
 
+data "template_cloudinit_config" "config" {
+  base64_encode = true
+  gzip          = true
+
+  part {
+    content_type = "text/cloud-config"
+    content      = var.cloud_init
+  }
+}
+
 resource "aws_launch_template" "iris" {
   name_prefix            = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
   image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type          = var.instance_type
   key_name               = var.key_name
-  vpc_security_group_ids = ["${aws_security_group.iris.id}"]
-  user_data              = ""
+  vpc_security_group_ids = [aws_security_group.iris.id]
+  user_data              = data.template_cloudinit_config.config.rendered
 
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name

@@ -98,6 +98,12 @@ variable "asg_scaleout_threshold" {
   default     = 5
 }
 
+variable "cloud_init" {
+  type        = string
+  description = "user script to run on init"
+  default     = ""
+}
+
 variable "tags" {
   type        = map(string)
   description = "A map of the tags to use on the resources that are deployed with this module. (Default: source = terraform)"
