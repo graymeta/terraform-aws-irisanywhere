@@ -104,6 +104,12 @@ variable "cloud_init" {
   default     = ""
 }
 
+variable "lb_check_interval" {
+  type        = number
+  description = "Loadbalancer health check interval"
+  default     = 30
+}
+
 variable "tags" {
   type        = map(string)
   description = "A map of the tags to use on the resources that are deployed with this module. (Default: source = terraform)"

@@ -51,7 +51,7 @@ resource "aws_lb_target_group" "port443" {
   health_check {
     path                = "/"
     port                = "9000"
-    interval            = 30
+    interval            = var.lb_check_interval
     timeout             = 5
     protocol            = "HTTP"
     matcher             = "200"
