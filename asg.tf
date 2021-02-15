@@ -1,9 +1,9 @@
 data "null_data_source" "tags" {
-  count = length(keys(var.tags))
+  count = length(keys(local.merged_tags))
 
   inputs = {
-    key                 = "${element(keys(var.tags), count.index)}"
-    value               = "${element(values(var.tags), count.index)}"
+    key                 = "${element(keys(local.merged_tags), count.index)}"
+    value               = "${element(values(local.merged_tags), count.index)}"
     propagate_at_launch = true
   }
 }
@@ -81,12 +81,12 @@ resource "aws_launch_template" "iris" {
 
   tag_specifications {
     resource_type = "instance"
-    tags          = var.tags
+    tags          = local.merged_tags
   }
 
   tag_specifications {
     resource_type = "volume"
-    tags          = var.tags
+    tags          = local.merged_tags
   }
 
   lifecycle {

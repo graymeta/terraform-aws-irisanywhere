@@ -8,11 +8,7 @@ resource "aws_security_group" "iris" {
   description = replace("${var.hostname_prefix}-${var.instance_type}-nsg", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
-  tags = merge(
-    map("source", "terraform"),
-    map("Name", "${var.hostname_prefix}-nsg"),
-    var.tags
-  )
+  tags = local.merged_tags
 }
 
 # Allow all outbound traffic

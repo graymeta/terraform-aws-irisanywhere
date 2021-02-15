@@ -5,10 +5,7 @@ resource "aws_lb" "iris_alb" {
   subnets                    = var.subnet_id
   enable_deletion_protection = false
 
-  tags = {
-    Name   = "Iris-${var.hostname_prefix}-${var.instance_type}-ALB"
-    Source = "terraform"
-  }
+  tags = local.merged_tags
 }
 
 resource "aws_lb_listener" "port80" {
@@ -35,18 +32,8 @@ resource "aws_lb_listener" "port443" {
   certificate_arn   = var.ssl_certificate_arn
 
   default_action {
-    type = "forward"
-
-    forward {
-      stickiness {
-        enabled  = true
-        duration = 600
-      }
-
-      target_group {
-        arn = aws_lb_target_group.port443.arn
-      }
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.port443.arn
   }
 }
 
@@ -69,7 +56,13 @@ resource "aws_lb_target_group" "port443" {
     unhealthy_threshold = var.lb_unhealthy_threshold
   }
 
-  tags = {}
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 1800
+    enabled         = true
+  }
+
+  tags = local.merged_tags
 }
 
 resource "aws_lb_listener_rule" "port443" {
