@@ -7,17 +7,17 @@ data "template_file" "iris_policy" {
 }
 
 resource "aws_iam_role" "iris" {
-  name               = var.hostname_prefix
+  name               = replace("${var.hostname_prefix}-${var.instance_type}-Role", ".", "")
   assume_role_policy = data.template_file.iris_role.rendered
 }
 
 resource "aws_iam_instance_profile" "iris" {
-  name = var.hostname_prefix
+  name = replace("${var.hostname_prefix}-${var.instance_type}-Profile", ".", "")
   role = aws_iam_role.iris.name
 }
 
 resource "aws_iam_policy" "iris" {
-  name   = var.hostname_prefix
+  name   = replace("${var.hostname_prefix}-${var.instance_type}-Policy", ".", "")
   policy = data.template_file.iris_policy.rendered
 }
 

@@ -13,6 +13,6 @@ data "template_file" "dashboard" {
 }
 
 resource "aws_cloudwatch_dashboard" "dashboard" {
-  dashboard_name = aws_autoscaling_group.iris.name
+  dashboard_name = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
   dashboard_body = data.template_file.dashboard.rendered
 }

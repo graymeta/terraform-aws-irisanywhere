@@ -9,7 +9,7 @@ data "null_data_source" "tags" {
 }
 
 resource "aws_autoscaling_group" "iris" {
-  name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
+  name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
   desired_capacity      = var.size_desired
   max_size              = var.size_max
   min_size              = var.size_min
@@ -58,7 +58,7 @@ data "template_cloudinit_config" "config" {
 }
 
 resource "aws_launch_template" "iris" {
-  name_prefix            = replace("${var.hostname_prefix}-${var.instance_type}", ".", "-")
+  name_prefix            = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
   image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type          = var.instance_type
   key_name               = var.key_name
@@ -95,7 +95,7 @@ resource "aws_launch_template" "iris" {
 }
 
 resource "aws_autoscaling_policy" "out" {
-  name                   = "${var.hostname_prefix}-ScaleOut"
+  name                   = replace("${var.hostname_prefix}-${var.instance_type}-ScaleOut", ".", "")
   scaling_adjustment     = 1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = var.asg_scaleout_cooldown
@@ -103,7 +103,7 @@ resource "aws_autoscaling_policy" "out" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "out" {
-  alarm_name          = "${var.hostname_prefix}-ScaleOut"
+  alarm_name          = replace("${var.hostname_prefix}-${var.instance_type}-ScaleOut", ".", "")
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods  = var.asg_scaleout_evaluation
   metric_name         = "IrisAvailableSessions"
@@ -121,7 +121,7 @@ resource "aws_cloudwatch_metric_alarm" "out" {
 }
 
 resource "aws_autoscaling_policy" "in" {
-  name                   = "${var.hostname_prefix}-ScaleIn"
+  name                   = replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", "")
   scaling_adjustment     = -1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = var.asg_scalein_cooldown
@@ -129,7 +129,7 @@ resource "aws_autoscaling_policy" "in" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "in" {
-  alarm_name          = "${var.hostname_prefix}-ScaleIn"
+  alarm_name          = replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = var.asg_scalein_evaluation
   metric_name         = "IrisAvailableSessions"

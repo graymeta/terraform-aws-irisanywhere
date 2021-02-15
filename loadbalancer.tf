@@ -1,5 +1,5 @@
 resource "aws_lb" "iris_alb" {
-  name_prefix                = var.hostname_prefix
+  name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
   internal                   = false
   security_groups            = ["${aws_security_group.iris.id}"]
   subnets                    = var.subnet_id
@@ -35,17 +35,27 @@ resource "aws_lb_listener" "port443" {
   certificate_arn   = var.ssl_certificate_arn
 
   default_action {
-    target_group_arn = aws_lb_target_group.port443.arn
-    type             = "forward"
+    type = "forward"
+
+    forward {
+      stickiness {
+        enabled  = true
+        duration = 600
+      }
+
+      target_group {
+        arn = aws_lb_target_group.port443.arn
+      }
+    }
   }
 }
 
 # TODO: Change the port back to 443
 resource "aws_lb_target_group" "port443" {
-  name_prefix                   = "iris-"
-  port                          = "80"
-  protocol                      = "HTTP"
-  vpc_id                        = data.aws_subnet.subnet.0.vpc_id
+  name_prefix = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
+  port        = "80"
+  protocol    = "HTTP"
+  vpc_id      = data.aws_subnet.subnet.0.vpc_id
   #load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
