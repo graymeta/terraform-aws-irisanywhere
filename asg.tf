@@ -47,13 +47,14 @@ resource "aws_autoscaling_group" "iris" {
   }
 }
 
-data "template_cloudinit_config" "config" {
-  base64_encode = true
-  gzip          = true
+data "template_file" "cloud_init" {
+  template = file("${path.module}/cloud_init.ps1")
 
-  part {
-    content_type = "text/cloud-config"
-    content      = var.cloud_init
+  vars = {
+    metric_check_interval = var.asg_check_interval
+    health_check_interval = var.lb_check_interval
+    unhealthy_threshold   = var.lb_unhealthy_threshold
+    cooldown              = var.asg_scalein_cooldown
   }
 }
 
@@ -63,7 +64,7 @@ resource "aws_launch_template" "iris" {
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.iris.id]
-  user_data              = data.template_cloudinit_config.config.rendered
+  user_data              = base64encode(data.template_file.cloud_init.rendered)
 
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name

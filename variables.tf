@@ -98,12 +98,6 @@ variable "asg_scaleout_threshold" {
   default     = 5
 }
 
-variable "cloud_init" {
-  type        = string
-  description = "user script to run on init"
-  default     = ""
-}
-
 variable "lb_check_interval" {
   type        = number
   description = "Loadbalancer health check interval. Default: 30"
