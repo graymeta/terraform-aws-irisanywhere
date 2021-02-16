@@ -47,6 +47,17 @@ resource "aws_autoscaling_group" "iris" {
   }
 }
 
+resource "aws_autoscaling_schedule" "iris_schedule" {
+  scheduled_action_name  = "${var.hostname_prefix}-asg-schedule"
+  desired_capacity       = var.schedule_size_desired
+  max_size               = var.schedule_size_max
+  min_size               = var.schedule_size_min
+  recurrence             = var.schedule_recurrence
+  start_time             = var.schedule_start
+  end_time               = var.schedule_end
+  autoscaling_group_name = aws_autoscaling_group.iris.name
+}
+
 data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
