@@ -88,7 +88,7 @@ variable "asg_scaleout_cooldown" {
 
 variable "asg_scaleout_evaluation" {
   type        = number
-  description = "Scale out evaluation periods: Default: 2"
+  description = "Scale out evaluation periods. Default: 2"
   default     = 2
 }
 
@@ -96,6 +96,18 @@ variable "asg_scaleout_threshold" {
   type        = number
   description = "Scale out if the number of sessions drop below.  Default: 5"
   default     = 5
+}
+
+variable "lb_check_interval" {
+  type        = number
+  description = "Loadbalancer health check interval. Default: 30"
+  default     = 30
+}
+
+variable "lb_unhealthy_threshold" {
+  type        = number
+  description = "Loadbalancer unhealthy threshold. Default: 2"
+  default     = 2
 }
 
 variable "tags" {

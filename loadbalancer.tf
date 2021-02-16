@@ -1,14 +1,11 @@
 resource "aws_lb" "iris_alb" {
-  name_prefix                = var.hostname_prefix
+  name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
   internal                   = false
   security_groups            = ["${aws_security_group.iris.id}"]
   subnets                    = var.subnet_id
   enable_deletion_protection = false
 
-  tags = {
-    Name   = "Iris-${var.hostname_prefix}-${var.instance_type}-ALB"
-    Source = "terraform"
-  }
+  tags = local.merged_tags
 }
 
 resource "aws_lb_listener" "port80" {
@@ -35,29 +32,37 @@ resource "aws_lb_listener" "port443" {
   certificate_arn   = var.ssl_certificate_arn
 
   default_action {
-    target_group_arn = aws_lb_target_group.port443.arn
     type             = "forward"
+    target_group_arn = aws_lb_target_group.port443.arn
   }
 }
 
+# TODO: Change the port back to 443
 resource "aws_lb_target_group" "port443" {
-  name_prefix = "iris-"
-  port        = "443"
+  name_prefix = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
+  port        = "80"
   protocol    = "HTTP"
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
+  #load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
     path                = "/"
     port                = "9000"
-    interval            = 30
+    interval            = var.lb_check_interval
     timeout             = 5
     protocol            = "HTTP"
     matcher             = "200"
-    healthy_threshold   = 3
-    unhealthy_threshold = 2
+    healthy_threshold   = 2
+    unhealthy_threshold = var.lb_unhealthy_threshold
   }
 
-  tags = {}
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 1800
+    enabled         = true
+  }
+
+  tags = local.merged_tags
 }
 
 resource "aws_lb_listener_rule" "port443" {

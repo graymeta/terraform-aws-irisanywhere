@@ -1,0 +1,40 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "region": "${region}",
+                "metrics": [
+                    [ "AWS/EC2", "IrisAvailableSessions", "AutoScalingGroupName", "${asg_name}", { "stat": "Sum" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "start": "-PT1H",
+                "end": "P0D",
+                "period": ${asg_check_interval},
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "label": "ScaleOut",
+                            "value": ${asg_scaleout_threshold}
+                        },
+                        {
+                            "label": "ScaleIn",
+                            "value": ${asg_scalein_threshold}
+                        }
+                    ]
+                },
+                "title": "${asg_name}",
+                "yAxis": {
+                    "left": {
+                        "min": 0
+                    }
+                }
+            }
+        }
+    ]
+}
