@@ -118,3 +118,64 @@ variable "tags" {
     source = "terraform"
   }
 }
+
+variable "tfliccontent" {
+  type        = string
+  description = "IA license file data"
+  default     = ""
+}
+
+variable "tfcertfile" {
+  type        = string
+  description = "Certificate in x509 format DER"
+  default     = ""
+}
+
+variable "tfcertkeycontent" {
+  type        = string
+  description = "Private for Cert"
+  default     = ""
+}
+
+variable "tfS3ConnID" {
+  type        = string
+  description = "S3 Connector SaaS license UID"
+  default     = ""
+}
+
+variable "tfS3ConnPW" {
+  type        = string
+  description = "S3 Connector SaaS license PW "
+  default     = ""
+}
+
+variable "tfcustomerID" {
+  type        = string
+  description = "Set Iris CustomerID"
+  default     = ""
+}
+
+variable "tfserviceacct" {
+  type        = string
+  description = "Sets Service Account for autologon"
+  default     = ""
+}
+
+variable "tfbucketname" {
+  type        = string
+  description = "Bucket Name that will attach to Iris"
+  default     = ""
+}
+
+variable "tfAccecssKey" {
+  type        = string
+  description = "Access key for bucket access"
+  default     = ""
+}
+
+variable "tfSecretKey" {
+  type        = string
+  description = "Secret key for bucket access"
+  default     = ""
+}
+
