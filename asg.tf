@@ -55,6 +55,18 @@ data "template_file" "cloud_init" {
     health_check_interval = var.lb_check_interval
     unhealthy_threshold   = var.lb_unhealthy_threshold
     cooldown              = var.asg_scalein_cooldown
+    tfliccontent          = var.tfliccontent
+    tfcertfile            = var.tfcertfile
+    tfcertkeycontent      = var.tfcertkeycontent
+    tfS3ConnID            = var.tfS3ConnID
+    tfS3ConnPW            = var.tfS3ConnPW
+    tfcustomerID          = var.tfcustomerID
+    tfadminserver         = var.tfadminserver
+    tfserviceacct         = var.tfserviceacct
+    tfbucketname          = var.tfbucketname
+    tfAccecssKey          = var.tfAccecssKey
+    tfSecretKey           = var.tfSecretKey
+
   }
 }
 
