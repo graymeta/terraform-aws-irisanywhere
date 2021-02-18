@@ -1,0 +1,26 @@
+# tfliccontent      = IA license file data
+# tfcertfile        = Certificate in x509 format DER
+# tfcertkeycontent  = Private for Cert
+# tfS3ConnID        = S3 Connector SaaS license UID
+# tfS3ConnPW        = S3 Connector SaaS license PW 
+# tfcustomerID      = Set Iris CustomerID
+# tfserviceacct     = Sets Service Account for autologon
+# tfbucketname      = Bucket Name
+# tfAccecssKey      = Access key for bucket access
+# tfSecretKey       = Secret key for bucket access
+
+
+tfliccontent = "licimport"
+tfcertfile = "certdata"
+tfcertkeycontent = "keydata"
+tfS3ConnID = "graymeta-dev-puppet@graymeta.com"
+tfS3ConnPW = "TLL2LQLWTNtFhbnd"
+tfcustomerID = "Set Iris CustomerID"
+tfserviceacct = "iris-service"
+tfbucketname = "iris-aws-dev"
+tfAccecssKey = "AKIA5JKV74OUTWXXZASM"
+tfSecretKey = "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"
+
+
+
+
