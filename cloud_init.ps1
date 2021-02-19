@@ -1,8 +1,4 @@
 <powershell>
-# Write-Host "Download IA-ASG"
-# Read-S3Object -BucketName sattler-test -Key ia-mock-windows -File "C:\ia-mock-windows.exe"
-# Read-S3Object -BucketName sattler-test -Key ia-asg-windows -File "C:\ia-asg-windows.exe"
-
 
 $liccontent = "${tfliccontent}"
 $certfile = "${tfcertfile}"
@@ -79,7 +75,7 @@ catch {
 # Set SSL Certs 
 try {
     $certfile = "$certfile"
-    $certkey = "$certkeycontent"
+    #$certkey = "$certkeycontent"
     $certpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Anywhere\Certs"
     # if cert info is present create file
     if ($certkeycontent) {
@@ -128,9 +124,8 @@ $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
     $username   =  $credential.username
     $domain     = "$env:COMPUTERNAME"
     $password   =  $credential.Password 
-    Start-Process $autologon -ArgumentList $username,$domain,$password
+    Start-Process $autologon -ArgumentList $username,$domain,$newpassword
     # Add event log entry and catch exceptions
-
 
 # Temporary until I get IA-ASG working directly with Windows Service Manager
 # Need to move this to the AMI creation and package it up

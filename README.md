@@ -41,6 +41,19 @@ module "iris_anywhere_9xl" {
     size_min                = 1
     ssl_certificate_arn     = "arn:aws:acm:us-west-2:123456789:certificate/12345-abc123-1234-abc123-123456789"
     subnet_id               = ["subnet-foo1", "subnet-foo2"]
+    # Entries for IrisAnywhere and Asset information
+    tfliccontent            = ""
+    tfcertfile              = ""
+    tfcertkeycontent        = ""
+    tfS3ConnID              = "licenced-email@domain.com"
+    tfS3ConnPW              = "licensecode"
+    tfcustomerID            = "customerID"
+    tfadminserver           = "iris-admin.fqdn.com"
+    tfserviceacct           = "iris-service"
+    tfbucketname            = "bucketname"
+    tfAccecssKey            = "accesskeyvalue"
+    tfSecretKey             = "secretkeyvalue"
+
 }
 ```
 
