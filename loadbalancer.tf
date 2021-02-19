@@ -1,11 +1,14 @@
 resource "aws_lb" "iris_alb" {
-  name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
+  name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""), 0, 6)
   internal                   = false
-  security_groups            = ["${aws_security_group.iris.id}"]
+  security_groups            = [aws_security_group.alb.id]
   subnets                    = var.subnet_id
   enable_deletion_protection = false
 
-  tags = local.merged_tags
+  tags = merge(
+    local.merged_tags,
+    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""))
+  )
 }
 
 resource "aws_lb_listener" "port80" {
@@ -37,7 +40,6 @@ resource "aws_lb_listener" "port443" {
   }
 }
 
-# TODO: Change the port back to 443
 resource "aws_lb_target_group" "port443" {
   name_prefix = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
   port        = "8080"
