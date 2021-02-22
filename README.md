@@ -38,18 +38,18 @@ module "iris_anywhere_9xl" {
     "my_tag2" = "my_value2"
   }
 
-  tfAccecssKey     = "accesskeyvalue"
-  tfS3ConnID       = "licenced-email@domain.com"
-  tfS3ConnPW       = "licensecode"
-  tfSecretKey      = "secretkeyvalue"
-  tfadminserver    = "iris-admin.fqdn.com"
-  tfbucketname     = "bucketname"
-  tfcertfile       = ""
-  tfcertkeycontent = ""
-  tfcustomerID     = "customerID"
-  tfliccontent     = ""
-  tfserviceacct    = "iris-service"
-
+  # Entries for IrisAnywhere and S3 information
+  ia_lic_content          = ""
+  ia_cert_file            = ""
+  ia_cert_key_content     = ""
+  ia_s3_conn_id           = "licenced-email@domain.com"
+  ia_s3_conn_code         = "licensecode"
+  ia_customer_id          = "customerID"
+  ia_admin_server         = "iris-admin.fqdn.com"
+  ia_service_acct         = "iris-service"
+  ia_bucket_name          = "bucketname"
+  ia_accecss_key          = "accesskeyvalue"
+  ia_secret_key           = "secretkeyvalue"
 }
 ```
 
@@ -80,17 +80,17 @@ The following arguments are supported:
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
 
-* `tfAccecssKey` - (Required) Access key for bucket access
-* `tfS3ConnID` - (Required) S3 Connector SaaS license UID
-* `tfS3ConnPW` - (Required) S3 Connector SaaS license PW
-* `tfSecretKey` - (Required) Secret key for bucket access
-* `tfadminserver` - (Required) Set Iris Admin Server
-* `tfbucketname` - (Required) Bucket Name that will attach to Iris
-* `tfcertfile` - (Required) Certificate in x509 format DER
-* `tfcertkeycontent` - (Required) Private for Cert
-* `tfcustomerID` - (Required) Set Iris CustomerID
-* `tfliccontent` - (Required) IA license file data
-* `tfserviceacct` - (Required) Sets Service Account for autologon
+* `ia_lic_content` - (Optional) License file contents for Iris Admin Server
+* `ia_cert_file` - (Optional) This enables SSL with non ACM deployments. Certificate format must be in x509 DER
+* `ia_cert_key_content` - (Optional) Private Key matching the cert file.
+* `ia_s3_conn_id` - (Required) S3 Connector license ID. Provided by GrayMeta upon licensing
+* `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
+* `ia_customer_id` - (Required) The customer id associates your Iris Anywhere instances to Iris Admin (licensing). Provided by Graymeta upon licensing
+* `ia_admin_server` - (Required) Host name of Iris Admin installation. Provided by customer.
+* `ia_service_acct` - (Required) Name of service account used to manage Iris Anywhere. Provided by customer.
+* `ia_bucket_name` - (Required) Name of S3 bucket containing assets. Provided by customer.
+* `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
+* `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
 
 ### Attributes Reference
 In addition to all the arguements above the following attributes are exported:

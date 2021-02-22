@@ -1,16 +1,16 @@
 <powershell>
 
-$liccontent = "${tfliccontent}"
-$certfile = "${tfcertfile}"
-$certkeycontent = "${tfcertkeycontent}"
-$S3ConnID = "${tfS3ConnID}"
-$S3ConnPW = "${tfS3ConnPW}"
-$customerID = "${tfcustomerID}"
-$adminserver = "${tfadminserver}"
-$serviceacct = "${tfserviceacct}" 
-$bucketname = "${tfbucketname}"
-$AccecssKey = "${tfAccecssKey}"
-$SecretKey = "${tfSecretKey}"
+$liccontent = "${ia_lic_content}"
+$certfile = "${ia_cert_file}"
+$certkeycontent = "${ia_cert_key_content}"
+$S3ConnID = "${ia_S3_conn_id}"
+$S3ConnPW = "${ia_s3_conn_code}"
+$customerID = "${ia_customer_id}"
+$adminserver = "${ia_admin_server}"
+$serviceacct = "${ia_service_acct}" 
+$bucketname = "${ia_bucket_name}"
+$AccecssKey = "${ia_accecss_key}"
+$SecretKey = "${ia_secret_key}"
 
 # Set S3 Licensing
 try {
@@ -125,6 +125,7 @@ $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
     $domain     = "$env:COMPUTERNAME"
     $password   =  $credential.Password 
     Start-Process $autologon -ArgumentList $username,$domain,$newpassword
+    # clear variables
     # Add event log entry and catch exceptions
 
 # Temporary until I get IA-ASG working directly with Windows Service Manager
@@ -166,8 +167,9 @@ nssm set ia-asg Start SERVICE_AUTO_START
 nssm start ia-asg
 New-NetFirewallRule -DisplayName "Allow inbound TCP port 9000 IA-ASG" -Direction inbound -LocalPort 9000 -Protocol TCP -Action Allow
 
-
+# Restarting host to invoke autologon
 Start-Sleep -Seconds 30
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 Restart-Computer -Force
 
 </powershell>
