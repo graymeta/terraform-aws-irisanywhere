@@ -67,6 +67,12 @@ variable "base_ami" {
   default     = ""
 }
 
+variable "disk_data_iops" {
+  type        = string
+  description = "(Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2."
+  default     = ""
+}
+
 variable "disk_data_size" {
   type        = number
   description = "(Optional) EBS volume size.  Default to `300`"
@@ -134,57 +140,57 @@ variable "tags" {
   default     = {}
 }
 
-variable "tfAccecssKey" {
-  type        = string
-  description = "Access key for bucket access"
-}
-
-variable "tfS3ConnID" {
-  type        = string
-  description = "S3 Connector SaaS license UID"
-}
-
-variable "tfS3ConnPW" {
-  type        = string
-  description = "S3 Connector SaaS license PW "
-}
-
-variable "tfSecretKey" {
-  type        = string
-  description = "Secret key for bucket access"
-}
-
-variable "tfadminserver" {
-  type        = string
-  description = "Set Iris Admin Server"
-}
-
-variable "tfbucketname" {
-  type        = string
-  description = "Bucket Name that will attach to Iris"
-}
-
-variable "tfcertfile" {
-  type        = string
-  description = "Certificate in x509 format DER"
-}
-
-variable "tfcertkeycontent" {
-  type        = string
-  description = "Private for Cert"
-}
-
-variable "tfcustomerID" {
-  type        = string
-  description = "Set Iris CustomerID"
-}
-
-variable "tfliccontent" {
+variable "ia_lic_content" {
   type        = string
   description = "IA license file data"
 }
 
-variable "tfserviceacct" {
+variable "ia_cert_file" {
+  type        = string
+  description = "Certificate in x509 format DER"
+}
+
+variable "ia_cert_key_content" {
+  type        = string
+  description = "Private for Cert"
+}
+
+variable "ia_s3_conn_id" {
+  type        = string
+  description = "S3 Connector SaaS license UID"
+}
+
+variable "ia_s3_conn_code" {
+  type        = string
+  description = "S3 Connector SaaS license PW "
+}
+
+variable "ia_customer_id" {
+  type        = string
+  description = "Set Iris CustomerID"
+}
+
+variable "ia_admin_server" {
+  type        = string
+  description = "Set Iris Admin Server"
+}
+
+variable "ia_service_acct" {
   type        = string
   description = "Sets Service Account for autologon"
+}
+
+variable "ia_bucket_name" {
+  type        = string
+  description = "Bucket Name that will attach to Iris"
+}
+
+variable "ia_accecss_key" {
+  type        = string
+  description = "Access key for bucket access"
+}
+
+variable "ia_secret_key" {
+  type        = string
+  description = "Secret key for bucket access"
 }
