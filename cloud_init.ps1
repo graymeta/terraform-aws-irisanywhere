@@ -12,7 +12,7 @@ New-EC2Tag -Resource $instanceid -Tag $tag
 $liccontent = "${ia_lic_content}"
 $certfile = "${ia_cert_file}"
 $certkeycontent = "${ia_cert_key_content}"
-$S3ConnID = "${ia_S3_conn_id}"
+$S3ConnID = "${ia_s3_conn_id}"
 $S3ConnPW = "${ia_s3_conn_code}"
 $customerID = "${ia_customer_id}"
 $adminserver = "${ia_admin_server}"
