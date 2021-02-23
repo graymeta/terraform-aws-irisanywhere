@@ -59,6 +59,7 @@ data "template_file" "cloud_init" {
     ia_lic_content        = var.ia_lic_content
     ia_cert_file          = var.ia_cert_file
     ia_cert_key_content   = var.ia_cert_key_content
+    ia_max_sessions       = var.ia_max_sessions
     ia_s3_conn_id         = var.ia_s3_conn_id
     ia_s3_conn_code       = var.ia_s3_conn_code
     ia_customer_id        = var.ia_customer_id

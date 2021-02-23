@@ -190,6 +190,12 @@ variable "ia_accecss_key" {
   description = "Access key for bucket access"
 }
 
+variable "ia_max_sessions" {
+  type        = string
+  description = "Max sessions per instance"
+  default     = "2"
+}
+
 variable "ia_secret_key" {
   type        = string
   description = "Secret key for bucket access"
