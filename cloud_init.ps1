@@ -6,7 +6,7 @@ $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data
 Import-Module -name AWSPowerShell
 $tag = New-Object Amazon.EC2.Model.Tag
 $tag.Key = "Name"
-$tag.Value = ${name}+"-"+$instanceid
+$tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
 
 $liccontent = "${ia_lic_content}"
