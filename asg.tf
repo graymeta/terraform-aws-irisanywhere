@@ -51,21 +51,22 @@ data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
   vars = {
+    name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
     metric_check_interval = var.asg_check_interval
     health_check_interval = var.lb_check_interval
     unhealthy_threshold   = var.lb_unhealthy_threshold
     cooldown              = var.asg_scalein_cooldown
-    tfliccontent          = var.tfliccontent
-    tfcertfile            = var.tfcertfile
-    tfcertkeycontent      = var.tfcertkeycontent
-    tfS3ConnID            = var.tfS3ConnID
-    tfS3ConnPW            = var.tfS3ConnPW
-    tfcustomerID          = var.tfcustomerID
-    tfadminserver         = var.tfadminserver
-    tfserviceacct         = var.tfserviceacct
-    tfbucketname          = var.tfbucketname
-    tfAccecssKey          = var.tfAccecssKey
-    tfSecretKey           = var.tfSecretKey
+    ia_lic_content        = var.ia_lic_content
+    ia_cert_file          = var.ia_cert_file
+    ia_cert_key_content   = var.ia_cert_key_content
+    ia_s3_conn_id         = var.ia_s3_conn_id
+    ia_s3_conn_code       = var.ia_s3_conn_code
+    ia_customer_id        = var.ia_customer_id
+    ia_admin_server       = var.ia_admin_server
+    ia_service_acct       = var.ia_service_acct
+    ia_bucket_name        = var.ia_bucket_name
+    ia_accecss_key        = var.ia_accecss_key
+    ia_secret_key         = var.ia_secret_key
   }
 }
 
@@ -99,6 +100,7 @@ resource "aws_launch_template" "iris" {
     ebs {
       volume_type           = var.disk_data_type
       volume_size           = var.disk_data_size
+      iops                  = var.disk_data_iops
       encrypted             = true
       delete_on_termination = "true"
     }

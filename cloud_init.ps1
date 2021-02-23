@@ -1,16 +1,25 @@
 <powershell>
 
-$liccontent = "${tfliccontent}"
-$certfile = "${tfcertfile}"
-$certkeycontent = "${tfcertkeycontent}"
-$S3ConnID = "${tfS3ConnID}"
-$S3ConnPW = "${tfS3ConnPW}"
-$customerID = "${tfcustomerID}"
-$adminserver = "${tfadminserver}"
-$serviceacct = "${tfserviceacct}" 
-$bucketname = "${tfbucketname}"
-$AccecssKey = "${tfAccecssKey}"
-$SecretKey = "${tfSecretKey}"
+# Create a Name tag
+$webclient = new-object net.webclient
+$instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
+Import-Module -name AWSPowerShell
+$tag = New-Object Amazon.EC2.Model.Tag
+$tag.Key = "Name"
+$tag.Value = ${name}+"-"+$instanceid
+New-EC2Tag -Resource $instanceid -Tag $tag
+
+$liccontent = "${ia_lic_content}"
+$certfile = "${ia_cert_file}"
+$certkeycontent = "${ia_cert_key_content}"
+$S3ConnID = "${ia_s3_conn_id}"
+$S3ConnPW = "${ia_s3_conn_code}"
+$customerID = "${ia_customer_id}"
+$adminserver = "${ia_admin_server}"
+$serviceacct = "${ia_service_acct}" 
+$bucketname = "${ia_bucket_name}"
+$AccecssKey = "${ia_accecss_key}"
+$SecretKey = "${ia_secret_key}"
 
 # Set S3 Licensing
 try {
@@ -58,7 +67,6 @@ catch {
 
 # Set IA License File (Admin only)
 try {
-    
     $licpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Server\License\ForImport"
     if ($liccontent) {
         New-Item -Path $licpath\license.plic -ItemType File 
@@ -94,80 +102,58 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception during the certificate configuration process" -ForegroundColor Red 
-    }
+}
 
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
 $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
 
 # Import System.Web assembly
-    Add-Type -AssemblyName System.Web
+Add-Type -AssemblyName System.Web
+
 # Generate random password
-    $newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
-    $password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
-    $credential     = New-Object System.Management.Automation.PSCredential ("$serviceacct", $password)
-    # Add logic to remove pw var, add event log entry and catch exceptions
+$newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
+$password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
+$credential     = New-Object System.Management.Automation.PSCredential ("$serviceacct", $password)
+# Add logic to remove pw var, add event log entry and catch exceptions
 
 # Stores credential securely
-    $credential | Export-CliXml -Path $credfile
+$credential | Export-CliXml -Path $credfile
 
 # Retreives credential securely
-    $credential = Import-CliXml -Path $credfile
+$credential = Import-CliXml -Path $credfile
 
 # Creates Local User for logon
-    New-localuser -name "$serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
+New-localuser -name "$serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
 
 # Adds User to local Admin
-    Add-LocalGroupMember -Group "Administrators" -Member "$serviceacct" 
+Add-LocalGroupMember -Group "Administrators" -Member "$serviceacct" 
 
 # Sets autologon
-    $autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"
-    $username   =  $credential.username
-    $domain     = "$env:COMPUTERNAME"
-    $password   =  $credential.Password 
-    Start-Process $autologon -ArgumentList $username,$domain,$newpassword
-    # Add event log entry and catch exceptions
+$autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"
+$username   =  $credential.username
+$domain     = "$env:COMPUTERNAME"
+$password   =  $credential.Password 
+Start-Process $autologon -ArgumentList $username,$domain,$newpassword
+# clear variables
+# Add event log entry and catch exceptions
 
-# Temporary until I get IA-ASG working directly with Windows Service Manager
-# Need to move this to the AMI creation and package it up
-# Remove ia-mock once we get the IA sessions responding to us
-Write-Host "Installing NSSM"
-choco install nssm -y
-Write-Host "Download IA-ASG"
-New-Item "C:\Program Files\Graymeta\asg\bin" -ItemType Directory
-New-Item "C:\Program Files\Graymeta\asg\logs" -ItemType Directory
-Read-S3Object -BucketName sattler-test -Key ia-mock-windows -File "C:\Program Files\Graymeta\asg\bin\ia-mock.exe"
-nssm install ia-mock "C:\Program Files\Graymeta\asg\bin\ia-mock.exe"
-nssm set ia-mock AppStdout "C:\Program Files\Graymeta\asg\logs\ia-mock.log"
-nssm set ia-mock AppStderr "C:\Program Files\Graymeta\asg\logs\ia-mock.log"
-nssm set ia-mock AppStdoutCreationDisposition 4
-nssm set ia-mock AppStderrCreationDisposition 4
-nssm set ia-mock AppRotateFiles 1
-nssm set ia-mock AppRotateOnline 0
-nssm set ia-mock AppRotateSeconds 86400
-nssm set ia-mock AppRotateBytes 1048576
-nssm set ia-mock DisplayName ia-mock
-nssm set ia-mock Description "IA-Mock application for sessions endpoint"
-nssm set ia-mock Start SERVICE_AUTO_START
-nssm start ia-mock
-Read-S3Object -BucketName sattler-test -Key ia-asg-windows -File "C:\Program Files\Graymeta\asg\bin\ia-asg.exe"
-nssm install ia-asg "C:\Program Files\Graymeta\asg\bin\ia-asg.exe"
-nssm set ia-asg AppStdout "C:\Program Files\Graymeta\asg\logs\ia-asg.log"
-nssm set ia-asg AppStderr "C:\Program Files\Graymeta\asg\logs\ia-asg.log"
-nssm set ia-asg AppStdoutCreationDisposition 4
-nssm set ia-asg AppStderrCreationDisposition 4
-nssm set ia-asg AppRotateFiles 1
-nssm set ia-asg AppRotateOnline 0
-nssm set ia-asg AppRotateSeconds 86400
-nssm set ia-asg AppRotateBytes 1048576
-nssm set ia-asg DisplayName ia-asg
-nssm set ia-asg Description "IA-ASG application to upload and control Autoscaling"
-nssm set ia-asg AppEnvironmentExtra iris_addr=http://127.0.0.1 gm_metric_check_interval=${metric_check_interval}s gm_health_check_interval=${health_check_interval}s gm_health_check_threshold=${unhealthy_threshold} gm_cool_down=${cooldown}s
-nssm set ia-asg Start SERVICE_AUTO_START
-nssm start ia-asg
+# Setup the ia-asg service
+[System.Environment]::SetEnvironmentVariable('gm_ia_addr', 'http://127.0.0.1:8080', [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('gm_ia_metric_interval', "${metric_check_interval}s", [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('gm_ia_health_interval', "${health_check_interval}s", [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('gm_ia_health_threshold', "${unhealthy_threshold}", [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('gm_ia_cooldown', "${cooldown}s", [System.EnvironmentVariableTarget]::User)
+New-Service -Name ia-asg `
+    -BinaryPathName "C:\Program Files\Graymeta\asg\bin\ia_asg.exe" `
+    -DisplayName ia-asg `
+    -Description "Iris Anywhere Autoscaling Service" `
+    -StartupType "Automatic"
+Start-Service -Name ia-asg
 New-NetFirewallRule -DisplayName "Allow inbound TCP port 9000 IA-ASG" -Direction inbound -LocalPort 9000 -Protocol TCP -Action Allow
 
-
+# Restarting host to invoke autologon
 Start-Sleep -Seconds 30
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 Restart-Computer -Force
 
 </powershell>
