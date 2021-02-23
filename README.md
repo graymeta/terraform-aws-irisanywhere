@@ -96,8 +96,6 @@ The following arguments are supported:
 * `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
 * `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
 
-
-
 ### Attributes Reference
 In addition to all the arguements above the following attributes are exported:
 * `alb_dns_name` - The DNS name of the load balancer.
