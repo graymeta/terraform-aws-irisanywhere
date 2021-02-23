@@ -95,7 +95,7 @@ The following arguments are supported:
 * `ia_bucket_name` - (Required) Name of S3 bucket containing assets. Provided by customer.
 * `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
 * `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
-* `ia_max_sessions` - (Optional) - sets maximum concurrent sessions for Iris Anywhere.
+
 
 
 ### Attributes Reference
