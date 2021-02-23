@@ -86,6 +86,7 @@ The following arguments are supported:
 * `ia_lic_content` - (Optional) License file contents for Iris Admin Server
 * `ia_cert_file` - (Optional) This enables SSL with non ACM deployments. Certificate format must be in x509 DER
 * `ia_cert_key_content` - (Optional) Private Key matching the cert file.
+* `ia_max_sessions` - (Optional) - Set max sessions per Iris Anywhere instance before autoscaling.
 * `ia_s3_conn_id` - (Required) S3 Connector license ID. Provided by GrayMeta upon licensing
 * `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
 * `ia_customer_id` - (Required) The customer id associates your Iris Anywhere instances to Iris Admin (licensing). Provided by Graymeta upon licensing

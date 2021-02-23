@@ -20,6 +20,8 @@ $serviceacct = "${ia_service_acct}"
 $bucketname = "${ia_bucket_name}"
 $AccecssKey = "${ia_accecss_key}"
 $SecretKey = "${ia_secret_key}"
+$MaxSessions = "${ia_max_sessions}"
+
 
 # Set S3 Licensing
 try {
@@ -63,6 +65,17 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting IrisAdmin ID" -ForegroundColor Red 
+}
+
+# Set Max Sessions:
+try {
+    set-maxsessions -sessions "$MaxSessions"
+    # Write to IA event log what was inserted by TF
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set max sessions to $MaxSessions"
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting max session value" -ForegroundColor Red 
 }
 
 # Set IA License File (Admin only)
