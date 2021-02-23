@@ -25,7 +25,7 @@ resource "aws_security_group_rule" "alb_egress" {
 }
 
 resource "aws_security_group_rule" "alb_port80" {
-  security_group_id = aws_security_group.iris.id
+  security_group_id = aws_security_group.alb.id
   description       = "alb_port80"
   type              = "ingress"
   from_port         = 80
@@ -35,7 +35,7 @@ resource "aws_security_group_rule" "alb_port80" {
 }
 
 resource "aws_security_group_rule" "alb_port443" {
-  security_group_id = aws_security_group.iris.id
+  security_group_id = aws_security_group.alb.id
   description       = "alb_port443"
   type              = "ingress"
   from_port         = 443
