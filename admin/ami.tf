@@ -17,4 +17,5 @@ data "aws_ami" "GrayMeta-Iris-Anywhere" {
   }
 
   owners = ["913397769129"]
+
 }

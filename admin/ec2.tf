@@ -31,7 +31,6 @@ resource "aws_instance" "iris_admin" {
     volume_size           = var.volume_size
     delete_on_termination = "true"
   }
-
 }
 
 # Create instance profile
@@ -44,36 +43,4 @@ resource "aws_iam_role" "iris_admin_role" {
   name = "iris_admin_role"
 
   assume_role_policy = file("${path.module}/admin_role.json")
-}
-
-# Create the security group
-resource "aws_security_group" "iris_admin" {
-  name_prefix = "iris-admnin-nsg"
-  description = "iris-admin-nsg"
-
-  tags = {
-    Source = "terraform"
-  }
-}
-
-# Allow all outbound traffic
-resource "aws_security_group_rule" "egress" {
-  security_group_id = aws_security_group.iris_admin.id
-  description       = "Allow all outbound"
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-}
-
-# Allow RDP inbound traffic
-resource "aws_security_group_rule" "allowd_rdp" {
-  security_group_id = aws_security_group.iris_admin.id
-  description       = "Allow RDP"
-  type              = "ingress"
-  from_port         = "3389"
-  to_port           = "3389"
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
 }
