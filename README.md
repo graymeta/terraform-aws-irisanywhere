@@ -16,11 +16,8 @@
 ## Iris Anywhere Autoscaling Groups
 Deploys Application Load Balancer and Autoscaling group
 
-### Example:
-
+### Example: main.tf
 ```
-main.tf
-
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
