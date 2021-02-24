@@ -18,7 +18,7 @@ $customerID = "${ia_customer_id}"
 $adminserver = "${ia_admin_server}"
 $serviceacct = "${ia_service_acct}" 
 $bucketname = "${ia_bucket_name}"
-$AccecssKey = "${ia_accecss_key}"
+$AccessKey = "${ia_access_key}"
 $SecretKey = "${ia_secret_key}"
 $MaxSessions = "${ia_max_sessions}"
 
@@ -36,14 +36,16 @@ catch {
 
 # Set S3 Bucket 
 try {
-    add-s3bucketonly -bucketname "$bucketname" -accesskey "$AccecssKey" -secretkey "$SecretKey" # provided by GM, supplied by TF 
+    Unregister-ScheduledTask -TaskName "HDD_init" -Confirm:$false  -ErrorAction SilentlyContinue | Out-Null
+    add-s3bucketonly -bucketname "$bucketname" -accesskey "$AccessKey" -secretkey "$SecretKey" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform "$bucketname""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform $bucketname"
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
 }
+
 
 # Set Customer ID:
 try {
