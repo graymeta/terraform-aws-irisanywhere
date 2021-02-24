@@ -4,11 +4,6 @@ variable "ami" {
   default     = ""
 }
 
-variable "instance_profile" {
-  type        = string
-  description = " IAM Instance Profile to launch the instance with."
-}
-
 variable "instance_type" {
   type        = string
   description = "The type of the EC2 instance."
@@ -19,11 +14,6 @@ variable "key_name" {
   description = "The key name to use for the instance(s)."
 }
 
-variable "security_groups" {
-  type        = string
-  description = "A list of security groups to associate with."
-}
-
 variable "subnet_id" {
   type        = string
   description = "VPC Subnet ID to launch in."
@@ -31,16 +21,8 @@ variable "subnet_id" {
 
 variable "tags" {
   type        = map(string)
-  description = "A map of the tags to use on the resources that are deployed with this module. (Default: source = terraform)"
-
-  default = {
-    source = "terraform"
-  }
-}
-
-variable "user_data" {
-  type        = string
-  description = "User data to provide when launching the instance."
+  description = "(Optional) A map of the additional tags."
+  default     = {}
 }
 
 variable "volume_type" {
