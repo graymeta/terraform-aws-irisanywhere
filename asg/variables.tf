@@ -185,7 +185,7 @@ variable "ia_bucket_name" {
   description = "Bucket Name that will attach to Iris"
 }
 
-variable "ia_accecss_key" {
+variable "ia_access_key" {
   type        = string
   description = "Access key for bucket access"
 }
