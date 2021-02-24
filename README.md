@@ -1,13 +1,20 @@
 # terraform-aws-irisanywhere
 
-## Iris Anywhere deployment with Terraform on AWS
-
-Deploys:
-
-- Autoscaling Group
-- Application Load Balancer
-- Security Group, IAM role, IAM policy
-
+## Iris Anywhere Admin Server
+*** ***Comming Soon***
+  
+### Example:
+*** ***Comming Soon***
+  
+### Arguement Reference:
+*** ***Comming Soon***
+  
+### Attributes Reference:
+*** ***Comming Soon***
+  
+***
+## Iris Anywhere Autoscaling Groups
+Deploys Application Load Balancer and Autoscaling group
 
 ### Example:
 
@@ -19,43 +26,62 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
-module "iris_anywhere_9xl" {
-  source = "https://github.com/graymeta/terraform-aws-irisanywhere?ref=v0.0.1"
+module "iris1" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.1"
 
-  access_cidr             = ["0.0.0.0/0"]
-  asg_size_desired        = 1
-  asg_size_max            = 5
-  asg_size_min            = 1
-  disk_data_iops          = 2000
-  disk_data_size          = 500
-  disk_data_type          = "io2"
-  disk_os_size            = 100
-  hostname_prefix         = "iris-anywhere"
-  instance_type           = "c5d.9xlarge"
-  key_name                = "my_key"
-  ssl_certificate_arn     = "cert_arn"
+  access_cidr = ["0.0.0.0/0"]
+
+  lb_check_interval      = 30
+  lb_unhealthy_threshold = 2
+
+  asg_check_interval = 60
+
+  asg_scalein_cooldown   = 600
+  asg_scalein_evaluation = 2
+  asg_scalein_threshold  = 6
+
+  asg_scaleout_cooldown   = 600
+  asg_scaleout_evaluation = 2
+  asg_scaleout_threshold  = 2
+
+  asg_size_desired = 1
+  asg_size_max     = 5
+  asg_size_min     = 1
+
+  disk_data_iops = 3000
+  disk_data_size = 700
+  disk_data_type = "io2"
+  disk_os_size   = 300
+  disk_os_type   = "gp2"
+
+  hostname_prefix = "iris1"
+  instance_type   = "c5d.9xlarge"
+  key_name        = "my_key"
+
+  ssl_certificate_arn     = "<cert_arn>"
   subnet_id               = ["subnet-foo1", "subnet-foo2"]
+
   tags                    = {
     "my_tag1" = "my_value1",
     "my_tag2" = "my_value2"
   }
 
   # Entries for IrisAnywhere and S3 information
-  ia_lic_content          = ""
-  ia_cert_file            = ""
-  ia_cert_key_content     = ""
-  ia_s3_conn_id           = "licenced-email@domain.com"
-  ia_s3_conn_code         = "licensecode"
-  ia_customer_id          = "customerID"
-  ia_admin_server         = "iris-admin.fqdn.com"
-  ia_service_acct         = "iris-service"
-  ia_bucket_name          = "bucketname"
-  ia_accecss_key          = "accesskeyvalue"
-  ia_secret_key           = "secretkeyvalue"
+  ia_lic_content      = ""
+  ia_cert_file        = ""
+  ia_cert_key_content = ""
+  ia_s3_conn_id       = "licenced-email@domain.com"
+  ia_s3_conn_code     = "licensecode"
+  ia_customer_id      = "customerID"
+  ia_admin_server     = "iris-admin.fqdn.com"
+  ia_service_acct     = "iris-service"
+  ia_bucket_name      = "bucketname"
+  ia_accecss_key      = "accesskeyvalue"
+  ia_secret_key       = "secretkeyvalue"
 }
 ```
 
-### Arguement Reference
+### Arguement Reference:
 The following arguments are supported:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60`
@@ -96,35 +122,40 @@ The following arguments are supported:
 * `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
 * `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
 
-### Attributes Reference
+### Attributes Reference:
 In addition to all the arguements above the following attributes are exported:
 * `alb_dns_name` - The DNS name of the load balancer.
 * `asg_name` - The autoscaling group name
 * `nsg_alb_id` - Network Security Group for ALB
 * `nsg_iris_id` - Network Security Group for ASG instances
 
-***
-### Optional
+
+### Optional Additional Resources
 
 Set your own scaling schedule. For example, if you expect more usage during business hours Monday - Friday, you can plan your scaling actions accordingly.
 
 Example: Add a resource block like this to your `main.tf`.
 
 ```
-resource "aws_autoscaling_schedule" "9xlarge_schedule" {
-  scheduled_action_name  = "9xlarge-asg-schedule"
-  recurrence             = "0 8-17 * * MON-FRI"
-  start_time             = "2021-01-01T00:00:00Z"
-  end_time               = "2022-01-01T00:00:00Z"
+resource "aws_autoscaling_schedule" "iris1_schedule_start" {
+  scheduled_action_name  = "iris1-schedule-start"
+  recurrence             = "0 16 * * MON-FRI"
   desired_capacity       = 2
   max_size               = 10
   min_size               = 2
-  autoscaling_group_name = module.iris_anywhere_9xl.asg_name
+  autoscaling_group_name = module.iris1.asg_name
+}
+
+resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
+  scheduled_action_name  = "iris1-schedule-end"
+  recurrence             = "0 6 * * MON-FRI"
+  desired_capacity       = 0
+  max_size               = 10
+  min_size               = 0
+  autoscaling_group_name = module.iris1.asg_name
 }
 ```
 
-`recurrence` - (Optional) The time when recurring future actions will start. Start time is specified by the user following the Unix cron syntax format.
+`recurrence` - (Optional) The time when recurring future actions will start. Start time is specified by the user following the Unix cron syntax format.   Based on UTC/GMT.
 
-`start_time`, `end_time` - (Optional) The time for this action to start/end, in "YYYY-MM-DDThh:mm:ssZ" format in UTC/GMT only (for example, 2014-06-01T00:00:00Z ). If you try to schedule your action in the past, Auto Scaling returns an error message.
-
-`desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time. 
+`desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
