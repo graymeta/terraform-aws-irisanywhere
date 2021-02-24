@@ -1,8 +1,6 @@
 locals {
   default_tags = {
-    source  = "terraform"
-    instance_name = aws_instance.iris_admin.name
+    source = "terraform"
   }
-
   merged_tags = merge(var.tags, local.default_tags)
 }
