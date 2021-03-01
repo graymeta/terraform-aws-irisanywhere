@@ -4,15 +4,36 @@
         {
             "Effect": "Allow",
             "Action": "ec2:CreateTags",
+            "Resource": "arn:aws:ec2:*:*:instance/*",
+            "Condition": {
+                "StringEquals": {
+                    "ec2:ResourceTag/cluster": "${cluster}"
+                }
+            }
+        },
+        {
+            "Effect": "Allow",
+            "Action": "autoscaling:DescribeAutoScalingInstances",
             "Resource": "*"
         },
         {
             "Effect": "Allow",
             "Action": [
-                "autoscaling:*",
-                "cloudwatch:*"
+                "autoscaling:SetInstanceProtection"
             ],
-            "Resource": "*"
+            "Resource": "arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/${cluster}"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "cloudwatch:namespace": "AWS/EC2"
+                }
+            }
         }
     ]
 }
