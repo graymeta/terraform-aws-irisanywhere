@@ -68,9 +68,9 @@ variable "base_ami" {
 }
 
 variable "disk_data_iops" {
-  type        = string
+  type        = number
   description = "(Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2."
-  default     = ""
+  default     = 0
 }
 
 variable "disk_data_size" {
@@ -112,6 +112,12 @@ variable "key_name" {
   description = "(Required) The key name to use for the instances."
 }
 
+variable "lb_algorithm_type" {
+  type        = string
+  description = "(Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`"
+  default     = "round_robin"
+}
+
 variable "lb_check_interval" {
   type        = number
   description = "(Optional) Loadbalancer health check interval. Default to `30`"
@@ -140,19 +146,21 @@ variable "tags" {
   default     = {}
 }
 
-variable "ia_lic_content" {
-  type        = string
-  description = "IA license file data"
-}
-
 variable "ia_cert_file" {
   type        = string
-  description = "Certificate in x509 format DER"
+  description = "(Optional) This enables SSL on server.  Certificate format must be in x509 DER.  Default to blank"
+  default     = ""
 }
 
 variable "ia_cert_key_content" {
   type        = string
-  description = "Private for Cert"
+  description = "(Optional) This enables SSL on server.  Private Key matching the cert file.  Blank will force non-SSL between LB and Server.  Default to blank"
+  default     = ""
+}
+
+variable "ia_lic_content" {
+  type        = string
+  description = "IA license file data"
 }
 
 variable "ia_s3_conn_id" {

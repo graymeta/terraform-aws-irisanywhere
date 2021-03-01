@@ -66,7 +66,7 @@ data "template_file" "cloud_init" {
     ia_admin_server       = var.ia_admin_server
     ia_service_acct       = var.ia_service_acct
     ia_bucket_name        = var.ia_bucket_name
-    ia_access_key        = var.ia_access_key
+    ia_access_key         = var.ia_access_key
     ia_secret_key         = var.ia_secret_key
   }
 }

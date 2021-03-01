@@ -1,13 +1,5 @@
 <powershell>
-
-# Create a Name tag
-$webclient = new-object net.webclient
-$instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
-Import-Module -name AWSPowerShell
-$tag = New-Object Amazon.EC2.Model.Tag
-$tag.Key = "Name"
-$tag.Value = "${name}-"+$instanceid
-New-EC2Tag -Resource $instanceid -Tag $tag
+Write-Output "TIMING: Cloud_init start at $(Get-Date)"
 
 $liccontent = "${ia_lic_content}"
 $certfile = "${ia_cert_file}"
@@ -21,7 +13,6 @@ $bucketname = "${ia_bucket_name}"
 $AccessKey = "${ia_access_key}"
 $SecretKey = "${ia_secret_key}"
 $MaxSessions = "${ia_max_sessions}"
-
 
 # Set S3 Licensing
 try {
@@ -45,7 +36,6 @@ catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
 }
-
 
 # Set Customer ID:
 try {
@@ -166,9 +156,21 @@ New-Service -Name ia-asg `
 Start-Service -Name ia-asg
 New-NetFirewallRule -DisplayName "Allow inbound TCP port 9000 IA-ASG" -Direction inbound -LocalPort 9000 -Protocol TCP -Action Allow
 
+# Create a Name tag
+$webclient = new-object net.webclient
+$instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
+[System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::User)
+Import-Module -name AWSPowerShell
+$tag = New-Object Amazon.EC2.Model.Tag
+$tag.Key = "Name"
+$tag.Value = "${name}-"+$instanceid
+New-EC2Tag -Resource $instanceid -Tag $tag
+
 # Restarting host to invoke autologon
 Start-Sleep -Seconds 30
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
+Write-Output "TIMING: rebooting now at $(Get-Date)"
 Restart-Computer -Force
 
 </powershell>
