@@ -10,6 +10,7 @@ resource "aws_security_group" "iris_adm" {
   tags = merge(
     local.merged_tags,
     map("Name", replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", ""))
+    )
 }
 
 # Allow all outbound traffic
