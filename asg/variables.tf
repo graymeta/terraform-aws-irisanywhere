@@ -140,6 +140,16 @@ variable "tags" {
   default     = {}
 }
 
+variable "ia_adm_id" {
+  type        = string
+  description = "Iris Admin user ID"
+}
+
+variable "ia_adm_pw" {
+  type        = string
+  description = "Iris Admin password"
+}
+
 variable "ia_lic_content" {
   type        = string
   description = "IA license file data"

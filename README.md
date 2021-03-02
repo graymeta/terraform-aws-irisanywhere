@@ -1,10 +1,10 @@
 # terraform-aws-irisanywhere
 
 ## Iris Anywhere Admin Server
-*** ***Coming Soon***
+Deploys Iris Admin management server
+
   
 ### Example:
-*** ***Coming Soon***
 
 ```
 main.tf
@@ -26,8 +26,6 @@ module "irsadmin1" {
 }
 ```
 
-
-  
 ### Arguement Reference:
 *** ***Coming Soon***
   

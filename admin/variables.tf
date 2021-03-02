@@ -30,7 +30,6 @@ variable "subnet_id" {
   description = "(Required) A list of subnet IDs to launch resources in."
 }
 
-
 variable "tags" {
   type        = map(string)
   description = "(Optional) A map of the additional tags."
@@ -48,3 +47,15 @@ variable "volume_size" {
   description = "Volume size."
   default     = "60"
 }
+
+variable "iadm_pw" {
+  type        = string
+  description = "PW for Iris Admin"
+}
+
+variable "iadm_uid" {
+  type        = string
+  description = "UID for Iris Admin"
+  default     = "postgres"
+}
+
