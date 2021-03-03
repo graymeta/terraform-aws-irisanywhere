@@ -1,6 +1,9 @@
 <powershell>
 Write-Output "TIMING: Cloud_init start at $(Get-Date)"
 
+$iadmid = "${ia_adm_id}"
+$iadmpw = "${ia_adm_pw}"
+$liccontent = "${ia_lic_content}"
 $liccontent = "${ia_lic_content}"
 $certfile = "${ia_cert_file}"
 $certkeycontent = "${ia_cert_key_content}"
@@ -18,11 +21,12 @@ $MaxSessions = "${ia_max_sessions}"
 try {
     add-s3license -tbuid "$S3ConnID" -tbpw "$S3ConnPW" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 license from terraform "$S3ConnID" and "$S3ConnPW""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 license from terraform "$S3ConnID""
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 license from terraform "$S3ConnID""
 }
 
 # Set S3 Bucket 
@@ -35,9 +39,10 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform $bucketname"
 }
 
-# Set Customer ID:
+# Set Iris Admin Customer ID:
 try {
     set-customer -id "$customerID"
     # Write to IA event log what was inserted by TF
@@ -46,9 +51,22 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting Customer ID" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Customer ID from terraform $customerID"
 }
 
-# Set IrisAdmin Server host:
+# Set Iris Admin Server credentials:
+try {
+    set-iaadmincreds -uid "$iadmid" -pass "$iadmpw"
+    # Write to IA event log what was inserted by TF
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin server credentials from terraform"
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting Iris Admin credentials" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin server credentials from terraform"
+}
+
+# Set Iris Admin Server host:
 try {
     set-iaadmin -licserver "$adminserver" 
     # Write to IA event log what was inserted by TF
@@ -57,9 +75,10 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting IrisAdmin ID" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin Server from terraform "$adminserver""
 }
 
-# Set Max Sessions:
+# Set Iris Anywhere Max Sessions:
 try {
     set-maxsessions -sessions "$MaxSessions"
     # Write to IA event log what was inserted by TF
@@ -68,9 +87,10 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting max session value" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting max sessions to $MaxSessions"
 }
 
-# Set IA License File (Admin only)
+# Set Iris Admin License 
 try {
     $licpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Server\License\ForImport"
     if ($liccontent) {
@@ -83,6 +103,7 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception during the S3 Licensing process" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA License from terraform "$liccontent""
 }
     
 # Set SSL Certs 
@@ -107,40 +128,50 @@ try {
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception during the certificate configuration process" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting certificate data"
 }
 
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
-$credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
 
-# Import System.Web assembly
-Add-Type -AssemblyName System.Web
+# Set SSL Certs 
+try {
+    $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
 
-# Generate random password
-$newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
-$password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
-$credential     = New-Object System.Management.Automation.PSCredential ("$serviceacct", $password)
-# Add logic to remove pw var, add event log entry and catch exceptions
+    # Import System.Web assembly
+    Add-Type -AssemblyName System.Web
 
-# Stores credential securely
-$credential | Export-CliXml -Path $credfile
+    # Generate random password
+    $newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
+    $password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
+    $credential     = New-Object System.Management.Automation.PSCredential ("$serviceacct", $password)
+    # Add logic to remove pw var, add event log entry and catch exceptions
 
-# Retreives credential securely
-$credential = Import-CliXml -Path $credfile
+    # Stores credential securely
+    $credential | Export-CliXml -Path $credfile
 
-# Creates Local User for logon
-New-localuser -name "$serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
+    # Retreives credential securely
+    $credential = Import-CliXml -Path $credfile
 
-# Adds User to local Admin
-Add-LocalGroupMember -Group "Administrators" -Member "$serviceacct" 
+    # Creates Local User for logon
+    New-localuser -name "$serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
 
-# Sets autologon
-$autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"
-$username   =  $credential.username
-$domain     = "$env:COMPUTERNAME"
-$password   =  $credential.Password 
-Start-Process $autologon -ArgumentList $username,$domain,$newpassword
-# clear variables
-# Add event log entry and catch exceptions
+    # Adds User to local Admin
+    Add-LocalGroupMember -Group "Administrators" -Member "$serviceacct" 
+
+    # Sets autologon
+    $autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"
+    $username   =  $credential.username
+    $domain     = "$env:COMPUTERNAME"
+    $password   =  $credential.Password 
+    Start-Process $autologon -ArgumentList $username,$domain,$newpassword
+    # Remove vars
+    remove-variable autologon ; remove-variable username ; remove-variable domain ; remove-variable password ; remove-variable newpassword
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception establishing autologon configuration" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception establishing autologon configuration"
+}
 
 # Setup the ia-asg service
 [System.Environment]::SetEnvironmentVariable('gm_ia_addr', 'http://127.0.0.1:8080', [System.EnvironmentVariableTarget]::User)

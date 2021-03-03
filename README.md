@@ -1,16 +1,36 @@
 # terraform-aws-irisanywhere
 
 ## Iris Anywhere Admin Server
-*** ***Comming Soon***
+Deploys Iris Admin management server
+
   
 ### Example:
-*** ***Comming Soon***
+
+```
+main.tf
+
+provider "aws" {
+  region  = "us-west-2"
+  profile = "my-aws-profile"
+}
+
+module "irsadmin1" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.1"
+    
+  access_cidr           = ["0.0.0.0/0"]
+  hostname_prefix       = "iadm1"
+  instance_type         = "t3.xlarge"
+  subnet_id             = "subnet-foo1"
+  key_name              = "my_key"
   
+}
+```
+
 ### Arguement Reference:
-*** ***Comming Soon***
+*** ***Coming Soon***
   
 ### Attributes Reference:
-*** ***Comming Soon***
+*** ***Coming Soon***
   
 ***
 ## Iris Anywhere Autoscaling Groups

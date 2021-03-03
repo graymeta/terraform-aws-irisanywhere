@@ -146,6 +146,16 @@ variable "tags" {
   default     = {}
 }
 
+variable "ia_adm_id" {
+  type        = string
+  description = "Iris Admin user ID"
+}
+
+variable "ia_adm_pw" {
+  type        = string
+  description = "Iris Admin password"
+}
+
 variable "ia_cert_file" {
   type        = string
   description = "(Optional) This enables SSL on server.  Certificate format must be in x509 DER.  Default to blank"

@@ -56,6 +56,8 @@ data "template_file" "cloud_init" {
     health_check_interval = var.lb_check_interval
     unhealthy_threshold   = var.lb_unhealthy_threshold
     cooldown              = var.asg_scalein_cooldown
+    ia_adm_id             = var.ia_adm_id
+    ia_adm_pw             = var.ia_adm_pw
     ia_lic_content        = var.ia_lic_content
     ia_cert_file          = var.ia_cert_file
     ia_cert_key_content   = var.ia_cert_key_content

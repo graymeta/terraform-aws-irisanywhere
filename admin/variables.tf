@@ -1,7 +1,18 @@
+variable "access_cidr" {
+  type        = list(string)
+  description = "(Optional) List of network cidr that have access.  Default to `[\"0.0.0.0/0\"]`"
+  default     = ["0.0.0.0/0"]
+}
+
 variable "ami" {
   type        = string
   description = "The AMI from which to launch the instance."
   default     = ""
+}
+
+variable "hostname_prefix" {
+  type        = string
+  description = "(Required) A unique name."
 }
 
 variable "instance_type" {
@@ -16,7 +27,7 @@ variable "key_name" {
 
 variable "subnet_id" {
   type        = string
-  description = "VPC Subnet ID to launch in."
+  description = "(Required) A list of subnet IDs to launch resources in."
 }
 
 variable "tags" {
@@ -27,10 +38,24 @@ variable "tags" {
 
 variable "volume_type" {
   type        = string
-  description = "EBS volume type."
+  description = "Volume type."
+  default     = "gp2"
 }
 
 variable "volume_size" {
   type        = number
-  description = "EBS volume size."
+  description = "Volume size."
+  default     = "60"
 }
+
+variable "iadm_pw" {
+  type        = string
+  description = "PW for Iris Admin"
+}
+
+variable "iadm_uid" {
+  type        = string
+  description = "UID for Iris Admin"
+  default     = "postgres"
+}
+
