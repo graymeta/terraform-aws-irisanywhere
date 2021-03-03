@@ -4,13 +4,13 @@ data "template_file" "cloud_init" {
 
 resource "aws_eip" "public_ip" {
   count    = var.instance_count
-  instance = element(aws_instance.iris_adm.*.id,count.index)
+  instance = element(aws_instance.iris_adm.*.id, count.index)
 }
 
 resource "aws_eip_association" "eip_assoc" {
-  allocation_id = element(aws_eip.public_ip.*.id,count.index)
+  allocation_id = element(aws_eip.public_ip.*.id, count.index)
   count         = var.instance_count
-  instance_id   = element(aws_instance.iris_adm.*.id,count.index)
+  instance_id   = element(aws_instance.iris_adm.*.id, count.index)
 }
 
 resource "aws_instance" "iris_adm" {
