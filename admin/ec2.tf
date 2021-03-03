@@ -21,7 +21,7 @@ resource "aws_instance" "iris_adm" {
   instance_type        = var.instance_type
   key_name             = var.key_name
   security_groups      = [aws_security_group.iris_adm.id]
-  subnet_id            = var.subnet_id
+  subnet_id            = element(var.subnet_id, count.index)
   user_data            = base64encode(data.template_file.cloud_init.rendered)
 
   lifecycle {
@@ -35,9 +35,15 @@ resource "aws_instance" "iris_adm" {
     ]
   }
 
-  tags = local.merged_tags
+  tags = merge(
+    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
+    local.merged_tags
+  )
 
-  volume_tags = local.merged_tags
+  volume_tags = merge(
+    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
+    local.merged_tags
+  )
 
   root_block_device {
     volume_type           = var.volume_type

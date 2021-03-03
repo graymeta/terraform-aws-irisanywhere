@@ -32,10 +32,9 @@ variable "key_name" {
 }
 
 variable "subnet_id" {
-  type        = string
+  type        = list(string)
   description = "(Required) A list of subnet IDs to launch resources in."
 }
-
 
 variable "tags" {
   type        = map(string)
