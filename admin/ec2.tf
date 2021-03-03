@@ -3,22 +3,25 @@ data "template_file" "cloud_init" {
 }
 
 resource "aws_eip" "public_ip" {
-  instance = aws_instance.iris_adm.id
+  count    = var.instance_count
+  instance = element(aws_instance.iris_adm.*.id,count.index)
 }
 
 resource "aws_eip_association" "eip_assoc" {
-    instance_id   = aws_instance.iris_adm.id
-    allocation_id = aws_eip.public_ip.id
+  allocation_id = element(aws_eip.public_ip.*.id,count.index)
+  count         = var.instance_count
+  instance_id   = element(aws_instance.iris_adm.*.id,count.index)
 }
 
 resource "aws_instance" "iris_adm" {
-  
+
   ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  count                = var.instance_count
   iam_instance_profile = aws_iam_instance_profile.iris_adm.name
   instance_type        = var.instance_type
   key_name             = var.key_name
   security_groups      = [aws_security_group.iris_adm.id]
-  subnet_id            = var.subnet_id 
+  subnet_id            = var.subnet_id
   user_data            = base64encode(data.template_file.cloud_init.rendered)
 
   lifecycle {
