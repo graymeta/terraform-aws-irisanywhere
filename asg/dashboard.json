@@ -35,6 +35,28 @@
                     }
                 }
             }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 6,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "view": "timeSeries",
+                "stacked": false,
+                "metrics": [
+                    [ "AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", "${asg_name}" ],
+                    [ ".", "GroupMaxSize", ".", "." ]
+                ],
+                "region": "${region}",
+                "yAxis": {
+                    "left": {
+                        "min": 0
+                    }
+                },
+                "title": "Autoscaling desired and max count"
+            }
         }
     ]
 }

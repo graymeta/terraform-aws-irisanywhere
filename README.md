@@ -54,11 +54,8 @@ In addition to all the arguments above the following attributes are exported:
 ## Iris Anywhere Autoscaling Groups
 Deploys Application Load Balancer and Autoscaling group
 
-### Example:
-
+### Example: main.tf
 ```
-main.tf
-
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
