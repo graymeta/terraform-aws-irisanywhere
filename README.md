@@ -105,9 +105,9 @@ module "iris1" {
   }
 
   # Entries for IrisAnywhere and S3 information
-  ia_lic_content      = ""
   ia_cert_file        = ""
   ia_cert_key_content = ""
+  ia_lic_content      = ""
   ia_s3_conn_id       = "licenced-email@domain.com"
   ia_s3_conn_code     = "licensecode"
   ia_customer_id      = "customerID"
@@ -141,15 +141,17 @@ The following arguments are supported:
 * `hostname_prefix` - (Required) A unique name.
 * `instance_type` - (Required) The type of the EC2 instance.
 * `key_name` - (Required) The key name to use for the instances.
+* `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30`
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2`
 * `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
 
+* `ia_cert_file` - (Optional) This enables SSL on server. Certificate format must be in x509 DER.  Default to blank
+* `ia_cert_key_content` - (Optional) This enables SSL on server.  Private Key matching the cert file.  Blank will force non-SSL between LB and Server.  Default to blank
+
 * `ia_lic_content` - (Optional) License file contents for Iris Admin Server
-* `ia_cert_file` - (Optional) This enables SSL with non ACM deployments. Certificate format must be in x509 DER
-* `ia_cert_key_content` - (Optional) Private Key matching the cert file.
 * `ia_max_sessions` - (Optional) - Set max sessions per Iris Anywhere instance before autoscaling.
 * `ia_s3_conn_id` - (Required) S3 Connector license ID. Provided by GrayMeta upon licensing
 * `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
