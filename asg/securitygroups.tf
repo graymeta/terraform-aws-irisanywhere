@@ -86,11 +86,23 @@ resource "aws_security_group_rule" "iris_health" {
 }
 
 resource "aws_security_group_rule" "iris_8080" {
+  count                    = var.ia_cert_key_content != "" ? 0 : 1
   security_group_id        = aws_security_group.iris.id
   description              = "iris_port8080"
   type                     = "ingress"
   from_port                = 8080
   to_port                  = 8080
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+}
+
+resource "aws_security_group_rule" "iris_443" {
+  count                    = var.ia_cert_key_content != "" ? 1 : 0
+  security_group_id        = aws_security_group.iris.id
+  description              = "iris_port443"
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.alb.id
 }
