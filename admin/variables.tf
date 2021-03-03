@@ -38,13 +38,13 @@ variable "tags" {
 
 variable "volume_type" {
   type        = string
-  description = "Volume type."
+  description = "EBS volume type.  Default to `gp2`"
   default     = "gp2"
 }
 
 variable "volume_size" {
   type        = number
-  description = "Volume size."
+  description = "EBS volume size.  Default to `60`"
   default     = "60"
 }
 

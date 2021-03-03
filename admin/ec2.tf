@@ -12,7 +12,6 @@ resource "aws_eip_association" "eip_assoc" {
 }
 
 resource "aws_instance" "iris_adm" {
-  
   ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   iam_instance_profile = aws_iam_instance_profile.iris_adm.name
   instance_type        = var.instance_type

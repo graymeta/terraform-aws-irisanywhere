@@ -1,7 +1,7 @@
 # terraform-aws-irisanywhere
 
 ## Iris Anywhere Admin Server
-Deploys Iris Admin management server
+Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.
 
   
 ### Example:
@@ -20,7 +20,7 @@ module "irsadmin1" {
   access_cidr           = ["0.0.0.0/0"]
   hostname_prefix       = "iadm1"
   instance_type         = "t3.xlarge"
-  subnet_id             = "subnet-foo1"
+  subnet_id             = ["subnet-foo1"]
   key_name              = "my_key"
   
 }
