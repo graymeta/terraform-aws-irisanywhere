@@ -1,16 +1,17 @@
 data "aws_subnet" "subnet" {
-  id    = var.subnet_id
+  count = "${length(var.subnet_id)}"
+  id    = "${element(var.subnet_id, count.index)}"
 }
 
 resource "aws_security_group" "iris_adm" {
-  name_prefix = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "")
-  description = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "")
-  vpc_id      = data.aws_subnet.subnet.vpc_id
+  name_prefix = "${var.hostname_prefix}-iris-admin"
+  description = "${var.hostname_prefix}-iris-admin"
+  vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
     local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", ""))
-    )
+    map("Name", format("${var.hostname_prefix}-iris-admin"))
+  )
 }
 
 # Allow all outbound traffic

@@ -15,6 +15,12 @@ variable "hostname_prefix" {
   description = "(Required) A unique name."
 }
 
+variable "instance_count" {
+  type        = number
+  description = "Number of EC2 instances to deploy."
+  default     = 1
+}
+
 variable "instance_type" {
   type        = string
   description = "The type of the EC2 instance."
@@ -26,7 +32,7 @@ variable "key_name" {
 }
 
 variable "subnet_id" {
-  type        = string
+  type        = list(string)
   description = "(Required) A list of subnet IDs to launch resources in."
 }
 
@@ -38,13 +44,13 @@ variable "tags" {
 
 variable "volume_type" {
   type        = string
-  description = "Volume type."
+  description = "EBS volume type.  Default to `gp2`"
   default     = "gp2"
 }
 
 variable "volume_size" {
   type        = number
-  description = "Volume size."
+  description = "EBS volume size.  Default to `60`"
   default     = "60"
 }
 

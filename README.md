@@ -1,7 +1,7 @@
 # terraform-aws-irisanywhere
 
 ## Iris Anywhere Admin Server
-Deploys Iris Admin management server
+Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.
 
   
 ### Example:
@@ -19,19 +19,37 @@ module "irsadmin1" {
     
   access_cidr           = ["0.0.0.0/0"]
   hostname_prefix       = "iadm1"
+  instance_count        = 1
   instance_type         = "t3.xlarge"
-  subnet_id             = "subnet-foo1"
+  subnet_id             = ["subnet-foo1"]
   key_name              = "my_key"
   
 }
 ```
+<<<<<<< HEAD
 
 ### Arguement Reference:
 *** ***Coming Soon***
+=======
+  
+### Argument Reference:
+* `access_cidr` - (Optional) List of network cidr that have access. Default to `["0.0.0.0/0"]`.
+* `ami` - (Optional) The AMI from which to launch the instance.  Default to latest released AMI.
+* `hostname_prefix` - (Required) A unique name.
+* `instance_count` - (Required) Number of admin instances to deploy.
+* `instance_type` - (Required) The type of the EC2 instance.
+* `key_name` - (Required) The key pair name to use for the instances.
+* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
+* `tags` -  (Optional) A map of the additional tags.
+* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
+* `volume_size` - (Optional) EBS volume size. Default to `60`.
+>>>>>>> 7f8345385899376f9dd6639dac41c2160eabedad
   
 ### Attributes Reference:
-*** ***Coming Soon***
-  
+In addition to all the arguments above the following attributes are exported:
+* `security_group` - The Security Group of the Admin instance(s).
+* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
+* `private_ip` - The Private IPv4 address of the Admin instance(s).
 ***
 ## Iris Anywhere Autoscaling Groups
 Deploys Application Load Balancer and Autoscaling group
@@ -101,7 +119,7 @@ module "iris1" {
 }
 ```
 
-### Arguement Reference:
+### Argument Reference:
 The following arguments are supported:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60`
@@ -145,7 +163,7 @@ The following arguments are supported:
 * `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
 
 ### Attributes Reference:
-In addition to all the arguements above the following attributes are exported:
+In addition to all the arguments above the following attributes are exported:
 * `alb_dns_name` - The DNS name of the load balancer.
 * `asg_name` - The autoscaling group name
 * `nsg_alb_id` - Network Security Group for ALB
