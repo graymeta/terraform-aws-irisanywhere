@@ -46,7 +46,7 @@ variable "tags" {
 variable "volume_type" {
   type        = string
   description = "Volume type."
-  default     = "gp2"
+  default     = "gp3"
 }
 
 variable "volume_size" {

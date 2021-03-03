@@ -16,9 +16,8 @@ module "irsadmin" {
   
   access_cidr           = ["0.0.0.0/0"]
   hostname_prefix       = "irisadm"
+  instance_count        = 1
   instance_type         = "t3.large"
   subnet_id             = "subnet-id123"
   key_name              = "my_key"
-
-  
 }
