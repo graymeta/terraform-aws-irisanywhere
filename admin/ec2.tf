@@ -3,21 +3,28 @@ data "template_file" "cloud_init" {
 }
 
 resource "aws_eip" "public_ip" {
-  instance = aws_instance.iris_adm.id
+  count    = var.instance_count
+  instance = element(aws_instance.iris_adm.*.id, count.index)
 }
 
 resource "aws_eip_association" "eip_assoc" {
-    instance_id   = aws_instance.iris_adm.id
-    allocation_id = aws_eip.public_ip.id
+  allocation_id = element(aws_eip.public_ip.*.id, count.index)
+  count         = var.instance_count
+  instance_id   = element(aws_instance.iris_adm.*.id, count.index)
 }
 
 resource "aws_instance" "iris_adm" {
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7f8345385899376f9dd6639dac41c2160eabedad
   ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  count                = var.instance_count
   iam_instance_profile = aws_iam_instance_profile.iris_adm.name
   instance_type        = var.instance_type
   key_name             = var.key_name
   security_groups      = [aws_security_group.iris_adm.id]
-  subnet_id            = var.subnet_id 
+  subnet_id            = element(var.subnet_id, count.index)
   user_data            = base64encode(data.template_file.cloud_init.rendered)
 
   lifecycle {
@@ -31,9 +38,15 @@ resource "aws_instance" "iris_adm" {
     ]
   }
 
-  tags = local.merged_tags
+  tags = merge(
+    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
+    local.merged_tags
+  )
 
-  volume_tags = local.merged_tags
+  volume_tags = merge(
+    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
+    local.merged_tags
+  )
 
   root_block_device {
     volume_type           = var.volume_type
