@@ -7,14 +7,13 @@ Deploys Iris Admin management server. This application provides comprehensive ad
 ### Example:
 
 ```
-main.tf
 
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
-module "irsadmin1" {
+module "irisadmin1" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.1"
     
   access_cidr           = ["0.0.0.0/0"]
@@ -23,27 +22,25 @@ module "irsadmin1" {
   instance_type         = "t3.xlarge"
   subnet_id             = ["subnet-foo1"]
   key_name              = "my_key"
-  
+  iadm_uid              = "AdminUID"
+  iadm_pw               = "YourPassword"
+  iadmdb_pw             = "YourDBPassword"
 }
 ```
-<<<<<<< HEAD
 
 ### Arguement Reference:
-*** ***Coming Soon***
-=======
-  
-### Argument Reference:
-* `access_cidr` - (Optional) List of network cidr that have access. Default to `["0.0.0.0/0"]`.
-* `ami` - (Optional) The AMI from which to launch the instance.  Default to latest released AMI.
+* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `hostname_prefix` - (Required) A unique name.
-* `instance_count` - (Required) Number of admin instances to deploy.
+* `instance_count` - (Required) Number of Instances to deploy.
 * `instance_type` - (Required) The type of the EC2 instance.
-* `key_name` - (Required) The key pair name to use for the instances.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
+* `key_name` - (Required) The key name to use for the instances.
+* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
+* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
+* `iadmdb_pw` - (Required) The password for backend database.
 * `tags` -  (Optional) A map of the additional tags.
 * `volume_type` - (Optional) EBS volume type. Default to `gp3`.
 * `volume_size` - (Optional) EBS volume size. Default to `60`.
->>>>>>> 7f8345385899376f9dd6639dac41c2160eabedad
   
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
@@ -61,7 +58,7 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
-module "iris1" {
+module "irisanywhere1" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.1"
 
   access_cidr = ["0.0.0.0/0"]
@@ -102,17 +99,20 @@ module "iris1" {
   }
 
   # Entries for IrisAnywhere and S3 information
+  ia_adm_id           = "credusername"
+  ia_adm_pw           = "credpw"
+  ia_admin_server     = "iris-admin.fqdn.com"
   ia_cert_file        = ""
   ia_cert_key_content = ""
+  ia_customer_id      = "customerID"
   ia_lic_content      = ""
+  ia_max_sessions     = "2"
   ia_s3_conn_id       = "licenced-email@domain.com"
   ia_s3_conn_code     = "licensecode"
-  ia_customer_id      = "customerID"
-  ia_admin_server     = "iris-admin.fqdn.com"
   ia_service_acct     = "iris-service"
-  ia_bucket_name      = "bucketname"
-  ia_accecss_key      = "accesskeyvalue"
-  ia_secret_key       = "secretkeyvalue"
+  ia_bucket_name      = "yourbucketname"
+  ia_accecss_key      = "youriamaccesskeyvalue"
+  ia_secret_key       = "youriamsecretkeyvalue"
 }
 ```
 
@@ -144,20 +144,20 @@ The following arguments are supported:
 * `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
-
+* `ia_adm_id` - (Required) Username for authenticating to Iris Admin Server
+* `ia_adm_pw` - (Required) Password for authenticating to Iris Admin Server
+* `ia_admin_server` - (Required) Host name of Iris Admin installation. Provided by customer.
 * `ia_cert_file` - (Optional) This enables SSL on server. Certificate format must be in x509 DER.  Default to blank
 * `ia_cert_key_content` - (Optional) This enables SSL on server.  Private Key matching the cert file.  Blank will force non-SSL between LB and Server.  Default to blank
-
+* `ia_customer_id` - (Required) The customer id associates your Iris Anywhere instances to Iris Admin (licensing). Provided by Graymeta upon licensing
 * `ia_lic_content` - (Optional) License file contents for Iris Admin Server
-* `ia_max_sessions` - (Optional) - Set max sessions per Iris Anywhere instance before autoscaling.
+* `ia_max_sessions` - (Optional) Set max sessions per Iris Anywhere instance before autoscaling.
 * `ia_s3_conn_id` - (Required) S3 Connector license ID. Provided by GrayMeta upon licensing
 * `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
-* `ia_customer_id` - (Required) The customer id associates your Iris Anywhere instances to Iris Admin (licensing). Provided by Graymeta upon licensing
-* `ia_admin_server` - (Required) Host name of Iris Admin installation. Provided by customer.
 * `ia_service_acct` - (Required) Name of service account used to manage Iris Anywhere. Provided by customer.
 * `ia_bucket_name` - (Required) Name of S3 bucket containing assets. Provided by customer.
 * `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
-* `ia_secret_key` - (Required) - secret key to match access key. Provided by customer.
+* `ia_secret_key` - (Required) Secret key to match access key. Provided by customer.
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
@@ -165,7 +165,6 @@ In addition to all the arguments above the following attributes are exported:
 * `asg_name` - The autoscaling group name
 * `nsg_alb_id` - Network Security Group for ALB
 * `nsg_iris_id` - Network Security Group for ASG instances
-
 
 ### Optional Additional Resources
 

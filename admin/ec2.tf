@@ -1,5 +1,12 @@
 data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
+
+  vars = {
+    iadm_uid   = var.iadm_uid
+    iadm_pw    = var.iadm_pw
+    iadmdb_uid = var.iadmdb_uid
+    iadmdb_pw  = var.iadmdb_pw
+  }
 }
 
 resource "aws_eip" "public_ip" {
@@ -14,11 +21,7 @@ resource "aws_eip_association" "eip_assoc" {
 }
 
 resource "aws_instance" "iris_adm" {
-<<<<<<< HEAD
-=======
-
->>>>>>> 7f8345385899376f9dd6639dac41c2160eabedad
-  ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
   count                = var.instance_count
   iam_instance_profile = aws_iam_instance_profile.iris_adm.name
   instance_type        = var.instance_type
