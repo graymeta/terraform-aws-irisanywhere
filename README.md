@@ -1,61 +1,28 @@
-# terraform-aws-irisanywhere
+# Deploying GrayMeta Iris Anywhere with Terraform
+* Contact support@graymeta.com to get access to AMI.
+* Terraform 12 is only supported at this time.
+* `version` - Current version is `v0.0.1`.
 
-## Iris Anywhere Admin Server
-Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.
 
-  
-### Example:
-
+## Example Usage
 ```
-
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
-module "irisadmin1" {
+module "irisadmin" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.1"
     
-  access_cidr           = ["0.0.0.0/0"]
-  hostname_prefix       = "iadm1"
-  instance_count        = 1
-  instance_type         = "t3.xlarge"
-  subnet_id             = ["subnet-foo1"]
-  key_name              = "my_key"
-  iadm_uid              = "AdminUID"
-  iadm_pw               = "YourPassword"
-  iadmdb_pw             = "YourDBPassword"
-}
-```
-
-### Arguement Reference:
-* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `hostname_prefix` - (Required) A unique name.
-* `instance_count` - (Required) Number of Instances to deploy.
-* `instance_type` - (Required) The type of the EC2 instance.
-* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
-* `key_name` - (Required) The key name to use for the instances.
-* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
-* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
-* `iadmdb_pw` - (Required) The password for backend database.
-* `tags` -  (Optional) A map of the additional tags.
-* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
-* `volume_size` - (Optional) EBS volume size. Default to `60`.
-  
-### Attributes Reference:
-In addition to all the arguments above the following attributes are exported:
-* `security_group` - The Security Group of the Admin instance(s).
-* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
-* `private_ip` - The Private IPv4 address of the Admin instance(s).
-***
-## Iris Anywhere Autoscaling Groups
-Deploys Application Load Balancer and Autoscaling group
-
-### Example: main.tf
-```
-provider "aws" {
-  region  = "us-west-2"
-  profile = "my-aws-profile"
+  access_cidr     = ["0.0.0.0/0"]
+  hostname_prefix = "iadm"
+  instance_count  = 1
+  instance_type   = "t3.xlarge"
+  subnet_id       = ["subnet-foo1"]
+  key_name        = "my_key"
+  iadm_uid        = "AdminUID"
+  iadm_pw         = "YourPassword"
+  iadmdb_pw       = "YourDBPassword"
 }
 
 module "irisanywhere1" {
@@ -99,9 +66,9 @@ module "irisanywhere1" {
   }
 
   # Entries for IrisAnywhere and S3 information
-  ia_adm_id           = "credusername"
-  ia_adm_pw           = "credpw"
-  ia_admin_server     = "iris-admin.fqdn.com"
+  ia_adm_id           = module.irisadmin.ia_adm_id
+  ia_adm_pw           = module.irisadmin.ia_adm_pw
+  ia_admin_server     = element(module.irisadmin.private_dns, 0)
   ia_cert_file        = ""
   ia_cert_key_content = ""
   ia_customer_id      = "customerID"
@@ -115,6 +82,34 @@ module "irisanywhere1" {
   ia_secret_key       = "youriamsecretkeyvalue"
 }
 ```
+
+***
+## Iris Anywhere Admin Server
+Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.
+
+### Arguement Reference:
+* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
+* `hostname_prefix` - (Required) A unique name.
+* `instance_count` - (Required) Number of Instances to deploy.
+* `instance_type` - (Required) The type of the EC2 instance.
+* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
+* `key_name` - (Required) The key name to use for the instances.
+* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
+* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
+* `iadmdb_pw` - (Required) The password for backend database.
+* `tags` -  (Optional) A map of the additional tags.
+* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
+* `volume_size` - (Optional) EBS volume size. Default to `60`.
+  
+### Attributes Reference:
+In addition to all the arguments above the following attributes are exported:
+* `security_group` - The Security Group of the Admin instance(s).
+* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
+* `private_ip` - The Private IPv4 address of the Admin instance(s).
+
+***
+## Iris Anywhere Autoscaling Groups
+Deploys Application Load Balancer and Autoscaling group
 
 ### Argument Reference:
 The following arguments are supported:
