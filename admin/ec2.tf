@@ -7,7 +7,6 @@ data "template_file" "cloud_init" {
     iadmdb_uid = var.iadmdb_uid
     iadmdb_pw  = var.iadmdb_pw
   }
-  
 }
 
 resource "aws_eip" "public_ip" {

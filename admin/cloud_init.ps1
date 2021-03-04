@@ -10,8 +10,6 @@ $start_time
 
 $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.exe*"} | select -ExpandProperty name
 
-#Will make passwords random when deployments are made public
-
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
 try {
     Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$irisadmindbid /DBPORT=5432 /DBPASSWORD=$irisadmindbpw /ADMINUSERNAME=$irisadminuid /ADMINPASSWORD=$irisadminpw" -Wait -PassThru
@@ -26,11 +24,5 @@ catch {
 #Check and Cleanup
 $irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion 
 Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green
-
-
-#Remove-item "C:\IrisTemp\$($iris_admin_exe)" -recurse -Force | Out-Null 
-
-#removing install directory
-#Remove-item "C:\IrisTemp\" -recurse -Force | Out-Null 
 
 </powershell>

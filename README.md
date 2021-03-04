@@ -26,6 +26,7 @@ module "irisadmin1" {
   iadm_pw               = "YourPassword"
   iadmdb_pw             = "YourDBPassword"
   
+  
 }
 ```
 
@@ -39,6 +40,9 @@ module "irisadmin1" {
 * `iadm_uid` - (Required) The username for accessing the Iris Admin console.
 * `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
 * `iadmdb_pw` - (Required) The password for backend database.
+* `tags` -  (Optional) A map of the additional tags.
+* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
+* `volume_size` - (Optional) EBS volume size. Default to `60`.
   
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
@@ -111,9 +115,6 @@ module "irisanywhere1" {
   ia_bucket_name      = "yourbucketname"
   ia_accecss_key      = "youriamaccesskeyvalue"
   ia_secret_key       = "youriamsecretkeyvalue"
-  
-
-  
 }
 ```
 
@@ -145,8 +146,6 @@ The following arguments are supported:
 * `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
-
-
 * `ia_adm_id` - (Required) Username for authenticating to Iris Admin Server
 * `ia_adm_pw` - (Required) Password for authenticating to Iris Admin Server
 * `ia_admin_server` - (Required) Host name of Iris Admin installation. Provided by customer.
@@ -168,7 +167,6 @@ In addition to all the arguments above the following attributes are exported:
 * `asg_name` - The autoscaling group name
 * `nsg_alb_id` - Network Security Group for ALB
 * `nsg_iris_id` - Network Security Group for ASG instances
-
 
 ### Optional Additional Resources
 
