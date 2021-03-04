@@ -22,6 +22,9 @@ module "irisadmin1" {
   instance_type         = "t3.xlarge"
   subnet_id             = ["subnet-foo1"]
   key_name              = "my_key"
+  iadm_uid              = "AdminUID"
+  iadm_pw               = "YourPassword"
+  iadmdb_pw             = "YourDBPassword"
   
 }
 ```
@@ -33,6 +36,9 @@ module "irisadmin1" {
 * `instance_type` - (Required) The type of the EC2 instance.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `key_name` - (Required) The key name to use for the instances.
+* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
+* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
+* `iadmdb_pw` - (Required) The password for backend database.
   
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
