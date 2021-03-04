@@ -25,8 +25,6 @@ module "irisadmin1" {
   iadm_uid              = "AdminUID"
   iadm_pw               = "YourPassword"
   iadmdb_pw             = "YourDBPassword"
-  
-  
 }
 ```
 
