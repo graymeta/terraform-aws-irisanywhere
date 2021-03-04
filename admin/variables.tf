@@ -62,6 +62,16 @@ variable "iadm_pw" {
 variable "iadm_uid" {
   type        = string
   description = "UID for Iris Admin"
-  default     = "postgres"
+  default     = "Admin"
 }
 
+variable "iadmdb_pw" {
+  type        = string
+  description = "PW for Iris Admin DB"
+}
+
+variable "iadmdb_uid" {
+  type        = string
+  description = "UID for Iris Admin DB"
+  default     = "postgres"
+}

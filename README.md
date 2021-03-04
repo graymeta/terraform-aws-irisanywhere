@@ -13,7 +13,7 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
-module "irsadmin1" {
+module "irisadmin1" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.1"
     
   access_cidr           = ["0.0.0.0/0"]
@@ -50,7 +50,7 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
-module "iris1" {
+module "irisanywhere1" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.1"
 
   access_cidr = ["0.0.0.0/0"]

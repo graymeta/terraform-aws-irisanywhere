@@ -1,9 +1,9 @@
-data "aws_ami" "GrayMeta-Iris-Anywhere" {
+data "aws_ami" "GrayMeta-Iris-Admin" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = ["GrayMeta-Iris-Anywhere-*"]
+    values = ["GrayMeta-Iris-Admin-*"]
   }
 
   filter {
