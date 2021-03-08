@@ -1,10 +1,19 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
+
+The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated `ia_admin_server` deployed first. 
+
 * Contact support@graymeta.com to get access to AMI.
 * Terraform 12 is only supported at this time.
 * `version` - Current version is `v0.0.1`.
 
+***
+## Iris Anywhere Admin Server
+Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process (`ia_customer_id`, `ia_admin_server`, `ia_s3_conn_id`, `ia_s3_conn_code`).  
+
+The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's {Public IPv4 DNS}:8020 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
 
 ## Example Usage
+
 ```
 provider "aws" {
   region  = "us-west-2"
@@ -23,6 +32,38 @@ module "irisadmin" {
   iadm_uid        = "AdminUID"
   iadm_pw         = "YourPassword"
   iadmdb_pw       = "YourDBPassword"
+}
+```
+
+### Arguement Reference:
+* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
+* `hostname_prefix` - (Required) A unique name.
+* `instance_count` - (Required) Number of Instances to deploy.
+* `instance_type` - (Required) The type of the EC2 instance.
+* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
+* `key_name` - (Required) The key name to use for the instances.
+* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
+* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
+* `iadmdb_pw` - (Required) The password for backend database.
+* `tags` -  (Optional) A map of the additional tags.
+* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
+* `volume_size` - (Optional) EBS volume size. Default to `60`.
+  
+### Attributes Reference:
+In addition to all the arguments above the following attributes are exported:
+* `security_group` - The Security Group of the Admin instance(s).
+* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
+* `private_ip` - The Private IPv4 address of the Admin instance(s).
+
+***
+## Iris Anywhere Autoscaling Groups
+Deploys Application Load Balancer and Autoscaling group.  We recommend that you do not deploy your Autoscaling Groups until your Iris Admin Server has been licensed with GrayMeta (support@graymeta.com), during this process you will be provided additional key values to plug into your terraform code (`ia_customer_id`, `ia_admin_server`, `ia_s3_conn_id`, `ia_s3_conn_code`).
+
+## Example Usage
+```
+provider "aws" {
+  region  = "us-west-2"
+  profile = "my-aws-profile"
 }
 
 module "irisanywhere1" {
@@ -78,48 +119,20 @@ module "irisanywhere1" {
   ia_s3_conn_code     = "licensecode"
   ia_service_acct     = "iris-service"
   ia_bucket_name      = "yourbucketname"
-  ia_accecss_key      = "youriamaccesskeyvalue"
+  ia_access_key      = "youriamaccesskeyvalue"
   ia_secret_key       = "youriamsecretkeyvalue"
 }
 ```
 
-***
-## Iris Anywhere Admin Server
-Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.
-
-### Arguement Reference:
-* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `hostname_prefix` - (Required) A unique name.
-* `instance_count` - (Required) Number of Instances to deploy.
-* `instance_type` - (Required) The type of the EC2 instance.
-* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
-* `key_name` - (Required) The key name to use for the instances.
-* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
-* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
-* `iadmdb_pw` - (Required) The password for backend database.
-* `tags` -  (Optional) A map of the additional tags.
-* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
-* `volume_size` - (Optional) EBS volume size. Default to `60`.
-  
-### Attributes Reference:
-In addition to all the arguments above the following attributes are exported:
-* `security_group` - The Security Group of the Admin instance(s).
-* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
-* `private_ip` - The Private IPv4 address of the Admin instance(s).
-
-***
-## Iris Anywhere Autoscaling Groups
-Deploys Application Load Balancer and Autoscaling group
-
 ### Argument Reference:
 The following arguments are supported:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60`
-* `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `300`
-* `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `2`
+* `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60` (seconds)
+* `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `300` (seconds)
+* `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `2` (evaluation periods)
 * `asg_scalein_threshold` - (Optional) Scale in if the number of sessions drop below.  Default to `5`
-* `asg_scaleout_cooldown` - (Optional) Scale out cooldown period.  Default to `300`
-* `asg_scaleout_evaluation` - (Optional) Scale out evaluation periods. Default to `2`
+* `asg_scaleout_cooldown` - (Optional) Scale out cooldown period.  Default to `300` (seconds)
+* `asg_scaleout_evaluation` - (Optional) Scale out evaluation periods. Default to `2` (evaluation periods)
 * `asg_scaleout_threshold` - (Optional) Scale out if the number of sessions drop below.  Default to `5`
 * `asg_size_desired` - (Required) The number of EC2 instances that should be running in the group.
 * `asg_size_max` - (Required) Maximum size of the Auto Scaling Group.
@@ -134,8 +147,8 @@ The following arguments are supported:
 * `instance_type` - (Required) The type of the EC2 instance.
 * `key_name` - (Required) The key name to use for the instances.
 * `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
-* `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30`
-* `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2`
+* `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
+* `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
 * `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
@@ -151,7 +164,7 @@ The following arguments are supported:
 * `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
 * `ia_service_acct` - (Required) Name of service account used to manage Iris Anywhere. Provided by customer.
 * `ia_bucket_name` - (Required) Name of S3 bucket containing assets. Provided by customer.
-* `ia_accecss_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
+* `ia_access_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
 * `ia_secret_key` - (Required) Secret key to match access key. Provided by customer.
 
 ### Attributes Reference:
