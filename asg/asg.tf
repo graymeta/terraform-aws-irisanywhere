@@ -84,6 +84,7 @@ resource "aws_launch_template" "iris" {
 
   network_interfaces {
     associate_public_ip_address = true
+    security_groups = [aws_security_group.iris.id]
   }
 
   iam_instance_profile {
