@@ -14,7 +14,7 @@ resource "aws_autoscaling_group" "iris" {
   max_size              = var.asg_size_max
   min_size              = var.asg_size_min
   protect_from_scale_in = true
-  #vpc_zone_identifier   = var.subnet_id
+  vpc_zone_identifier   = var.subnet_id
   target_group_arns     = ["${aws_lb_target_group.port443.id}"]
 
   launch_template {
@@ -85,6 +85,7 @@ resource "aws_launch_template" "iris" {
   network_interfaces {
     associate_public_ip_address = true
     security_groups = [aws_security_group.iris.id]
+    subnet_id       = var.subnet_id
   }
 
   iam_instance_profile {
