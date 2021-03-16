@@ -82,6 +82,10 @@ resource "aws_launch_template" "iris" {
   user_data              = base64encode(data.template_file.cloud_init.rendered)
   ebs_optimized          = true
 
+  network_interfaces {
+    associate_public_ip_address = true
+  }
+
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name
   }
