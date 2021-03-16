@@ -78,7 +78,7 @@ resource "aws_launch_template" "iris" {
   image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type          = var.instance_type
   key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.iris.id]
+  #vpc_security_group_ids = [aws_security_group.iris.id]
   user_data              = base64encode(data.template_file.cloud_init.rendered)
   ebs_optimized          = true
 
