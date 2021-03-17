@@ -74,13 +74,12 @@ data "template_file" "cloud_init" {
 }
 
 resource "aws_launch_template" "iris" {
-  name_prefix            = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
-  image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.iris.id]
-  user_data              = base64encode(data.template_file.cloud_init.rendered)
-  ebs_optimized          = true
+  name_prefix   = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+  image_id      = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  user_data     = base64encode(data.template_file.cloud_init.rendered)
+  ebs_optimized = true
 
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name
@@ -107,6 +106,11 @@ resource "aws_launch_template" "iris" {
       encrypted             = true
       delete_on_termination = "true"
     }
+  }
+
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.iris.id]
   }
 
   tag_specifications {
