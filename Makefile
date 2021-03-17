@@ -1,3 +1,3 @@
 
 test:
-	terraform12 fmt -check .
+	terraform12 fmt -recursive -check .
