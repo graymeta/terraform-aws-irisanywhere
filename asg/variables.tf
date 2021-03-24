@@ -156,16 +156,21 @@ variable "ia_adm_pw" {
   description = "Iris Admin password"
 }
 
-variable "ia_cert_file" {
+variable "ia_cert_crt_arn" {
   type        = string
   description = "(Optional) This enables SSL on server.  Certificate format must be in x509 DER.  Default to blank"
   default     = ""
 }
 
-variable "ia_cert_key_content" {
+variable "ia_cert_key_arn" {
   type        = string
   description = "(Optional) This enables SSL on server.  Private Key matching the cert file.  Blank will force non-SSL between LB and Server.  Default to blank"
   default     = ""
+}
+
+variable "ia_secret_arn" {
+  type        = string
+  description = "arn of secret input - required"
 }
 
 variable "ia_lic_content" {

@@ -5,8 +5,6 @@ $iadmid = "${ia_adm_id}"
 $iadmpw = "${ia_adm_pw}"
 $liccontent = "${ia_lic_content}"
 $liccontent = "${ia_lic_content}"
-$certfile = "${ia_cert_file}"
-$certkeycontent = "${ia_cert_key_content}"
 $S3ConnID = "${ia_s3_conn_id}"
 $S3ConnPW = "${ia_s3_conn_code}"
 $customerID = "${ia_customer_id}"
@@ -16,6 +14,23 @@ $bucketname = "${ia_bucket_name}"
 $AccessKey = "${ia_access_key}"
 $SecretKey = "${ia_secret_key}"
 $MaxSessions = "${ia_max_sessions}"
+$certcrtarn = "${ia_cert_crt_arn}"
+$certkeyarn = "${ia_cert_key_arn}"
+$iasecretarn = "${ia_secret_arn}"
+
+
+# Set Leaf Certs 
+try {
+    if($certcrtarn) {$crt=Get-SECSecretValue $certcrtarn ; $crt = $crt | select -expandproperty secretstring ; add-content -Value $crt 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.crt'
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Leaf Cert Added" }
+    if($certkeyarn) {$key=Get-SECSecretValue $certkeyarn ; $key = $key | select -expandproperty secretstring ; add-content -Value $key 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.key'
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Private key added" }
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception adding certificates" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception adding certificates from terraform"
+}
 
 # Set S3 Licensing
 try {

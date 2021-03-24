@@ -42,8 +42,8 @@ resource "aws_lb_listener" "port443" {
 
 resource "aws_lb_target_group" "port443" {
   name_prefix = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
-  port        = var.ia_cert_key_content != "" ? "443" : "8080"
-  protocol    = var.ia_cert_key_content != "" ? "HTTPS" : "HTTP"
+  port        = var.ia_cert_key_arn != "" ? "443" : "8080"
+  protocol    = var.ia_cert_key_arn != "" ? "HTTPS" : "HTTP"
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   load_balancing_algorithm_type = var.lb_algorithm_type
