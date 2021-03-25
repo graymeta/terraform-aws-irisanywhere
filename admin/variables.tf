@@ -54,24 +54,8 @@ variable "volume_size" {
   default     = "60"
 }
 
-variable "iadm_pw" {
+variable "ia_secret_arn" {
   type        = string
-  description = "PW for Iris Admin"
+  description = "ARN containing secrets for Iris Admin"
 }
 
-variable "iadm_uid" {
-  type        = string
-  description = "UID for Iris Admin"
-  default     = "Admin"
-}
-
-variable "iadmdb_pw" {
-  type        = string
-  description = "PW for Iris Admin DB"
-}
-
-variable "iadmdb_uid" {
-  type        = string
-  description = "UID for Iris Admin DB"
-  default     = "postgres"
-}

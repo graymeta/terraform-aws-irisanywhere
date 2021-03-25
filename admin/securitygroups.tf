@@ -4,8 +4,8 @@ data "aws_subnet" "subnet" {
 }
 
 resource "aws_security_group" "iris_adm" {
-  name_prefix = "${var.hostname_prefix}-iris-admin"
-  description = "${var.hostname_prefix}-iris-admin"
+  name_prefix = replace("${var.hostname_prefix}-${var.instance_type}-iris-admin", ".", "")
+  description = replace("${var.hostname_prefix}-${var.instance_type}-iris-admin", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
