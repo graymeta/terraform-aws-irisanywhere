@@ -56,20 +56,9 @@ data "template_file" "cloud_init" {
     health_check_interval = var.lb_check_interval
     unhealthy_threshold   = var.lb_unhealthy_threshold
     cooldown              = var.asg_scalein_cooldown
-    ia_adm_id             = var.ia_adm_id
-    ia_adm_pw             = var.ia_adm_pw
-    ia_lic_content        = var.ia_lic_content
     ia_cert_crt_arn       = var.ia_cert_crt_arn
     ia_cert_key_arn       = var.ia_cert_key_arn
-    ia_max_sessions       = var.ia_max_sessions
-    ia_s3_conn_id         = var.ia_s3_conn_id
-    ia_s3_conn_code       = var.ia_s3_conn_code
-    ia_customer_id        = var.ia_customer_id
-    ia_admin_server       = var.ia_admin_server
-    ia_service_acct       = var.ia_service_acct
-    ia_bucket_name        = var.ia_bucket_name
-    ia_access_key         = var.ia_access_key
-    ia_secret_key         = var.ia_secret_key
+    ia_max_sessions       = var.ia_max_sessions    
     ia_secret_arn         = var.ia_secret_arn
   }
 }

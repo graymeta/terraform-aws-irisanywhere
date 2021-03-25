@@ -1,24 +1,35 @@
 <powershell>
 Write-Output "TIMING: Cloud_init start at $(Get-Date)"
 
-$iadmid = "${ia_adm_id}"
-$iadmpw = "${ia_adm_pw}"
-$liccontent = "${ia_lic_content}"
-$liccontent = "${ia_lic_content}"
-$S3ConnID = "${ia_s3_conn_id}"
-$S3ConnPW = "${ia_s3_conn_code}"
-$customerID = "${ia_customer_id}"
-$adminserver = "${ia_admin_server}"
-$serviceacct = "${ia_service_acct}" 
-$bucketname = "${ia_bucket_name}"
-$AccessKey = "${ia_access_key}"
-$SecretKey = "${ia_secret_key}"
 $MaxSessions = "${ia_max_sessions}"
 $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 
 
+#Retrieve and prepare Secrets
+try {
+    $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
+
+    #Set init variables
+    $admin_customer_id  = $secretdata.admin_customer_id
+    $admin_db_id        = $secretdata.admin_db_id
+    $admin_db_pw        = $secretdata.admin_db_pw
+    $admin_server       = $secretdata.admin_server
+    $iris_s3_bucketname = $secretdata.iris_s3_bucketname
+    $iris_s3_access_key = $secretdata.iris_s3_access_key
+    $iris_s3_secret_key = $secretdata.iris_s3_secret_key
+    $iris_s3_lic_code   = $secretdata.iris_s3_lic_code
+    $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
+    $iris_serviceacct   = $secretdata.iris_serviceacct
+
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception accessing secret $iasecretarn" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
+
+}
 # Set Leaf Certs 
 try {
     if($certcrtarn) {$crt=Get-SECSecretValue $certcrtarn ; $crt = $crt | select -expandproperty secretstring ; add-content -Value $crt 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.crt'
@@ -34,44 +45,44 @@ catch {
 
 # Set S3 Licensing
 try {
-    add-s3license -tbuid "$S3ConnID" -tbpw "$S3ConnPW" # provided by GM, supplied by TF 
+    add-s3license -tbuid "$iris_s3_lic_id" -tbpw "$iris_s3_lic_code" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 license from terraform "$S3ConnID""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 license from terraform "$iris_s3_lic_id""
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 license from terraform "$S3ConnID""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 license from terraform "$iris_s3_lic_id""
 }
 
 # Set S3 Bucket 
 try {
     Unregister-ScheduledTask -TaskName "HDD_init" -Confirm:$false  -ErrorAction SilentlyContinue | Out-Null
-    add-s3bucketonly -bucketname "$bucketname" -accesskey "$AccessKey" -secretkey "$SecretKey" # provided by GM, supplied by TF 
+    add-s3bucketonly -bucketname "$iris_s3_bucketname" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform $bucketname"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform "$iris_s3_bucketname""
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting S3 license" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform $bucketname"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform "$iris_s3_bucketname""
 }
 
 # Set Iris Admin Customer ID:
 try {
-    set-customer -id "$customerID"
+    set-customer -id "$admin_customer_id"
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set Customer ID from terraform $customerID"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set Customer ID from terraform $admin_customer_id"
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting Customer ID" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Customer ID from terraform $customerID"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Customer ID from terraform "$admin_customer_id""
 }
 
 # Set Iris Admin Server credentials:
 try {
-    set-iaadmincreds -uid "$iadmid" -pass "$iadmpw"
+    set-iaadmincreds -uid "$admin_db_id" -pass "$admin_db_pw"
     # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin server credentials from terraform"
 }
@@ -83,14 +94,14 @@ catch {
 
 # Set Iris Admin Server host:
 try {
-    set-iaadmin -licserver "$adminserver" 
+    set-iaadmin -licserver "$admin_server" 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin Server from terraform "$adminserver""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin Server from terraform "$admin_server""
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting IrisAdmin ID" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin Server from terraform "$adminserver""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin Server from terraform "$admin_server""
 }
 
 # Set Iris Anywhere Max Sessions:
@@ -120,35 +131,9 @@ catch {
     Write-host "Exception during the S3 Licensing process" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA License from terraform "$liccontent""
 }
-    
-# Set SSL Certs 
-try {
-    $certfile = "$certfile"
-    #$certkey = "$certkeycontent"
-    $certpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Anywhere\Certs"
-    # if cert info is present create file
-    if ($certkeycontent) {
-        New-Item -Path $certpath\server.key -ItemType File
-        Add-content -Path $certpath\server.key -Value "$certkeycontent"
-        # Write to IA event log what was inserted by TF
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Certificate Private Key set successfully"
-    }
-    if ($certfile) {
-        New-Item -Path $certpath\server.crt -ItemType File 
-        Add-content -Path $certpath\server.crt -Value "$certfile"        
-        # Write to IA event log what was inserted by TF   
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Certificate CRT set successfully"
-    }
-}
-catch {
-    Write-host $_.Exception | Format-List -force
-    Write-host "Exception during the certificate configuration process" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting certificate data"
-}
 
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
 
-# Set SSL Certs 
 try {
     $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
 
@@ -158,7 +143,7 @@ try {
     # Generate random password
     $newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
     $password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
-    $credential     = New-Object System.Management.Automation.PSCredential ("$serviceacct", $password)
+    $credential     = New-Object System.Management.Automation.PSCredential ("$iris_serviceacct", $password)
     # Add logic to remove pw var, add event log entry and catch exceptions
 
     # Stores credential securely
@@ -168,10 +153,10 @@ try {
     $credential = Import-CliXml -Path $credfile
 
     # Creates Local User for logon
-    New-localuser -name "$serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
+    New-localuser -name "$iris_serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
 
     # Adds User to local Admin
-    Add-LocalGroupMember -Group "Administrators" -Member "$serviceacct" 
+    Add-LocalGroupMember -Group "Administrators" -Member "$iris_serviceacct" 
 
     # Sets autologon
     $autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"

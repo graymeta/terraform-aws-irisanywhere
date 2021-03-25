@@ -24,7 +24,7 @@ variable "asg_scalein_evaluation" {
 
 variable "asg_scalein_threshold" {
   type        = number
-  description = "Optional) Scale in if the number of sessions drop below.  Default to `5`"
+  description = "(Optional) Scale in if the number of sessions drop below.  Default to `5`"
   default     = 5
 }
 
@@ -88,7 +88,7 @@ variable "disk_data_type" {
 variable "disk_os_size" {
   type        = number
   description = "(Optional) EBS volume size.  Default to `50`"
-  default     = "50"
+  default     = "60"
 }
 
 variable "disk_os_type" {
@@ -146,16 +146,6 @@ variable "tags" {
   default     = {}
 }
 
-variable "ia_adm_id" {
-  type        = string
-  description = "Iris Admin user ID"
-}
-
-variable "ia_adm_pw" {
-  type        = string
-  description = "Iris Admin password"
-}
-
 variable "ia_cert_crt_arn" {
   type        = string
   description = "(Optional) This enables SSL on server.  Certificate format must be in x509 DER.  Default to blank"
@@ -170,56 +160,11 @@ variable "ia_cert_key_arn" {
 
 variable "ia_secret_arn" {
   type        = string
-  description = "arn of secret input - required"
-}
-
-variable "ia_lic_content" {
-  type        = string
-  description = "IA license file data"
-}
-
-variable "ia_s3_conn_id" {
-  type        = string
-  description = "S3 Connector SaaS license UID"
-}
-
-variable "ia_s3_conn_code" {
-  type        = string
-  description = "S3 Connector SaaS license PW "
-}
-
-variable "ia_customer_id" {
-  type        = string
-  description = "Set Iris CustomerID"
-}
-
-variable "ia_admin_server" {
-  type        = string
-  description = "Set Iris Admin Server"
-}
-
-variable "ia_service_acct" {
-  type        = string
-  description = "Sets Service Account for autologon"
-}
-
-variable "ia_bucket_name" {
-  type        = string
-  description = "Bucket Name that will attach to Iris"
-}
-
-variable "ia_access_key" {
-  type        = string
-  description = "Access key for bucket access"
+  description = "arn of secrets for configuring application. See Readme for instructions for required inputs- required"
 }
 
 variable "ia_max_sessions" {
   type        = string
   description = "Max sessions per instance"
   default     = "2"
-}
-
-variable "ia_secret_key" {
-  type        = string
-  description = "Secret key for bucket access"
 }
