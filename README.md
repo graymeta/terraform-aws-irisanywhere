@@ -29,9 +29,7 @@ module "irisadmin" {
   instance_type   = "t3.xlarge"
   subnet_id       = ["subnet-foo1"]
   key_name        = "my_key"
-  iadm_uid        = "AdminUID"
-  iadm_pw         = "YourPassword"
-  iadmdb_pw       = "YourDBPassword"
+
 }
 ```
 
@@ -42,9 +40,6 @@ module "irisadmin" {
 * `instance_type` - (Required) The type of the EC2 instance.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `key_name` - (Required) The key name to use for the instances.
-* `iadm_uid` - (Required) The username for accessing the Iris Admin console.
-* `iadm_pw` - (Required) The password for acccessing the Iris Admin console.
-* `iadmdb_pw` - (Required) The password for backend database.
 * `tags` -  (Optional) A map of the additional tags.
 * `volume_type` - (Optional) EBS volume type. Default to `gp3`.
 * `volume_size` - (Optional) EBS volume size. Default to `60`.
@@ -107,21 +102,8 @@ module "irisanywhere1" {
   }
 
   # Entries for IrisAnywhere and S3 information
-  ia_adm_id           = module.irisadmin.ia_adm_id
-  ia_adm_pw           = module.irisadmin.ia_adm_pw
-  ia_admin_server     = element(module.irisadmin.private_dns, 0)
-  ia_cert_file        = ""
-  ia_cert_key_content = ""
-  ia_customer_id      = "customerID"
-  ia_lic_content      = ""
   ia_max_sessions     = "2"
-  ia_s3_conn_id       = "licenced-email@domain.com"
-  ia_s3_conn_code     = "licensecode"
-  ia_service_acct     = "iris-service"
-  ia_bucket_name      = "yourbucketname"
-  ia_access_key      = "youriamaccesskeyvalue"
-  ia_secret_key       = "youriamsecretkeyvalue"
-}
+  
 ```
 
 ### Argument Reference:
@@ -149,23 +131,15 @@ The following arguments are supported:
 * `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
-* `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate.
+* `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
-* `ia_adm_id` - (Required) Username for authenticating to Iris Admin Server
-* `ia_adm_pw` - (Required) Password for authenticating to Iris Admin Server
-* `ia_admin_server` - (Required) Host name of Iris Admin installation. Provided by customer.
-* `ia_cert_file` - (Optional) This enables SSL on server. Certificate format must be in x509 DER.  Default to blank
-* `ia_cert_key_content` - (Optional) This enables SSL on server.  Private Key matching the cert file.  Blank will force non-SSL between LB and Server.  Default to blank
-* `ia_customer_id` - (Required) The customer id associates your Iris Anywhere instances to Iris Admin (licensing). Provided by Graymeta upon licensing
-* `ia_lic_content` - (Optional) License file contents for Iris Admin Server
+
+* `ia_cert_crt_arn` - (Optional) This enables end to end SSL on Iris Anywhere application server. ARN of certificate in secrets manager. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_cert_key_arn` - (Optional) This enables end to end SSL on Iris Anywhere application server.  ARN of private key in secrets manager. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Optional) Set max sessions per Iris Anywhere instance before autoscaling.
-* `ia_s3_conn_id` - (Required) S3 Connector license ID. Provided by GrayMeta upon licensing
-* `ia_s3_conn_code` - (Required) S3 Connector license code (this will be accompanied with S3 Connector ID). Provided by GrayMeta
-* `ia_service_acct` - (Required) Name of service account used to manage Iris Anywhere. Provided by customer.
-* `ia_bucket_name` - (Required) Name of S3 bucket containing assets. Provided by customer.
-* `ia_access_key` - (Required) Access key value to permit access to Iris Anywhere. Provided by customer.
-* `ia_secret_key` - (Required) Secret key to match access key. Provided by customer.
+
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
