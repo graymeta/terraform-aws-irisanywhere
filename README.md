@@ -183,16 +183,18 @@ resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
 
 ### Creating Secrets for Iris Anywhere
 Before you can deploy Iris Admin and Iris Anywhere (ASG), you will need to create a secret in AWS Secrets Manager with the following keys/values:
+
 Required by Iris Admin server
 * Key : Value
 * `admin_db_id`        : userid for Iris Admin database
 * `admin_db_pw`        : password for Iris Admin database
 * `admin_console_id`   : userid of Iris Admin console
 * `admin_console_pw`   : password for Iris Admin console
+
 Required by Iris Anywhere ASG:
 * Key : Value
 * `admin_customer_id`  : provided by GrayMeta licensing
-* `admin_server`       : FQDN of Iris administrator server
+* `admin_server`       : FQDN of Iris Admin server
 * `iris_s3_bucketname` : Name of S3 bucket you would like to attach to Iris Anywhere
 * `iris_s3_access_key` : IAM Access Key with permission to access bucket
 * `iris_s3_secret_key` : IAM Secret key associated with access key
