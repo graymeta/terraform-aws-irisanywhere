@@ -1,7 +1,9 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
 
-The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated `ia_admin_server` deployed first. 
+The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin server deployed first. 
 
+Prerequisets:
+* To start this build, you will need to create a secret in Secrets Manager containing your desired inputs (see Creating Secrets for Iris Anywhere Below).
 * Contact support@graymeta.com to get access to AMI.
 * Terraform 12 is only supported at this time.
 * `version` - Current version is `v0.0.1`.
@@ -177,3 +179,25 @@ resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
 `recurrence` - (Optional) The time when recurring future actions will start. Start time is specified by the user following the Unix cron syntax format.   Based on UTC/GMT.
 
 `desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
+
+
+### Creating Secrets for Iris Anywhere
+Before you can deploy Iris Admin and Iris Anywhere (ASG), you will need to create a secret in AWS Secrets Manager with the following keys/values:
+Required by Iris Admin server
+* Key : Value
+* `admin_db_id`        : userid for Iris Admin database
+* `admin_db_pw`        : password for Iris Admin database
+* `admin_console_id`   : userid of Iris Admin console
+* `admin_console_pw`   : password for Iris Admin console
+Required by Iris Anywhere ASG:
+* Key : Value
+* `admin_customer_id`  : provided by GrayMeta licensing
+* `admin_server`       : FQDN of Iris administrator server
+* `iris_s3_bucketname` : Name of S3 bucket you would like to attach to Iris Anywhere
+* `iris_s3_access_key` : IAM Access Key with permission to access bucket
+* `iris_s3_secret_key` : IAM Secret key associated with access key
+* `iris_s3_lic_code`   : S3 connector license code - provided by GrayMeta during licensing
+* `iris_s3_lic_id`     : S3 connector license id - provided by GrayMeta during licensing
+* `iris_serviceacct`   : account used to run Iris Anywhere
+
+
