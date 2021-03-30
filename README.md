@@ -31,6 +31,8 @@ module "irisadmin" {
   instance_type   = "t3.xlarge"
   subnet_id       = ["subnet-foo1"]
   key_name        = "my_key"
+  ia_secret_arn       = "arn:aws:secretsmanager:us-west-2:913397769129:secret:env/iris/secrets1-E13BIn"
+  
 
 }
 ```
@@ -54,7 +56,7 @@ In addition to all the arguments above the following attributes are exported:
 
 ***
 ## Iris Anywhere Autoscaling Groups
-Deploys Application Load Balancer and Autoscaling group.  We recommend that you do not deploy your Autoscaling Groups until your Iris Admin Server has been licensed with GrayMeta (support@graymeta.com), during this process you will be provided additional key values to plug into your terraform code (`ia_customer_id`, `ia_admin_server`, `ia_s3_conn_id`, `ia_s3_conn_code`).
+Deploys Application Load Balancer and Autoscaling group.  We recommend that you do not deploy your Autoscaling Groups until your Iris Admin Server has been licensed with GrayMeta (support@graymeta.com).
 
 ## Example Usage
 ```
@@ -181,10 +183,12 @@ resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
 `desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
 
 
+
+
 ### Creating Secrets for Iris Anywhere
 Before you can deploy Iris Admin and Iris Anywhere (ASG), you will need to create a secret in AWS Secrets Manager with the following keys/values:
 
-Required by Iris Admin server
+Required by Iris Admin server (these inputs are specified by you)
 * Key : Value
 * `admin_db_id`        : userid for Iris Admin database
 * `admin_db_pw`        : password for Iris Admin database
@@ -194,7 +198,7 @@ Required by Iris Admin server
 Required by Iris Anywhere ASG:
 * Key : Value
 * `admin_customer_id`  : provided by GrayMeta licensing
-* `admin_server`       : FQDN of Iris Admin server
+* `admin_server`       : DNS of Iris Admin server
 * `iris_s3_bucketname` : Name of S3 bucket you would like to attach to Iris Anywhere
 * `iris_s3_access_key` : IAM Access Key with permission to access bucket
 * `iris_s3_secret_key` : IAM Secret key associated with access key
@@ -202,4 +206,7 @@ Required by Iris Anywhere ASG:
 * `iris_s3_lic_id`     : S3 connector license id - provided by GrayMeta during licensing
 * `iris_serviceacct`   : account used to run Iris Anywhere
 
+### Creating DNS for the Iris ASG load balancer
+
+Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer works best.
 
