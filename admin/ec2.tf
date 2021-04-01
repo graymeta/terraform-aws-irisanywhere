@@ -2,13 +2,13 @@ data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
   vars = {
-    ia_secret_arn  = var.ia_secret_arn
+    ia_secret_arn = var.ia_secret_arn
   }
 }
 
 resource "aws_eip" "public_ip" {
-  count    = var.instance_count
-  vpc      = true
+  count = var.instance_count
+  vpc   = true
 }
 
 resource "aws_eip_association" "eip_assoc" {
@@ -27,7 +27,7 @@ resource "aws_instance" "iris_adm" {
   subnet_id                   = element(var.subnet_id, count.index)
   user_data                   = base64encode(data.template_file.cloud_init.rendered)
   associate_public_ip_address = true
- 
+
 
   lifecycle {
     create_before_destroy = true
