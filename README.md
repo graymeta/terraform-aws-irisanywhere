@@ -105,8 +105,9 @@ module "irisanywhere1" {
     "my_tag2" = "my_value2"
   }
 
-  # Entries for IrisAnywhere and S3 information
+  # Entries for IrisAnywhere
   ia_max_sessions     = "2"
+  ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
   
 ```
 
@@ -135,12 +136,12 @@ The following arguments are supported:
 * `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
-* `ssl_certificate_arn` - (Required) The ARN of the SSL server certificate for Load Balancer.
+* `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
 
-* `ia_cert_crt_arn` - (Optional) This enables end to end SSL on Iris Anywhere application server. ARN of certificate in secrets manager. Blank will force non-SSL between LB and Server.  Default to blank
-* `ia_cert_key_arn` - (Optional) This enables end to end SSL on Iris Anywhere application server.  ARN of private key in secrets manager. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Optional) Set max sessions per Iris Anywhere instance before autoscaling.
 
@@ -209,4 +210,3 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 
 ### Creating DNS for the Iris ASG load balancer
 Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
-

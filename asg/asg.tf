@@ -58,7 +58,7 @@ data "template_file" "cloud_init" {
     cooldown              = var.asg_scalein_cooldown
     ia_cert_crt_arn       = var.ia_cert_crt_arn
     ia_cert_key_arn       = var.ia_cert_key_arn
-    ia_max_sessions       = var.ia_max_sessions    
+    ia_max_sessions       = var.ia_max_sessions
     ia_secret_arn         = var.ia_secret_arn
   }
 }
