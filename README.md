@@ -2,15 +2,16 @@
 
 The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin server deployed first. 
 
-Prerequisets:
-* To start this build, you will need to create a secret in Secrets Manager containing your desired inputs (see Creating Secrets for Iris Anywhere Below).
-* Contact support@graymeta.com to get access to AMI.
+Prerequisites:
+* 1.) To start this deployment, you will need to have stored credentials in Secrets Manager (see Creating Secrets for Iris Anywhere Below).
+* 2.) Gain access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
+* 3.) Have certificates created or imported in AWS Certificate Manager.
 * Terraform 12 is only supported at this time.
 * `version` - Current version is `v0.0.1`.
 
 ***
 ## Iris Anywhere Admin Server
-Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process (`ia_customer_id`, `ia_admin_server`, `ia_s3_conn_id`, `ia_s3_conn_code`).  
+Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
 
 The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's {Public IPv4 DNS}:8020 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
 
@@ -31,9 +32,7 @@ module "irisadmin" {
   instance_type   = "t3.xlarge"
   subnet_id       = ["subnet-foo1"]
   key_name        = "my_key"
-  ia_secret_arn       = "arn:aws:secretsmanager:us-west-2:913397769129:secret:env/iris/secrets1-E13BIn"
-  
-
+  ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
 }
 ```
 
@@ -44,10 +43,11 @@ module "irisadmin" {
 * `instance_type` - (Required) The type of the EC2 instance.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `key_name` - (Required) The key name to use for the instances.
+* `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `tags` -  (Optional) A map of the additional tags.
 * `volume_type` - (Optional) EBS volume type. Default to `gp3`.
 * `volume_size` - (Optional) EBS volume size. Default to `60`.
-  
+
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
 * `security_group` - The Security Group of the Admin instance(s).
@@ -182,9 +182,6 @@ resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
 
 `desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
 
-
-
-
 ### Creating Secrets for Iris Anywhere
 Before you can deploy Iris Admin and Iris Anywhere (ASG), you will need to create a secret in AWS Secrets Manager with the following keys/values:
 
@@ -206,7 +203,10 @@ Required by Iris Anywhere ASG:
 * `iris_s3_lic_id`     : S3 connector license id - provided by GrayMeta during licensing
 * `iris_serviceacct`   : account used to run Iris Anywhere
 
-### Creating DNS for the Iris ASG load balancer
+Secrets required for End to End SSL (optional).  Create two seperate secret credentials:
+* `Certificate in X509 DER format` in plain text.
+* `Certificate Private Key` in plain text.
 
-Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer works best.
+### Creating DNS for the Iris ASG load balancer
+Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
 
