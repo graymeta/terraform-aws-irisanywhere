@@ -1,6 +1,6 @@
 resource "aws_lb" "iris_alb" {
   name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""), 0, 6)
-  internal                   = false
+  internal                   = var.alb_internal
   security_groups            = [aws_security_group.alb.id]
   subnets                    = var.subnet_id
   enable_deletion_protection = false
