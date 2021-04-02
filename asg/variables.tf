@@ -168,11 +168,6 @@ variable "ia_cert_key_content" {
   default     = ""
 }
 
-variable "ia_lic_content" {
-  type        = string
-  description = "IA license file data"
-}
-
 variable "ia_s3_conn_id" {
   type        = string
   description = "S3 Connector SaaS license UID"
