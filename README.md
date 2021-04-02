@@ -1,11 +1,11 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
 
-The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin server deployed first. 
+The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin Server deployed first. 
 
 Prerequisites:
-* 1.) To start this deployment, you will need to have stored credentials in Secrets Manager (see Creating Secrets for Iris Anywhere Below).
-* 2.) Gain access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
-* 3.) Have certificates created or imported in AWS Certificate Manager.
+* Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
+* Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
+* Certificates created or imported in AWS Certificate Manager.
 * Terraform 12 is only supported at this time.
 * `version` - Current version is `v0.0.1`.
 
@@ -106,8 +106,11 @@ module "irisanywhere1" {
   }
 
   # Entries for IrisAnywhere
-  ia_max_sessions     = "2"
-  ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
+  ia_max_sessions  = "2"
+  ia_secret_arn    = "arn:aws:secretsmanager:secret:1234567913397769129"
+  ia_cert_crt_arn  = "arn:aws:secretsmanager:secret:1234567913397769130"
+  ia_cert_key_arn  = "arn:aws:secretsmanager:secret:1234567913397769131"
+}
   
 ```
 
