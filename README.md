@@ -113,7 +113,6 @@ module "irisanywhere1" {
   ia_cert_file        = ""
   ia_cert_key_content = ""
   ia_customer_id      = "customerID"
-  ia_lic_content      = ""
   ia_max_sessions     = "2"
   ia_s3_conn_id       = "licenced-email@domain.com"
   ia_s3_conn_code     = "licensecode"
