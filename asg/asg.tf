@@ -58,7 +58,6 @@ data "template_file" "cloud_init" {
     cooldown              = var.asg_scalein_cooldown
     ia_adm_id             = var.ia_adm_id
     ia_adm_pw             = var.ia_adm_pw
-    ia_lic_content        = var.ia_lic_content
     ia_cert_file          = var.ia_cert_file
     ia_cert_key_content   = var.ia_cert_key_content
     ia_max_sessions       = var.ia_max_sessions
