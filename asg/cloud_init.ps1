@@ -3,8 +3,6 @@ Write-Output "TIMING: Cloud_init start at $(Get-Date)"
 
 $iadmid = "${ia_adm_id}"
 $iadmpw = "${ia_adm_pw}"
-$liccontent = "${ia_lic_content}"
-$liccontent = "${ia_lic_content}"
 $certfile = "${ia_cert_file}"
 $certkeycontent = "${ia_cert_key_content}"
 $S3ConnID = "${ia_s3_conn_id}"
