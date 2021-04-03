@@ -168,3 +168,9 @@ variable "ia_max_sessions" {
   description = "Max sessions per instance"
   default     = "2"
 }
+
+variable "ia_url" {
+  type        = string
+  description = "FQDN / DNS of Iris application"
+}
+

@@ -60,6 +60,7 @@ data "template_file" "cloud_init" {
     ia_cert_key_arn       = var.ia_cert_key_arn
     ia_max_sessions       = var.ia_max_sessions
     ia_secret_arn         = var.ia_secret_arn
+    ia_url                = var.ia_url
   }
 }
 

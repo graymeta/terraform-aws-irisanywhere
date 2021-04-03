@@ -5,6 +5,7 @@ $MaxSessions = "${ia_max_sessions}"
 $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
+$iaurl = "${ia_url}"
 
 
 #Retrieve and prepare Secrets
@@ -174,11 +175,18 @@ catch {
 }
 
 # Setup the ia-asg service
-[System.Environment]::SetEnvironmentVariable('gm_ia_addr', 'http://127.0.0.1:8080', [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('gm_ia_metric_interval', "${metric_check_interval}s", [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('gm_ia_health_interval', "${health_check_interval}s", [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('gm_ia_health_threshold', "${unhealthy_threshold}", [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('gm_ia_cooldown', "${cooldown}s", [System.EnvironmentVariableTarget]::User)
+$ia_https_url="https://$($iaurl):443"
+$ia_http_url="http://$($iaurl):8080"
+
+if($certkeyarn){
+    [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_https_url, [System.EnvironmentVariableTarget]::Machine)
+}else {
+    [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_http_url, [System.EnvironmentVariableTarget]::Machine)
+}
+[System.Environment]::SetEnvironmentVariable('gm_ia_metric_interval', "${metric_check_interval}s", [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('gm_ia_health_interval', "${health_check_interval}s", [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('gm_ia_health_threshold', "${unhealthy_threshold}", [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('gm_ia_cooldown', "${cooldown}s", [System.EnvironmentVariableTarget]::Machine)
 New-Service -Name ia-asg `
     -BinaryPathName "C:\Program Files\Graymeta\asg\bin\ia_asg.exe" `
     -DisplayName ia-asg `
@@ -190,8 +198,8 @@ New-NetFirewallRule -DisplayName "Allow inbound TCP port 9000 IA-ASG" -Direction
 # Create a Name tag
 $webclient = new-object net.webclient
 $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
-[System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::User)
-[System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::Machine)
 Import-Module -name AWSPowerShell
 $tag = New-Object Amazon.EC2.Model.Tag
 $tag.Key = "Name"
