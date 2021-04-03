@@ -176,7 +176,7 @@ catch {
 
 # Setup the ia-asg service
 $ia_https_url="https://$($iaurl):443"
-$ia_http_url="http://$($iaurl):8080"
+$ia_http_url="http://127.0.0.1:8080"
 
 if($certkeyarn){
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_https_url, [System.EnvironmentVariableTarget]::Machine)
