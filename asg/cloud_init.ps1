@@ -5,7 +5,7 @@ $MaxSessions = "${ia_max_sessions}"
 $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
-$iaurl = "${ia_url}"
+$iadomain = "${ia_domain}"
 
 
 #Retrieve and prepare Secrets
@@ -175,11 +175,18 @@ catch {
 }
 
 # Setup the ia-asg service
-$ia_https_url="https://$($iaurl):443"
+$nodefqdn= -join("$env:COMPUTERNAME",".","$iadomain")
+$ia_https_url="https://$($nodefqdn):443"
 $ia_http_url="http://127.0.0.1:8080"
+
+
 
 if($certkeyarn){
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_https_url, [System.EnvironmentVariableTarget]::Machine)
+
+    $HostFile = 'C:\Windows\System32\drivers\etc\hosts'     
+    Add-content -path $HostFile -value "127.0.0.1 `t $nodefqdn"
+
 }else {
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_http_url, [System.EnvironmentVariableTarget]::Machine)
 }

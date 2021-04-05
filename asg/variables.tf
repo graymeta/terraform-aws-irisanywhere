@@ -169,7 +169,7 @@ variable "ia_max_sessions" {
   default     = "2"
 }
 
-variable "ia_url" {
+variable "ia_domain" {
   type        = string
   description = "FQDN / DNS of Iris application"
 }
