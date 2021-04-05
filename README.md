@@ -110,7 +110,7 @@ module "irisanywhere1" {
   ia_secret_arn    = "arn:aws:secretsmanager:secret:1234567913397769129"
   ia_cert_crt_arn  = "arn:aws:secretsmanager:secret:1234567913397769130"
   ia_cert_key_arn  = "arn:aws:secretsmanager:secret:1234567913397769131"
-  ia_url           = "irisanywhere.yourdomain.com"
+  ia_domain        = "yourdomain.com"
 }
   
 ```
@@ -146,9 +146,9 @@ The following arguments are supported:
 
 * `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
 * `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_domain` - (Required) domain name of SSL wildcard SSL used for end to end SSL, ie "yourdomain.com", or "test.yourdomain.com". Domain must match cert SAN.
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Optional) Set max sessions per Iris Anywhere instance before autoscaling.
-* `ia_url` - (Required) FQDN of Iris Anywhere application.
 
 
 ### Attributes Reference:
