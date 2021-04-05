@@ -172,6 +172,6 @@ variable "ia_max_sessions" {
 variable "ia_domain" {
   type        = string
   description = "FQDN / DNS of Iris application"
-   default     = ""
+  default     = ""
 }
 
