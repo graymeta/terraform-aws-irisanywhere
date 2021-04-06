@@ -19,6 +19,16 @@
         {
             "Effect": "Allow",
             "Action": [
+                "secretsmanager:GetResourcePolicy",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecretVersionIds"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
                 "autoscaling:SetInstanceProtection"
             ],
             "Resource": "arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/${cluster}"

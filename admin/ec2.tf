@@ -2,16 +2,13 @@ data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
   vars = {
-    iadm_uid   = var.iadm_uid
-    iadm_pw    = var.iadm_pw
-    iadmdb_uid = var.iadmdb_uid
-    iadmdb_pw  = var.iadmdb_pw
+    ia_secret_arn = var.ia_secret_arn
   }
 }
 
 resource "aws_eip" "public_ip" {
-  count    = var.instance_count
-  instance = element(aws_instance.iris_adm.*.id, count.index)
+  count = var.instance_count
+  vpc   = true
 }
 
 resource "aws_eip_association" "eip_assoc" {
@@ -21,16 +18,19 @@ resource "aws_eip_association" "eip_assoc" {
 }
 
 resource "aws_instance" "iris_adm" {
-  ami                  = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
-  count                = var.instance_count
-  iam_instance_profile = aws_iam_instance_profile.iris_adm.name
-  instance_type        = var.instance_type
-  key_name             = var.key_name
-  security_groups      = [aws_security_group.iris_adm.id]
-  subnet_id            = element(var.subnet_id, count.index)
-  user_data            = base64encode(data.template_file.cloud_init.rendered)
+  ami                         = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
+  count                       = var.instance_count
+  iam_instance_profile        = aws_iam_instance_profile.iris_adm.name
+  instance_type               = var.instance_type
+  key_name                    = var.key_name
+  vpc_security_group_ids      = [aws_security_group.iris_adm.id]
+  subnet_id                   = element(var.subnet_id, count.index)
+  user_data                   = base64encode(data.template_file.cloud_init.rendered)
+  associate_public_ip_address = true
+
 
   lifecycle {
+    create_before_destroy = true
     ignore_changes = [
       ami,
       ebs_optimized,
@@ -58,14 +58,3 @@ resource "aws_instance" "iris_adm" {
   }
 }
 
-# Create instance profile
-resource "aws_iam_instance_profile" "iris_adm" {
-  name = "iris_adm"
-  role = aws_iam_role.iris_adm_role.name
-}
-
-resource "aws_iam_role" "iris_adm_role" {
-  name = "iris_adm_role"
-
-  assume_role_policy = file("${path.module}/adm_role.json")
-}
