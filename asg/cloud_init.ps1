@@ -1,4 +1,4 @@
-<powershell>
+
 Write-Output "TIMING: Cloud_init start at $(Get-Date)"
 
 $MaxSessions = "${ia_max_sessions}"
@@ -6,7 +6,7 @@ $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
-
+$user_init = "${user_init}"
 
 #Retrieve and prepare Secrets
 try {
@@ -23,7 +23,6 @@ try {
     $iris_s3_lic_code   = $secretdata.iris_s3_lic_code
     $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
     $iris_serviceacct   = $secretdata.iris_serviceacct
-
 }
 catch {
     Write-host $_.Exception | Format-List -force
@@ -214,9 +213,8 @@ $tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
 
 # Restarting host to invoke autologon
-Start-Sleep -Seconds 30
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
+Start-Sleep -Seconds 15
 Write-Output "TIMING: rebooting now at $(Get-Date)"
-Restart-Computer -Force
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "IA init complete"
 
-</powershell>
+

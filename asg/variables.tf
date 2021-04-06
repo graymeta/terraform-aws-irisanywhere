@@ -171,7 +171,12 @@ variable "ia_max_sessions" {
 
 variable "ia_domain" {
   type        = string
-  description = "FQDN / DNS of Iris application"
+  description = "domain name suffix for SSL cert used by Iris"
   default     = ""
 }
 
+variable "user_init" {
+  type        = string
+  description = "Custom Userinit"
+  default     = ""
+}

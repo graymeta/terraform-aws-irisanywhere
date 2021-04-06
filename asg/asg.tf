@@ -47,6 +47,29 @@ resource "aws_autoscaling_group" "iris" {
   }
 }
 
+data "cloudinit_config" "config" {
+    gzip          = false
+    base64_encode = false
+
+  part {
+    content_type = "text/cloud-config"
+    content      = "${data.template_file.cloud_init.rendered}"
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = var.user_init
+    merge_type   = "list(append)+dict(recurse_array)+str()" 
+  }
+  
+  part {
+    content_type = "text/x-shellscript"
+    content      = "<powershell>Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message 'Restarting node' ; Restart-Computer -Force </powershell>"
+    merge_type   = "list(append)+dict(recurse_array)+str()"
+  }
+  
+}
+
 data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
@@ -61,6 +84,7 @@ data "template_file" "cloud_init" {
     ia_max_sessions       = var.ia_max_sessions
     ia_secret_arn         = var.ia_secret_arn
     ia_domain             = var.ia_domain
+    user_init             = var.user_init
   }
 }
 
@@ -69,7 +93,7 @@ resource "aws_launch_template" "iris" {
   image_id      = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type = var.instance_type
   key_name      = var.key_name
-  user_data     = base64encode(data.template_file.cloud_init.rendered)
+  user_data     = base64encode(join("\n", ["<powershell>","${data.template_file.cloud_init.rendered}","${var.user_init}", "\n", "Restart-Computer -Force","\n", "</powershell>"]))
   ebs_optimized = true
 
   iam_instance_profile {
