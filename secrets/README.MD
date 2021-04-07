@@ -15,7 +15,7 @@ provider "aws" {
 }
 
 module "iris-secrets" {    
-    #source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.1"
+    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.1"
     secret_name        = "yoursecretcredname"
     admin_console_id   = "null"
     admin_console_pw   = "null"
