@@ -4,6 +4,12 @@ variable "access_cidr" {
   default     = ["0.0.0.0/0"]
 }
 
+variable "alb_internal" {
+  type        = bool
+  description = "(Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`"
+  default     = false
+}
+
 variable "asg_check_interval" {
   type        = number
   description = "(Optional) Autoscale check interval.  Default to `60`"
