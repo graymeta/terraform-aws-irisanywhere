@@ -1,4 +1,3 @@
-
 # Creating Secrets for GrayMeta Iris Anywhere with Terraform
 Purpose: To stage secrets for Iris Anywhere into an AWS Secrets Manager.  We do not recommend populating the values here since they will be stored in state. We recommend using CLI or the console to update.  Leave the values as "null" for best practice.
 
@@ -36,7 +35,7 @@ module "iris-secrets" {
 ```
 
 ### Arguement Reference:
-* `secret_name` - (Required) A unique name for your secret`
+* `secret_name` - (Required) A unique name for your secret
 * `admin_console_id` - (Required) Username for your Iris Admin console.
 * `admin_console_pw` - (Required) Password for your Iris Admin console.
 * `admin_customer_id` - (Required) Customer ID value for your Iris License.
