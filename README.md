@@ -7,7 +7,7 @@ Prerequisites:
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12 is only supported at this time.
-* `version` - Current version is `v0.0.1`.
+* `version` - Current version is `v0.0.2`.
 
 ***
 ## Iris Anywhere Admin Server
@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.1"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.2"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -66,7 +66,7 @@ provider "aws" {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.1"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.2"
 
   access_cidr = ["0.0.0.0/0"]
 
@@ -110,8 +110,6 @@ module "irisanywhere1" {
   # Entries for IrisAnywhere
   ia_max_sessions  = "2"
   ia_secret_arn    = "arn:aws:secretsmanager:secret:1234567913397769129"
-  ia_cert_crt_arn  = "arn:aws:secretsmanager:secret:1234567913397769130"
-  ia_cert_key_arn  = "arn:aws:secretsmanager:secret:1234567913397769131"
   ia_domain        = "yourdomain.com"
 }
   
