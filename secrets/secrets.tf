@@ -1,6 +1,6 @@
 
 resource "aws_secretsmanager_secret" "iris_secrets" {
-  name = var.secret_name
+  name        = var.secret_name
   description = "Iris Secrets"
 }
 

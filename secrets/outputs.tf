@@ -42,7 +42,7 @@ output "iris_s3_lic_id" {
   description = "Iris Secrets"
   value       = var.iris_s3_lic_id
 }
-    
+
 output "iris_s3_lic_code" {
   description = "Iris Secrets"
   value       = var.iris_s3_lic_code
