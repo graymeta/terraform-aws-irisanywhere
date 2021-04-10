@@ -29,7 +29,6 @@ variable "admin_console_pw" {
   description = "Password for Iris Admin console"
 }
 
-
 variable "admin_server" {
   type        = string
   description = "FQDN of Iris Admin Server"
