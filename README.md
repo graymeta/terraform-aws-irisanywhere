@@ -118,7 +118,7 @@ module "irisanywhere1" {
 ### Argument Reference:
 The following arguments are supported:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `alb_internal` - (Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`
+* `alb_internal` - (Optional) sets the application load balancer for Iris Anywhere to internal mode.  When set to `true` this also disables allocating public IP addresses to Iris Anywhere EC2 instances. Default to `false`
 * `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60` (seconds)
 * `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `300` (seconds)
 * `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `2` (evaluation periods)
