@@ -42,7 +42,7 @@ module "iris-secrets" {
 * `admin_db_id` - (Required) Username for your Iris Admin database.
 * `admin_db_pw` - (Required) Password for your Iris Admin database.
 * `admin_server` - (Required) FQDN of Iris Admin Server.
-* `iris_s3_bucketname` - (Required) Name of S3 bucket that will be attached to Iris Anywhere.
+* `iris_s3_bucketname` - (Required) Name of S3 bucket that will be attached to Iris Anywhere. Multiple buckets require same access/secert keys and comma seperation "bucket1, bucket2".
 * `iris_s3_access_key` - (Required) Access Key used to attach to the S3 bucket.
 * `iris_s3_secret_key` - (Required) Secret Key used to attach to the S3 bucket.
 * `iris_s3_lic_id` - (Required) S3 license ID for Iris Anywhere.
