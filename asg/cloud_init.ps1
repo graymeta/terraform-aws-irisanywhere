@@ -6,7 +6,6 @@ $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
 
-
 #Retrieve and prepare Secrets
 try {
     $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -58,14 +57,18 @@ catch {
 # Set S3 Bucket 
 try {
     Unregister-ScheduledTask -TaskName "HDD_init" -Confirm:$false  -ErrorAction SilentlyContinue | Out-Null
-    add-s3bucketonly -bucketname "$iris_s3_bucketname" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
+
+    $bucketlist=$iris_s3_bucketname -split ", "
+    foreach($i in $bucketlist){
+    add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform "$iris_s3_bucketname""
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform "$i"" 
+    }
 }
 catch {
     Write-host $_.Exception | Format-List -force
-    Write-host "Exception setting S3 license" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform "$iris_s3_bucketname""
+    Write-host "Exception S3 Bucket" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform "$i""
 }
 
 # Set Iris Admin Customer ID:
@@ -173,12 +176,21 @@ catch {
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception establishing autologon configuration"
 }
 
+#CW Config
+try {
+    & $env:ProgramFiles\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1 -a fetch-config -m ec2 -c file:$env:ProgramFiles\Amazon\AmazonCloudWatchAgent\config.json -s
+
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Error setting cloudwatch config" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting config"
+}
+
 # Setup the ia-asg service
 $nodefqdn= -join("$env:COMPUTERNAME",".","$iadomain")
 $ia_https_url="https://$($nodefqdn):443"
 $ia_http_url="http://127.0.0.1:8080"
-
-
 
 if($certkeyarn){
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_https_url, [System.EnvironmentVariableTarget]::Machine)

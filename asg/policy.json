@@ -15,6 +15,20 @@
             "Effect": "Allow",
             "Action": "autoscaling:DescribeAutoScalingInstances",
             "Resource": "*"
+        }, 
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeTags",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups",
+                "logs:CreateLogStream",
+                "logs:CreateLogGroup"
+            ],
+            "Resource": "*"
         },
         {
             "Effect": "Allow",

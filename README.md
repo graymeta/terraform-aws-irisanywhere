@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.2"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.4"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -66,7 +66,7 @@ provider "aws" {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.2"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.4"
 
   access_cidr = ["0.0.0.0/0"]
 
