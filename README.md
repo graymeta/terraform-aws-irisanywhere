@@ -66,7 +66,7 @@ provider "aws" {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.4"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.5"
 
   access_cidr = ["0.0.0.0/0"]
 
