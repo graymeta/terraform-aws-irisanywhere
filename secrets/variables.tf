@@ -64,6 +64,43 @@ variable "iris_serviceacct" {
   description = "account name for application"
 }
 
+variable "okta_issuer" {
+  type        = string
+  description = "Value for Okta Issuer SPA"
+}
+
+variable "okta_clientid" {
+  type        = string
+  description = "Value for Okta Client ID SPA"
+}
+
+variable "okta_redirecturi" {
+  type        = string
+  description = "Value for Okta callback URI SPA"
+}
+
+variable "okta_scope" {
+  type        = string
+  description = "Value for scope SPA"
+}
+
+variable "s3_meta_access_key" {
+  type        = string
+  description = "S3 Access key for alternate bucket write access"
+}
+
+variable "s3_meta_secret_key" {
+  type        = string
+  description = "S3 Secret key for alternate bucket write access"
+}
+
+variable "s3_meta_bucketname" {
+  type        = string
+  description = "S3 bucket name for alternate bucket write access"
+}
+
+
+
 variable "tags" {
   type        = map(string)
   description = "(Optional) A map of the additional tags."

@@ -14,7 +14,7 @@ provider "aws" {
 }
 
 module "iris-secrets" {    
-    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.1"
+    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.4"
     secret_name        = "yoursecretcredname"
     admin_console_id   = "null"
     admin_console_pw   = "null"
@@ -28,6 +28,15 @@ module "iris-secrets" {
     iris_s3_lic_id     = "null"
     iris_s3_lic_code   = "null"
     iris_serviceacct   = "null"
+
+    okta_issuer        = ""
+    okta_clientid      = ""
+    okta_redirecturi   = ""
+    okta_scope         = ""
+
+    s3_meta_access_key = ""
+    s3_meta_secret_key = ""
+    s3_meta_bucketname = ""
     tags = {
     "costcenter" = "yourcostcenter"
   }
@@ -48,4 +57,13 @@ module "iris-secrets" {
 * `iris_s3_lic_id` - (Required) S3 license ID for Iris Anywhere.
 * `iris_s3_lic_code` - (Required) S3 license code for Iris Anywhere.
 * `iris_serviceacct` - (Required) User account used for running Iris Anywhere.
+
+* `okta_issuer` - (Optional) User account used for running Iris Anywhere.
+* `okta_clientid` - (Optional) User account used for running Iris Anywhere.
+* `okta_redirecturi` - (Optional) User account used for running Iris Anywhere.
+* `okta_scope` - (Optional) User account used for running Iris Anywhere.
+
+* `s3_meta_access_key` - (Optional) User account used for running Iris Anywhere.
+* `s3_meta_secret_key` - (Optional) User account used for running Iris Anywhere.
+* `s3_meta_bucketname` - (Optional) User account used for running Iris Anywhere.
 * `tags` -  (Optional) A map of the additional tags.
