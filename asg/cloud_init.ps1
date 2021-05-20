@@ -22,6 +22,15 @@ try {
     $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
     $iris_serviceacct   = $secretdata.iris_serviceacct
 
+    $okta_issuer        = $secretdata.okta_issuer
+    $okta_clientid	    = $secretdata.okta_clientid
+    $okta_redirecturi   = $secretdata.okta_redirecturi
+    $okta_scope         = $secretdata.okta_scope
+
+    $s3_meta_bucketname = $secretdata.s3_meta_bucketname
+    $s3_meta_access_key = $secretdata.s3_meta_access_key
+    $s3_meta_secret_key = $secretdata.s3_meta_secret_key
+
 }
 catch {
     Write-host $_.Exception | Format-List -force
@@ -29,6 +38,7 @@ catch {
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
 
 }
+
 # Set Leaf Certs 
 try {
     if($certcrtarn) {$crt=Get-SECSecretValue $certcrtarn ; $crt = $crt | select -expandproperty secretstring ; add-content -Value $crt 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.crt'
@@ -55,12 +65,30 @@ catch {
 }
 
 # Set S3 Bucket 
+
+if($s3_meta_bucketname){
+    $bucketlist=$iris_s3_bucketname -split ", "
+    foreach($i in $bucketlist){
+        $dir = "D:\irisanywhere\$($i)"
+        new-item $dir -ItemType Directory
+        Write-Host "Found Meta config for bucket $i to directory "$dir" with meta credentials $s3_meta_access_key"
+        tiercli config "$dir" target s3 "$iris_s3_access_key" "$iris_s3_secret_key" http://s3.amazonaws.com
+        tiercli config "$dir" container  "$i"
+        tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key"    
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta bucket $s3_meta_bucketname  & $dir"
+    }
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta access key $s3_meta_access_key" 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta secret key $s3_meta_secret_key"    
+    tiercli config reload
+}
+else {
+
 try {
     Unregister-ScheduledTask -TaskName "HDD_init" -Confirm:$false  -ErrorAction SilentlyContinue | Out-Null
-
     $bucketlist=$iris_s3_bucketname -split ", "
     foreach($i in $bucketlist){
     add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
+
     # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform "$i"" 
     }
@@ -69,8 +97,8 @@ catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception S3 Bucket" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 Bucket from terraform "$i""
+    }
 }
-
 # Set Iris Admin Customer ID:
 try {
     set-customer -id "$admin_customer_id"
@@ -119,6 +147,18 @@ catch {
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting max sessions to $MaxSessions"
 }
 
+# Set Okta config:
+try {
+    if($okta_issuer){
+    set-okta -enabled "true" -issuer "$okta_issuer" -clientid "$okta_clientid" -redirecturi "$okta_redirecturi" -scope "$okta_scope"
+    # Write to IA event log what was inserted by TF
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set Okta config from terraform"}
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting Okta Config" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Okta config from terraform"
+}
 # Set Iris Admin License 
 try {
     $licpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Server\License\ForImport"

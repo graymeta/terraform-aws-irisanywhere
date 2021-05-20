@@ -14,7 +14,7 @@ provider "aws" {
 }
 
 module "iris-secrets" {    
-    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.1"
+    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.5"
     secret_name        = "yoursecretcredname"
     admin_console_id   = "null"
     admin_console_pw   = "null"
@@ -28,6 +28,15 @@ module "iris-secrets" {
     iris_s3_lic_id     = "null"
     iris_s3_lic_code   = "null"
     iris_serviceacct   = "null"
+
+    okta_issuer        = ""
+    okta_clientid      = ""
+    okta_redirecturi   = ""
+    okta_scope         = ""
+
+    s3_meta_access_key = ""
+    s3_meta_secret_key = ""
+    s3_meta_bucketname = ""
     tags = {
     "costcenter" = "yourcostcenter"
   }
@@ -48,4 +57,13 @@ module "iris-secrets" {
 * `iris_s3_lic_id` - (Required) S3 license ID for Iris Anywhere.
 * `iris_s3_lic_code` - (Required) S3 license code for Iris Anywhere.
 * `iris_serviceacct` - (Required) User account used for running Iris Anywhere.
+
+* `okta_issuer` - (Optional) Okta Issuer value for SPA configuration.
+* `okta_clientid` - (Optional) Okta Client ID value for SPA configuration.
+* `okta_redirecturi` - (Optional) Okta redirect URI value for SPA configuration.
+* `okta_scope` - (Optional) Okta scope value for SPA configuration.
+
+* `s3_meta_access_key` - (Optional) Access key for S3 write access.
+* `s3_meta_secret_key` - (Optional) Secret key value for S3 write access.
+* `s3_meta_bucketname` - (Optional) S3 bucket name for write access.
 * `tags` -  (Optional) A map of the additional tags.
