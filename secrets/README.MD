@@ -58,12 +58,12 @@ module "iris-secrets" {
 * `iris_s3_lic_code` - (Required) S3 license code for Iris Anywhere.
 * `iris_serviceacct` - (Required) User account used for running Iris Anywhere.
 
-* `okta_issuer` - (Optional) User account used for running Iris Anywhere.
-* `okta_clientid` - (Optional) User account used for running Iris Anywhere.
-* `okta_redirecturi` - (Optional) User account used for running Iris Anywhere.
-* `okta_scope` - (Optional) User account used for running Iris Anywhere.
+* `okta_issuer` - (Optional) Okta Issuer value for SPA configuration.
+* `okta_clientid` - (Optional) Okta Client ID value for SPA configuration.
+* `okta_redirecturi` - (Optional) Okta redirect URI value for SPA configuration.
+* `okta_scope` - (Optional) Okta scope value for SPA configuration.
 
-* `s3_meta_access_key` - (Optional) User account used for running Iris Anywhere.
-* `s3_meta_secret_key` - (Optional) User account used for running Iris Anywhere.
-* `s3_meta_bucketname` - (Optional) User account used for running Iris Anywhere.
+* `s3_meta_access_key` - (Optional) Access key for S3 write access.
+* `s3_meta_secret_key` - (Optional) Secret key value for S3 write access.
+* `s3_meta_bucketname` - (Optional) S3 bucket name for write access.
 * `tags` -  (Optional) A map of the additional tags.
