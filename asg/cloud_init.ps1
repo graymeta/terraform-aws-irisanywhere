@@ -156,8 +156,8 @@ try {
 }
 catch {
     Write-host $_.Exception | Format-List -force
-    Write-host "Exception setting Customer ID" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Customer ID from terraform "$admin_customer_id""
+    Write-host "Exception setting Okta Config" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Okta config from terraform"
 }
 # Set Iris Admin License 
 try {
