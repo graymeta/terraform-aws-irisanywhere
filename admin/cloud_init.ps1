@@ -27,6 +27,8 @@ $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.
 
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
 try {
+
+    # SAR: How long does this take?
     Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
 
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1000 -message "Iris Admin installed"

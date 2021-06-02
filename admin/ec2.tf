@@ -16,7 +16,10 @@ resource "aws_eip_association" "eip_assoc" {
   count         = var.instance_count
   instance_id   = element(aws_instance.iris_adm.*.id, count.index)
 }
-
+/*
+What happens to the data if this node dies?
+Have you considered an ASG of 1 with a remountable data volume?
+*/
 resource "aws_instance" "iris_adm" {
   ami                         = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
   count                       = var.instance_count

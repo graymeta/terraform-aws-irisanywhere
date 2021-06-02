@@ -131,11 +131,12 @@ resource "aws_cloudwatch_metric_alarm" "out" {
   alarm_name          = replace("${var.hostname_prefix}-${var.instance_type}-ScaleOut", ".", "")
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods  = var.asg_scaleout_evaluation
-  metric_name         = "IrisAvailableSessions"
-  namespace           = "AWS/EC2"
-  period              = var.asg_check_interval
-  statistic           = "Sum"
-  threshold           = var.asg_scaleout_threshold
+  # Sar: This is pretty neat, would love to learn how this is implemented.
+  metric_name = "IrisAvailableSessions"
+  namespace   = "AWS/EC2"
+  period      = var.asg_check_interval
+  statistic   = "Sum"
+  threshold   = var.asg_scaleout_threshold
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.iris.name
