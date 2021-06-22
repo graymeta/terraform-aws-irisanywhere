@@ -73,6 +73,12 @@ variable "base_ami" {
   default     = ""
 }
 
+variable "bucketname" {
+  type        = string
+  description = "(Required) Name of S3 bucket used to access assets"
+  default     = ""
+}
+
 variable "disk_data_iops" {
   type        = number
   description = "(Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2."

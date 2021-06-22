@@ -7,6 +7,7 @@ data "template_file" "iris_policy" {
 
   vars = {
     cluster = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+    bucketname = var.bucketname
   }
 }
 
