@@ -57,3 +57,14 @@ resource "aws_security_group_rule" "allow_8020" {
   protocol          = "tcp"
   cidr_blocks       = var.access_cidr
 }
+
+# Allow Postgres inbound traffic
+resource "aws_security_group_rule" "allow_8021" {
+  security_group_id = aws_security_group.iris_adm.id
+  description       = "Allow 8021"
+  type              = "ingress"
+  from_port         = "8021"
+  to_port           = "8021"
+  protocol          = "tcp"
+  cidr_blocks       = var.access_cidr
+}
