@@ -6,7 +6,7 @@ data "template_file" "iris_policy" {
   template = file("${path.module}/policy.json")
 
   vars = {
-    cluster = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+    cluster    = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
   }
 }
 
