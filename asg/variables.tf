@@ -186,3 +186,15 @@ variable "user_init" {
   description = "Custom Userinit"
   default     = ""
 }
+
+variable "s3_policy" {
+  type        = string
+  description = "S3 Policy for IAM"
+  default     = "{}"
+}
+
+variable "iam_policy_enabled" {
+  type        = bool
+  description = "Enabled custom policy for IAM/S3 objects"
+  default     = "false"
+}
