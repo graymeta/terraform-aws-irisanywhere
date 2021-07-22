@@ -19,25 +19,25 @@ variable "asg_check_interval" {
 variable "asg_scalein_cooldown" {
   type        = number
   description = "(Optional) Scale in cooldown period.  Default to `300`"
-  default     = 300
+  default     = 420
 }
 
 variable "asg_scalein_evaluation" {
   type        = number
   description = "(Optional) Scale in evaluation periods.  Default to `2`"
-  default     = 2
+  default     = 10
 }
 
 variable "asg_scalein_threshold" {
   type        = number
-  description = "(Optional) Scale in if the number of sessions drop below.  Default to `5`"
-  default     = 5
+  description = "(Optional) Scale in if the number of sessions drop below.  Default to max sessions plus 1"
+  default     = "3"
 }
 
 variable "asg_scaleout_cooldown" {
   type        = number
   description = "(Optional) Scale out cooldown period.  Default to `300`"
-  default     = 300
+  default     = 420
 }
 
 variable "asg_scaleout_evaluation" {
@@ -48,8 +48,8 @@ variable "asg_scaleout_evaluation" {
 
 variable "asg_scaleout_threshold" {
   type        = number
-  description = "(Optional) Scale out if the number of sessions drop below.  Default to `5`"
-  default     = 5
+  description = "(Optional) Scale out if the number of sessions drop below.  Default to max sessions minus 1"
+  default     = "1"
 }
 
 variable "asg_size_desired" {
@@ -108,6 +108,12 @@ variable "hostname_prefix" {
   description = "(Required) A unique name."
 }
 
+variable "iam_policy_enabled" {
+  type        = bool
+  description = "Enabled custom policy for IAM/S3 objects default is false"
+  default     = false
+}
+
 variable "instance_type" {
   type        = string
   description = "(Required) The type of the EC2 instance."
@@ -134,6 +140,12 @@ variable "lb_unhealthy_threshold" {
   type        = number
   description = "(Optional) Loadbalancer unhealthy threshold.  Default to `2`"
   default     = 2
+}
+
+variable "s3_policy" {
+  type        = string
+  description = "(Optional) S3 Policy for IAM"
+  default     = "{}"
 }
 
 variable "ssl_certificate_arn" {
@@ -166,35 +178,23 @@ variable "ia_cert_key_arn" {
 
 variable "ia_secret_arn" {
   type        = string
-  description = "arn of secrets for configuring application. See Readme for instructions for required inputs- required"
+  description = "(Required) arn of secrets for configuring application. See Readme for instructions for required inputs"
 }
 
 variable "ia_max_sessions" {
   type        = string
-  description = "Max sessions per instance"
+  description = "(Required) max number of sessions (users) per instance. Based on instance type and media playback requirements"
   default     = "2"
 }
 
 variable "ia_domain" {
   type        = string
-  description = "domain name suffix for SSL cert used by Iris"
+  description = "(Optional) domain name suffix for SSL cert used by Iris"
   default     = ""
 }
 
 variable "user_init" {
   type        = string
-  description = "Custom Userinit"
+  description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""
-}
-
-variable "s3_policy" {
-  type        = string
-  description = "S3 Policy for IAM"
-  default     = "{}"
-}
-
-variable "iam_policy_enabled" {
-  type        = bool
-  description = "Enabled custom policy for IAM/S3 objects"
-  default     = "false"
 }
