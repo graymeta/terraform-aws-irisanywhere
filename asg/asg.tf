@@ -23,7 +23,6 @@ resource "aws_autoscaling_group" "iris" {
     max_group_prepared_capacity = var.asg_size_max - (var.asg_size_max - 1)
   }
 
-
   launch_template {
     id      = aws_launch_template.iris.id
     version = "$Latest"
