@@ -7,7 +7,7 @@ Prerequisites:
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12 is only supported at this time.
-* `version` - Current version is `v0.0.2`.
+* `version` - Current version is `v0.0.7`.
 
 ***
 ## Iris Anywhere Admin Server
@@ -65,36 +65,34 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
+locals {
+  # Calculates scale in/out threshold based on session count.
+  ia_max_sessions        = 3
+  asg_scaleout_threshold = local.ia_max_sessions - 1
+  asg_scalein_threshold = local.ia_max_sessions + 1
+}
+
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.6"
-
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.7"
   access_cidr = ["0.0.0.0/0"]
-
-  alb_internal = true
-
+  alb_internal = false
   lb_check_interval      = 30
   lb_unhealthy_threshold = 2
-
   asg_check_interval = 60
-
-  asg_scalein_cooldown   = 600
+  asg_scalein_cooldown   = 420
   asg_scalein_evaluation = 2
-  asg_scalein_threshold  = 6
-
-  asg_scaleout_cooldown   = 600
+  asg_scalein_threshold  = local.asg_scalein_threshold
+  asg_scaleout_cooldown   = 420
   asg_scaleout_evaluation = 2
-  asg_scaleout_threshold  = 2
-
+  asg_scaleout_threshold  = local.asg_scaleout_threshold
   asg_size_desired = 1
-  asg_size_max     = 5
+  asg_size_max     = 3
   asg_size_min     = 1
-
   disk_data_iops = 3000
   disk_data_size = 700
   disk_data_type = "io2"
   disk_os_size   = 300
   disk_os_type   = "gp2"
-
   hostname_prefix = "iris1"
   instance_type   = "c5d.9xlarge"
   key_name        = "my_key"
@@ -108,9 +106,10 @@ module "irisanywhere1" {
   }
 
   # Entries for IrisAnywhere
-  ia_max_sessions  = "2"
+  ia_max_sessions  = local.ia_max_sessions
   ia_secret_arn    = "arn:aws:secretsmanager:secret:1234567913397769129"
-  ia_domain        = "yourdomain.com"
+  s3_policy                   = file("custom_policy.json")
+  iam_policy_enabled          = true
 }
   
 ```
@@ -136,11 +135,13 @@ The following arguments are supported:
 * `disk_os_size` - (Optional) EBS volume size.  Default to `50`
 * `disk_os_type` - (Optional) EBS volume type.  Default to `gp3`
 * `hostname_prefix` - (Required) A unique name.
+* `iam_policy_enabled` - (Optional) Enables the ability to add custom IAM policies for the instance profile
 * `instance_type` - (Required) The type of the EC2 instance.
 * `key_name` - (Required) The key name to use for the instances.
 * `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
+* `s3_policy` - (Optional) Provides customers the ability to supply their own IAM policy for instance profile - file("custom_policy.json")
 * `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
@@ -149,7 +150,7 @@ The following arguments are supported:
 * `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
 * `ia_domain` - (Required) domain name of SSL wildcard SSL used for end to end SSL, ie "yourdomain.com", or "test.yourdomain.com". Domain must match cert SAN.
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
-* `ia_max_sessions` - (Optional) Set max sessions per Iris Anywhere instance before autoscaling.
+* `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
 
 
 ### Attributes Reference:
