@@ -6,8 +6,8 @@ Prerequisites:
 * Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
-* Terraform 12 is only supported at this time.
-* `version` - Current version is `v0.0.7`.
+* Terraform 12 & 13 are supported at this time.
+* `version` - Current version is `v0.0.8`.
 
 ***
 ## Iris Anywhere Admin Server
@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.6"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.8"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -76,26 +76,26 @@ module "irisanywhere1" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.7"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
-  lb_check_interval      = 30
-  lb_unhealthy_threshold = 2
-  asg_check_interval = 60
-  asg_scalein_cooldown   = 420
-  asg_scalein_evaluation = 2
-  asg_scalein_threshold  = local.asg_scalein_threshold
+  lb_check_interval       = 30
+  lb_unhealthy_threshold  = 2
+  asg_check_interval      = 60
+  asg_scalein_cooldown    = 420
+  asg_scalein_evaluation  = 2
+  asg_scalein_threshold   = local.asg_scalein_threshold
   asg_scaleout_cooldown   = 420
   asg_scaleout_evaluation = 2
   asg_scaleout_threshold  = local.asg_scaleout_threshold
-  asg_size_desired = 1
-  asg_size_max     = 3
-  asg_size_min     = 1
-  disk_data_iops = 3000
-  disk_data_size = 700
-  disk_data_type = "io2"
-  disk_os_size   = 300
-  disk_os_type   = "gp2"
-  hostname_prefix = "iris1"
-  instance_type   = "c5d.9xlarge"
-  key_name        = "my_key"
+  asg_size_desired        = 1
+  asg_size_max            = 3
+  asg_size_min            = 1
+  disk_data_iops          = 3000
+  disk_data_size          = 700
+  disk_data_type          = "io2"
+  disk_os_size            = 300
+  disk_os_type            = "gp2"
+  hostname_prefix         = "iris1"
+  instance_type           = "c5d.9xlarge"
+  key_name                = "my_key"
 
   ssl_certificate_arn     = "<cert_arn>"
   subnet_id               = ["subnet-foo1", "subnet-foo2"]
@@ -106,10 +106,10 @@ module "irisanywhere1" {
   }
 
   # Entries for IrisAnywhere
-  ia_max_sessions  = local.ia_max_sessions
-  ia_secret_arn    = "arn:aws:secretsmanager:secret:1234567913397769129"
-  s3_policy                   = file("custom_policy.json")
-  iam_policy_enabled          = true
+  ia_max_sessions          = local.ia_max_sessions
+  ia_secret_arn            = "arn:aws:secretsmanager:secret:1234567913397769129"
+  s3_policy                = file("custom_policy.json")
+  iam_policy_enabled       = true
 }
   
 ```
