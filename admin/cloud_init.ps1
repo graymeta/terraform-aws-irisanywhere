@@ -13,7 +13,6 @@ try {
     #TEMP create event log for debugging
     New-EventLog -LogName IrisAdmin -Source "IrisAdmin" ; Start-Sleep -Seconds 10
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1001 -message "I have started initializing"
-    $secretdata | export-csv c:\creds.csv -NoTypeInformation
 }
 catch {
     Write-host $_.Exception | Format-List -force
