@@ -114,6 +114,12 @@ variable "iam_policy_enabled" {
   default     = false
 }
 
+variable "iam_role_name" {
+  type = string
+  description = "Name to use for IAM role assigned to ASG EC2 instance profile."
+  default = replace("${var.hostname_prefix}-${var.instance_type}-Role", ".", "")
+}
+
 variable "instance_type" {
   type        = string
   description = "(Required) The type of the EC2 instance."
