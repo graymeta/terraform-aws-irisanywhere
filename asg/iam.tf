@@ -17,8 +17,7 @@ data "template_file" "iris_policy_custom" {
 }
 
 resource "aws_iam_role" "iris" {
-  name = var.iam_role_name != "" ? var.iam_role_name : replace("${var.hostname_prefix}-${var.instance_type}-Role", ".", "")
-  #name               = replace("${var.hostname_prefix}-${var.instance_type}-Role", ".", "")
+  name               = var.iam_role_name != "" ? var.iam_role_name : replace("${var.hostname_prefix}-${var.instance_type}-Role", ".", "")
   assume_role_policy = data.template_file.iris_role.rendered
 }
 

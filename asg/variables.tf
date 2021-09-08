@@ -114,7 +114,7 @@ variable "iam_policy_enabled" {
   default     = false
 }
 
-variable "iam_role_name"{
+variable "iam_role_name" {
   type        = string
   description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""

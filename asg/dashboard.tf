@@ -1,7 +1,7 @@
 data "aws_region" "current" {}
 
 data "template_file" "dashboard" {
-  template = "${file("${path.module}/dashboard.json")}"
+  template = file("${path.module}/dashboard.json")
 
   vars = {
     region                 = data.aws_region.current.name
