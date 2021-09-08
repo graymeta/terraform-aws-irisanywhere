@@ -6,8 +6,8 @@ Prerequisites:
 * Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
-* Terraform 12 & 13 are supported at this time.
-* `version` - Current version is `v0.0.8`.
+* Terraform 12, 13 & 14 compatible.
+* `version` - Current version is `v0.0.9`.
 
 ***
 ## Iris Anywhere Admin Server
@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.8"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.9"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -73,7 +73,7 @@ locals {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.7"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.9"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
   lb_check_interval       = 30
@@ -151,6 +151,7 @@ The following arguments are supported:
 * `ia_domain` - (Required) domain name of SSL wildcard SSL used for end to end SSL, ie "yourdomain.com", or "test.yourdomain.com". Domain must match cert SAN.
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
+* `iam_role_name` - (Optional) Set name for IAM Role.
 
 
 ### Attributes Reference:

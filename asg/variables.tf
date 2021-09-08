@@ -114,6 +114,12 @@ variable "iam_policy_enabled" {
   default     = false
 }
 
+variable "iam_role_name"{
+  type        = string
+  description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
+  default     = ""
+}
+
 variable "instance_type" {
   type        = string
   description = "(Required) The type of the EC2 instance."
@@ -198,3 +204,4 @@ variable "user_init" {
   description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""
 }
+
