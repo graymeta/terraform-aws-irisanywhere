@@ -10,7 +10,7 @@ resource "aws_security_group" "iris_adm" {
 
   tags = merge(
     local.merged_tags,
-    map("Name", format("${var.hostname_prefix}-iris-admin"))
+    tomap("Name", format("${var.hostname_prefix}-iris-admin"))
   )
 }
 
