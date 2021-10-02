@@ -13,7 +13,7 @@ Prerequisites:
 ## Iris Anywhere Admin Server
 Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
 
-The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's {Public IPv4 DNS}:8020 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
+The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's {Public IPv4 DNS}:8021 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
 
 ## Example Usage
 
