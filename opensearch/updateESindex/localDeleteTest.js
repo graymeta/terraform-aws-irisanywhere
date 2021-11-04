@@ -1,6 +1,6 @@
 
 // Mock event
-const event = require('./localCreateTestEvent')
+const event = require('./localDeleteTestEvent')
 
 // Mock environment variables
 process.env.AWS_REGION = 'us-west-2'

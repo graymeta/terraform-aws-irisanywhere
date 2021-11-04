@@ -3,8 +3,9 @@
 
 const AWS = require('aws-sdk');
 
+var opensearch = new AWS.OpenSearch({ endpoint : process.env.domain });
+
 AWS.config.region = process.env.AWS_REGION 
-const s3 = new AWS.S3()
 
 // The Lambda handler
 exports.handler = async (event) => {
@@ -13,10 +14,10 @@ exports.handler = async (event) => {
   await Promise.all(
     event.Records.map(async (event) => {
       //console.log(event);
-      console.log(event.eventName);
+      console.log(event);
       try {
         if (event.eventName.startsWith('ObjectCreated:')) {
-          await processCreateEvent(event)
+          //await processCreateEvent(event)
         } else if (event.eventName.startsWith('ObjectRemoved:')) {
           await processDeleteEvent(event)
         }
@@ -30,31 +31,20 @@ exports.handler = async (event) => {
 // Add S3 Object to bucket index
 const processCreateEvent = async (event) => {
   
-  console.log('\n\nCreated\n\n');
-  
-  /*const Key = decodeURIComponent(event.Key.replace(/\+/g, ' '))
-  const Bucket = event.Bucket
-  const type = Key.split('/')[0]
-  console.log(`Bucket: ${Bucket}, Key: ${Key}, Type: ${type}`)*/
-
-  // Payload object for ES
-  /*let payload = {
-    path: obj.Key,
-    name: obj.Key.replace(/^.*[\\\/]/, ''),
-    bucket: process.env.bucket,
-    etag: obj.ETag,
-    fileSize: obj.Size,
-    lastModified : obj.lastModified
-  }*/
-
-  // This is the payload for Elasticsearch
-  //console.log('Payload: ', JSON.stringify(payload, null, 2))
-  //await indexDocument(payload)
+  // Payload object for ES index insertion
+  await openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
+    path: event.s3.object.key,
+    name: event.s3.object.key.replace(/^.*[\\\/]/, ''),
+    bucket: event.s3.bucket.name,
+    etag: event.s3.object.eTag,
+    fileSize: event.s3.object.Size,
+    lastModified : Date.now()
+  }), 1);
 }
 
 // Delete S3 Object from bucket index
 const processDeleteEvent = async (event) => {
-  
+  console.log('\n\nDeleted\n\n');
 }
 
 const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {

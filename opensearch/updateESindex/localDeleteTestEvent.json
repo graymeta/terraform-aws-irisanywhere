@@ -5,7 +5,7 @@
             "eventSource": "aws:s3",
             "awsRegion": "us-east-1",
             "eventTime": "2020-03-25T11:43:21.655Z",
-            "eventName": "ObjectCreated:Put",
+            "eventName": "ObjectRemoved:Delete",
             "userIdentity": {
                 "principalId": "AWS:AROA3DTKMGNKB5FPBYP5N:jbeswick-Isengard"
             },
@@ -20,7 +20,7 @@
                 "s3SchemaVersion": "1.0",
                 "configurationId": "5faaac81-003d-444f-a85b-ccc35bfc036f",
                 "bucket": {
-                    "name": "patterns-s3docrepo-documents",
+                    "name": "iris-aws-dev",
                     "ownerIdentity": {
                         "principalId": "ASRUZ4ZWI5GFR"
                     },
