@@ -9,11 +9,12 @@ const args = require('minimist')(process.argv.slice(2));
 
 
 process.env.language = 'en'
-//process.env.domain = 'search-index-s3-iris-aws-dev-mcqnhh3vm2226xpi53neo4pzwu.us-west-2.es.amazonaws.com'
 
-const indexCreationJson = { "settings" : {"number_of_shards" : 2,"number_of_replicas" : 1},"mappings" : {"properties" : {"path" : { "type" : "text" },"name" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"fileSize" : { "type" : "long" }, "lastModified" : { "type" : "date" }}}};
+//const indexCreationJson = { "settings" : {"number_of_shards" : 2,"number_of_replicas" : 1},"mappings" : {"properties" : {"path" : { "type" : "text" },"name" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"fileSize" : { "type" : "long" }, "lastModified" : { "type" : "date" }}}};
+const indexCreationJson = { "mappings" : {"properties" : {"path" : { "type" : "text" },"name" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"fileSize" : { "type" : "long" }, "lastModified" : { "type" : "date" }}}};
 
 var numberFileObjectsUpdated = 0;
+var numberFileObjectsUpdateFailed = 0;
 
 const main = async () => {
 
@@ -70,7 +71,8 @@ async function getAllKeys(params){
 
   const response = await s3.listObjectsV2(params).promise();
   response.Contents.forEach(async function(obj) {
-    if ((obj.Size > 0) || (args['indexFolders'] != null)) {
+    // Don't index folders unless command line setting is true
+    if ((!obj.Key.endsWith("/")) || (args['indexFolders'] == "true")) {
       fileObjects.push(
         {
           path: obj.Key,
@@ -89,7 +91,7 @@ async function getAllKeys(params){
 
   numberFileObjectsUpdated += fileObjects.length;
 
-  console.log("Total File Objects Updated:" + numberFileObjectsUpdated);
+  console.log("Total File Objects Updated:" + numberFileObjectsUpdated + " Failed:"  + numberFileObjectsUpdateFailed);
   console.timeLog("indexS3Bucket");
 
   if (response.NextContinuationToken) {
@@ -107,7 +109,7 @@ const indexBucketMetadata = async (payload) => {
       bulkRequestBody += '{"index":{"_index":"' + process.env.bucket + '"}}\n';
       bulkRequestBody += JSON.stringify(obj) + '\n';
     });
-    await openSearchClient('PUT', '_bulk', bulkRequestBody);
+    await openSearchClient('PUT', '_bulk', bulkRequestBody, payload.length);
   }
 }
 
@@ -119,7 +121,7 @@ const deleteBucketIndex = async (payload) => {
   await openSearchClient('DELETE', process.env.bucket, '');
 }
 
-const openSearchClient = async (httpMethod, path, requestBody) => {
+const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {
   return new Promise((resolve, reject) => {
     const endpoint = new AWS.Endpoint(process.env.domain)
     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
