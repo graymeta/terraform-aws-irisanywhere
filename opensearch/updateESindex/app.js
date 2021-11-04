@@ -1,22 +1,25 @@
 
 'use strict'
 
-const AWS = require('aws-sdk')
+const AWS = require('aws-sdk');
+
 AWS.config.region = process.env.AWS_REGION 
 const s3 = new AWS.S3()
-const comprehend = new AWS.Comprehend({apiVersion: '2017-11-27'})
-
-const { indexDocument } = require('./indexDocument')
 
 // The Lambda handler
 exports.handler = async (event) => {
-  console.log (JSON.stringify(event, null, 2))
 
   // Handle each incoming S3 object in the event
   await Promise.all(
     event.Records.map(async (event) => {
+      //console.log(event);
+      console.log(event.eventName);
       try {
-        await processDocument(JSON.parse(event.body))
+        if (event.eventName.startsWith('ObjectCreated:')) {
+          await processCreateEvent(event)
+        } else if (event.eventName.startsWith('ObjectRemoved:')) {
+          await processDeleteEvent(event)
+        }
       } catch (err) {
         console.error(`Handler error: ${err}`)
       }
@@ -24,52 +27,68 @@ exports.handler = async (event) => {
   )
 }
 
-// Load text, run Comprehend, save to ES
-const processDocument = async (event) => {
-
-  console.log('indexDocument: ', event)
+// Add S3 Object to bucket index
+const processCreateEvent = async (event) => {
   
+  console.log('\n\nCreated\n\n');
   
-  const Key = decodeURIComponent(event.Key.replace(/\+/g, ' '))
+  /*const Key = decodeURIComponent(event.Key.replace(/\+/g, ' '))
   const Bucket = event.Bucket
   const type = Key.split('/')[0]
-  console.log(`Bucket: ${Bucket}, Key: ${Key}, Type: ${type}`)
+  console.log(`Bucket: ${Bucket}, Key: ${Key}, Type: ${type}`)*/
 
   // Payload object for ES
-  let payload = {
-    id: Date.now(),
-    index: type,
-    content: {
-      Key,
-      Bucket,
-      entities: []
-    }
-  }
-
-  /*
-  // Load text from S3
-  const s3obj = await s3.getObject({ Bucket, Key }).promise()
-  const Text = s3obj.Body.toString('utf-8')
-
-  // Processing different between images and PDF/DOCX
-  if (type === "images") {
-    // Load json from S3 object
-    const labels = JSON.parse(Text)
-    // Strip down entities to labels
-    payload.content.entities = labels.map((label) => (label.Name))
-  } else {
-    // Get entities from Comprehend
-    const result = await comprehend.detectEntities({
-      LanguageCode: process.env.language,
-      Text
-    }).promise()
-    // Strip down entities to labels
-    payload.content.entities = result.Entities.map((entity) => (entity.Text))
-  }
-  */
-
+  /*let payload = {
+    path: obj.Key,
+    name: obj.Key.replace(/^.*[\\\/]/, ''),
+    bucket: process.env.bucket,
+    etag: obj.ETag,
+    fileSize: obj.Size,
+    lastModified : obj.lastModified
+  }*/
 
   // This is the payload for Elasticsearch
-  console.log('Payload: ', JSON.stringify(payload, null, 2))
-  await indexDocument(payload)
+  //console.log('Payload: ', JSON.stringify(payload, null, 2))
+  //await indexDocument(payload)
+}
+
+// Delete S3 Object from bucket index
+const processDeleteEvent = async (event) => {
+  
+}
+
+const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {
+  return new Promise((resolve, reject) => {
+    const endpoint = new AWS.Endpoint(process.env.domain)
+    let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
+
+    request.method = httpMethod;
+    request.path += path;
+    request.body = requestBody;
+    request.headers['host'] = endpoint.host;
+    request.headers['Content-Type'] = 'application/json';
+    request.headers['Content-Length'] = Buffer.byteLength(request.body)
+
+    const credentials = new AWS.SharedIniFileCredentials('default')
+    const signer = new AWS.Signers.V4(request, 'es')
+    signer.addAuthorization(credentials, new Date())
+
+    const client = new AWS.HttpClient()
+    client.handleRequest(request, null, function(response) {
+      //console.log(response.statusCode + ' ' + response.statusMessage)
+      let responseBody = ''
+      response.on('data', function (chunk) {
+        responseBody += chunk;
+      });
+      response.on('end', function (chunk) {
+        if (response.statusCode != 200) {
+          console.log('Response body: ' + responseBody);
+        }
+        resolve()
+      });
+    }, function(error) {
+      console.log('Error: ' + error)
+      reject()
+    })
+  })
 }
