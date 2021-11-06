@@ -17,7 +17,7 @@ exports.handler = async (event) => {
       console.log(event);
       try {
         if (event.eventName.startsWith('ObjectCreated:')) {
-          //await processCreateEvent(event)
+          await processCreateEvent(event)
         } else if (event.eventName.startsWith('ObjectRemoved:')) {
           await processDeleteEvent(event)
         }
@@ -32,25 +32,34 @@ exports.handler = async (event) => {
 const processCreateEvent = async (event) => {
   
   // Payload object for ES index insertion
-  await openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
+  var response = await openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
     path: event.s3.object.key,
     name: event.s3.object.key.replace(/^.*[\\\/]/, ''),
     bucket: event.s3.bucket.name,
     etag: event.s3.object.eTag,
     fileSize: event.s3.object.Size,
     lastModified : Date.now()
-  }), 1);
+  }));
 }
 
 // Delete S3 Object from bucket index
 const processDeleteEvent = async (event) => {
-  console.log('\n\nDeleted\n\n');
+  
+  var requestBody = {"query": {"term": {"path": event.s3.object.key}}}
+  openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
+    console.log(searchResponse);
+    //await Promise.all(
+      //searchResponse.hit.hits.map(async (searchHit) => {
+      //})
+  });
 }
 
-const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {
+const openSearchClient = async (httpMethod, path, requestBody) => {
   return new Promise((resolve, reject) => {
     const endpoint = new AWS.Endpoint(process.env.domain)
     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
+
+    console.log(requestBody);
 
     request.method = httpMethod;
     request.path += path;
@@ -65,16 +74,14 @@ const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) 
 
     const client = new AWS.HttpClient()
     client.handleRequest(request, null, function(response) {
-      //console.log(response.statusCode + ' ' + response.statusMessage)
+      console.log(response.statusCode + ' ' + response.statusMessage)
       let responseBody = ''
       response.on('data', function (chunk) {
         responseBody += chunk;
       });
       response.on('end', function (chunk) {
-        if (response.statusCode != 200) {
-          console.log('Response body: ' + responseBody);
-        }
-        resolve()
+        //console.log('Response body: ' + responseBody);
+        resolve(JSON.parse(responseBody));
       });
     }, function(error) {
       console.log('Error: ' + error)
