@@ -14,7 +14,6 @@ exports.handler = async (event) => {
   await Promise.all(
     event.Records.map(async (event) => {
       //console.log(event);
-      console.log(event);
       try {
         if (event.eventName.startsWith('ObjectCreated:')) {
           await processCreateEvent(event)
@@ -33,24 +32,36 @@ const processCreateEvent = async (event) => {
   
   // Payload object for ES index insertion
   var response = await openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
-    path: event.s3.object.key,
-    name: event.s3.object.key.replace(/^.*[\\\/]/, ''),
+    filepath: event.s3.object.key,
+    filename: event.s3.object.key.replace(/^.*[\\\/]/, ''),
     bucket: event.s3.bucket.name,
     etag: event.s3.object.eTag,
-    fileSize: event.s3.object.Size,
-    lastModified : Date.now()
+    filesize: event.s3.object.Size,
+    lastmodified : Date.now()
   }));
 }
 
 // Delete S3 Object from bucket index
 const processDeleteEvent = async (event) => {
   
-  var requestBody = {"query": {"term": {"path": event.s3.object.key}}}
+  var requestBody = {"query": {"term": {"filepath": event.s3.object.key}}}
   openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
-    console.log(searchResponse);
-    //await Promise.all(
-      //searchResponse.hit.hits.map(async (searchHit) => {
-      //})
+    var deletedEntry = false;
+    //console.log(searchResponse);
+    searchResponse.hits.hits.map(async (searchHit) => {
+
+        // Objects in S3 are globally unique when inclueding the bucket with the path
+        if (searchHit._source.bucket.trim() == event.s3.bucket.name.trim()) {
+          if (searchHit._source.filepath.trim() == event.s3.object.key.trim()) {
+            //console.log(searchHit);
+            deletedEntry = true;
+            var response = openSearchClient('DELETE', event.s3.bucket.name + '/_doc/' + searchHit._id, '');
+          }
+        }
+    });
+    if (!deletedEntry) {
+      console.log("Didn't delete cache item for event!\n\n" + JSON.stringify(event));
+    }
   });
 }
 
@@ -59,7 +70,7 @@ const openSearchClient = async (httpMethod, path, requestBody) => {
     const endpoint = new AWS.Endpoint(process.env.domain)
     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
 
-    console.log(requestBody);
+    //console.log(requestBody);
 
     request.method = httpMethod;
     request.path += path;
@@ -74,13 +85,12 @@ const openSearchClient = async (httpMethod, path, requestBody) => {
 
     const client = new AWS.HttpClient()
     client.handleRequest(request, null, function(response) {
-      console.log(response.statusCode + ' ' + response.statusMessage)
+      //console.log(response.statusCode + ' ' + response.statusMessage)
       let responseBody = ''
       response.on('data', function (chunk) {
         responseBody += chunk;
       });
       response.on('end', function (chunk) {
-        //console.log('Response body: ' + responseBody);
         resolve(JSON.parse(responseBody));
       });
     }, function(error) {

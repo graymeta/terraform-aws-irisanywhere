@@ -11,9 +11,9 @@ process.env.domain = 'os-endpoint.graymeta.com'
 const { handler } = require('./app')
 
 const main = async () => {
-  console.time('localCreateTest')
+  console.time('localDeleteTest')
   await handler(event)
-  console.timeEnd('localCreateTest')
+  console.timeEnd('localDeleteTest')
 }
 
 main().catch(error => console.error(error))
