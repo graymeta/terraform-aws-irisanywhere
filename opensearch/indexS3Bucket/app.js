@@ -10,8 +10,7 @@ const args = require('minimist')(process.argv.slice(2));
 
 process.env.language = 'en'
 
-//const indexCreationJson = { "settings" : {"number_of_shards" : 2,"number_of_replicas" : 1},"mappings" : {"properties" : {"path" : { "type" : "text" },"name" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"fileSize" : { "type" : "long" }, "lastModified" : { "type" : "date" }}}};
-const indexCreationJson = { "mappings" : {"properties" : {"path" : { "type" : "text" },"name" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"fileSize" : { "type" : "long" }, "lastModified" : { "type" : "date" }}}};
+const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "keyword" },"filename" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
 
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
