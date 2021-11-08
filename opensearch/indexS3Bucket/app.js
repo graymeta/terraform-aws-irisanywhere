@@ -75,12 +75,12 @@ async function getAllKeys(params){
     if ((!obj.Key.endsWith("/")) || (args['indexFolders'] == "true")) {
       fileObjects.push(
         {
-          path: obj.Key,
-          name: obj.Key.replace(/^.*[\\\/]/, ''),
+          filepath: obj.Key,
+          filename: obj.Key.replace(/^.*[\\\/]/, ''),
           bucket: process.env.bucket,
           etag: obj.ETag,
-          fileSize: obj.Size,
-          lastModified : obj.lastModified
+          filesize: obj.Size,
+          lastmodified : obj.lastModified
         }
       );
     }
