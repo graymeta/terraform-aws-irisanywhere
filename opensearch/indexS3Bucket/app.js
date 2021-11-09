@@ -55,11 +55,11 @@ const main = async () => {
 
   // delete bucket index if exists
   try {
-    deleteBucketIndex();
+    await openSearchClient('DELETE', process.env.bucket, '');
   } catch (error) {}
 
   //create new bucket index
-  createBucketIndex();
+  await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
 
   await Promise.all(arrayOfParams.map(params => getAllKeys(params)));
   console.timeEnd('indexS3Bucket')
@@ -110,14 +110,6 @@ const indexBucketMetadata = async (payload) => {
     });
     await openSearchClient('PUT', '_bulk', bulkRequestBody, payload.length);
   }
-}
-
-const createBucketIndex = async (payload) => {
-  await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
-}
-
-const deleteBucketIndex = async (payload) => {
-  await openSearchClient('DELETE', process.env.bucket, '');
 }
 
 const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {
