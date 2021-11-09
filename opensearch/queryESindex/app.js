@@ -28,7 +28,8 @@ const main = async () => {
 
   // Run elasticsearch query  
   try {
-    const response = await queryES(args['q'])
+    const response = await queryES(args['q']);
+    //const response = await queryES('filename:*app*');
     return {
       statusCode: 200,
       body: JSON.stringify(response)
