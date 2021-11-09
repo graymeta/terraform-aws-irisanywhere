@@ -86,9 +86,13 @@ async function getAllKeys(params){
   });
 
 
-  indexBucketMetadata(fileObjects, process.env.bucket);
+  var bulkUpdateResponse = indexBucketMetadata(fileObjects, process.env.bucket);
 
-  numberFileObjectsUpdated += fileObjects.length;
+  if (bulkUpdateResponse) {
+    numberFileObjectsUpdated += fileObjects.length;
+  } else {
+    numberFileObjectsUpdateFailed += fileObjects.length;
+  }
 
   console.log("Total File Objects Updated:" + numberFileObjectsUpdated + " Failed:"  + numberFileObjectsUpdateFailed);
   console.timeLog("indexS3Bucket");
@@ -108,7 +112,7 @@ const indexBucketMetadata = async (payload) => {
       bulkRequestBody += '{"index":{"_index":"' + process.env.bucket + '"}}\n';
       bulkRequestBody += JSON.stringify(obj) + '\n';
     });
-    await openSearchClient('PUT', '_bulk', bulkRequestBody, payload.length);
+    return await openSearchClient('PUT', '_bulk', bulkRequestBody, payload.length);
   }
 }
 
@@ -138,12 +142,13 @@ const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) 
       response.on('end', function (chunk) {
         if (response.statusCode != 200) {
           console.log('Response body: ' + responseBody);
+          reject(false);
         }
-        resolve()
+        resolve(true)
       });
     }, function(error) {
       console.log('Error: ' + error)
-      reject()
+      reject(false)
     })
   })
 }
