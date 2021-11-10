@@ -70,19 +70,16 @@ async function getAllKeys(params){
 
   const response = await s3.listObjectsV2(params).promise();
   response.Contents.forEach(async function(obj) {
-    // Don't index folders unless command line setting is true
-    if ((!obj.Key.endsWith("/")) || (args['indexFolders'] == "true")) {
-      fileObjects.push(
-        {
-          filepath: obj.Key,
-          filename: obj.Key.replace(/^.*[\\\/]/, ''),
-          bucket: process.env.bucket,
-          etag: obj.ETag,
-          filesize: obj.Size,
-          lastmodified : obj.lastModified
-        }
-      );
-    }
+    fileObjects.push(
+      {
+        filepath: obj.Key,
+        filename: obj.Key.replace(/^.*[\\\/]/, ''),
+        bucket: process.env.bucket,
+        etag: obj.ETag,
+        filesize: obj.Size,
+          astmodified : obj.lastModified
+      }
+    );
   });
 
 
