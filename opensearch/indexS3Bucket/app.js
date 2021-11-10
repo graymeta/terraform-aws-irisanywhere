@@ -4,15 +4,15 @@
 const AWS = require('aws-sdk');
 
 AWS.config.region = process.env.AWS_REGION;
+process.env.language = 'en'
 
 const s3 = new AWS.S3();
 
 const args = require('minimist')(process.argv.slice(2));
 
+const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "text" }, "filename" : { "type" : "text" },"bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
 
-process.env.language = 'en'
-
-const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "text" },"filename" : { "type" : "text" },"bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
+const folderMap = new Map();
 
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
@@ -71,21 +71,60 @@ const main = async () => {
   console.timeEnd('indexS3Bucket')
 };
 
-async function getAllKeys(params){
+/*
+Here's the problem: you are assuming there should always be objects with keys ending in / to symbolize folders with S3.
+
+This is an incorrect assumption. They will only be there if you created them, either via the S3 console or the API. There's no reason to expect them, as S3 doesn't actually need them or use them for anything, and the S3 service does not create them spontaneously, itself.
+
+If you use the API to upload an object with key foo/bar.txt, this does not create the foo/ folder as a distinct object. It will appear as a folder in the console for convenience, but it isn't there unless at some point you deliberately created it.
+
+Of course, the only way to upload such an object with the console is to "create" the folder unless it already appears -- but appears in the console does not necessarily equate to exists as a distinct object.
+*/
+
+async function getAllKeys(params) {
   var fileObjects = [];
 
   const response = await s3.listObjectsV2(params).promise();
   response.Contents.forEach(async function(obj) {
-    fileObjects.push(
-      {
-        filepath: obj.Key,
-        filename: obj.Key.replace(/^.*[\\\/]/, ''),
-        bucket: process.env.bucket,
-        etag: obj.ETag,
-        filesize: obj.Size,
-        lastmodified : obj.LastModified
-      }
-    );
+    if (!obj.Key.endsWith('/')) {
+      var folderName = obj.Key.substring(0,obj.Key.lastIndexOf("/")+1);
+      fileObjects.push(
+        {
+          filepath: obj.Key,
+          filename: obj.Key.replace(/^.*[\\\/]/, ''),
+          bucket: process.env.bucket,
+          etag: obj.ETag,
+          filesize: obj.Size,
+          lastmodified: obj.LastModified
+        }
+      );
+      
+
+      // Read comment above method.  We have to create fileobjects that represent folders as there is an inconsistency in folder creation and representation.
+      // A map is maintained with a global state of created folders.  If already created, it won't be created again.
+      var pathComponents = folderName.split('/');
+      if (pathComponents.length > 1) {
+        var syntheticPath = "";
+        pathComponents.forEach(async function(pathComponent) {
+          if (pathComponent != "") {
+            syntheticPath += pathComponent + "/";
+            if (!folderMap.has(syntheticPath)) {
+              folderMap.set(syntheticPath, true);
+              fileObjects.push(
+                {
+                  filepath: syntheticPath,
+                  filename: '',
+                  bucket: process.env.bucket,
+                  etag: '',
+                  filesize: 0,
+                  lastmodified: Date.now()
+                }
+              );
+            }
+          }
+        });
+      } 
+    }
   });
 
 
