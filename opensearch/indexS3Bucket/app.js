@@ -2,7 +2,9 @@
 'use strict'
 
 const AWS = require('aws-sdk');
+
 AWS.config.region = process.env.AWS_REGION;
+
 const s3 = new AWS.S3();
 
 const args = require('minimist')(process.argv.slice(2));
@@ -10,7 +12,7 @@ const args = require('minimist')(process.argv.slice(2));
 
 process.env.language = 'en'
 
-const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "keyword" },"filename" : { "type" : "text" },"bucket" : { "type" : "text" },"etag" : { "type" : "text" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
+const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "text" },"filename" : { "type" : "text" },"bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
 
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
@@ -34,6 +36,10 @@ const main = async () => {
   } else {
     throw '\'--domain\' parameter is required!';
   }
+  if (args['awsProfile'] != null) {
+    process.env.AWS_PROFILE = args['awsProfile'];
+  }
+  
 
   console.log("\nSyncing Bucket:" + process.env.bucket + "\n\nOpenSearch Domain Endpoint:" + process.env.domain + "\n\nRegion:" + process.env.AWS_REGION);
 
@@ -77,7 +83,7 @@ async function getAllKeys(params){
         bucket: process.env.bucket,
         etag: obj.ETag,
         filesize: obj.Size,
-          astmodified : obj.lastModified
+        lastmodified : obj.LastModified
       }
     );
   });
