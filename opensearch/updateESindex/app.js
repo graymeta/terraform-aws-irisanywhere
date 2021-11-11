@@ -32,6 +32,7 @@ const processCreateEvent = async (event) => {
   
   // Payload object for ES index insertion
   var response = await openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
+    s3key : event.s3.object.key,
     filepath: event.s3.object.key,
     filename: event.s3.object.key.replace(/^.*[\\\/]/, ''),
     bucket: event.s3.bucket.name,
@@ -44,7 +45,7 @@ const processCreateEvent = async (event) => {
 // Delete S3 Object from bucket index
 const processDeleteEvent = async (event) => {
   
-  var requestBody = {"query": {"term": {"filepath": event.s3.object.key}}}
+  var requestBody = {"query": {"term": {"s3key": event.s3.object.key}}}
   openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
     var deletedEntry = false;
     //console.log(searchResponse);
