@@ -10,7 +10,7 @@ const s3 = new AWS.S3();
 
 const args = require('minimist')(process.argv.slice(2));
 
-const indexCreationJson = { "mappings" : {"properties" : {"filepath" : { "type" : "text" }, "filename" : { "type" : "text" },"bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
+const indexCreationJson = { "mappings" : {"properties" : { "s3key" : { "type" : "keyword" }, "filepath" : { "type" : "text" }, "filename" : { "type" : "text" }, "bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
 
 const folderMap = new Map();
 
@@ -90,6 +90,7 @@ async function getAllKeys(params) {
       var folderName = obj.Key.substring(0,obj.Key.lastIndexOf("/")+1);
       fileObjects.push(
         {
+          s3key: obj.Key,
           filepath: obj.Key,
           filename: obj.Key.replace(/^.*[\\\/]/, ''),
           bucket: process.env.bucket,
@@ -112,6 +113,7 @@ async function getAllKeys(params) {
               folderMap.set(syntheticPath, true);
               fileObjects.push(
                 {
+                  s3key: syntheticPath,
                   filepath: syntheticPath,
                   filename: '',
                   bucket: process.env.bucket,
