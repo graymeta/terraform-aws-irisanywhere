@@ -7,14 +7,14 @@ data "template_file" "cloud_init" {
 }
 
 resource "aws_instance" "iris_adm" {
-  ami                         = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
-  count                       = var.instance_count
-  iam_instance_profile        = aws_iam_instance_profile.iris_adm.name
-  instance_type               = var.instance_type
-  key_name                    = var.key_name
-  vpc_security_group_ids      = [aws_security_group.iris_adm.id]
-  subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(data.template_file.cloud_init.rendered)
+  ami                    = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
+  count                  = var.instance_count
+  iam_instance_profile   = aws_iam_instance_profile.iris_adm.name
+  instance_type          = var.instance_type
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.iris_adm.id]
+  subnet_id              = element(var.subnet_id, count.index)
+  user_data              = base64encode(data.template_file.cloud_init.rendered)
   #associate_public_ip_address = true
 
 
