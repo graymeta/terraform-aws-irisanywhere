@@ -6,17 +6,6 @@ data "template_file" "cloud_init" {
   }
 }
 
-resource "aws_eip" "public_ip" {
-  count = var.instance_count
-  vpc   = true
-}
-
-resource "aws_eip_association" "eip_assoc" {
-  allocation_id = element(aws_eip.public_ip.*.id, count.index)
-  count         = var.instance_count
-  instance_id   = element(aws_instance.iris_adm.*.id, count.index)
-}
-
 resource "aws_instance" "iris_adm" {
   ami                         = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
   count                       = var.instance_count
@@ -26,7 +15,7 @@ resource "aws_instance" "iris_adm" {
   vpc_security_group_ids      = [aws_security_group.iris_adm.id]
   subnet_id                   = element(var.subnet_id, count.index)
   user_data                   = base64encode(data.template_file.cloud_init.rendered)
-  associate_public_ip_address = true
+  #associate_public_ip_address = true
 
 
   lifecycle {
