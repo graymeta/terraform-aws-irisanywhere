@@ -27,6 +27,8 @@ const indexCreationJson = { "mappings" : {"properties" : { "s3key" : { "type" : 
 
 const folderMap = new Map();
 
+var awsProfile = 'default';
+
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
 
@@ -51,6 +53,7 @@ const main = async () => {
   }
   if (args['awsProfile'] != null) {
     process.env.AWS_PROFILE = args['awsProfile'];
+    awsProfile = args['awsProfile'];
   }
   
 
@@ -185,7 +188,7 @@ const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) 
     request.headers['Content-Type'] = 'application/json';
     request.headers['Content-Length'] = Buffer.byteLength(request.body)
 
-    const credentials = new AWS.SharedIniFileCredentials('default')
+    const credentials = new AWS.SharedIniFileCredentials(awsProfile);
     const signer = new AWS.Signers.V4(request, 'es')
     signer.addAuthorization(credentials, new Date())
 
