@@ -92,7 +92,7 @@
      request.headers['Content-Type'] = 'application/json';
      request.headers['Content-Length'] = Buffer.byteLength(request.body)
  
-     const credentials = { accessKeyId: process.env.key_id, secretAccessKey: process.env.secret_key, region: process.env.region }
+     const credentials = { accessKeyId: process.env.domain_key_id, secretAccessKey: process.env.domain_secret_key, region: process.env.region }
      const signer = new AWS.Signers.V4(request, 'es')
      signer.addAuthorization(credentials, new Date())
  
