@@ -39,12 +39,15 @@
  
  // Add S3 Object to bucket index
  const processCreateEvent = (event) => {
-   //console.log("Created:" +  event);
+   
+  const search = '\\+';
+  const searchRegExp = new RegExp(search, 'g');
+
    // Payload object for ES index insertion
    var response = openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
      s3key : event.s3.object.key,
-     filepath: event.s3.object.key,
-     filename: event.s3.object.key.replace(/^.*[\\\/]/, ''),
+     filepath: event.s3.object.key.replace(searchRegExp, ' '),
+     filename: event.s3.object.key.replace(/^.*[\\\/]/, '').replace(searchRegExp, ' '),
      bucket: event.s3.bucket.name,
      etag: event.s3.object.eTag,
      filesize: event.s3.object.Size,
@@ -59,13 +62,13 @@
    var requestBody = {"query": {"term": {"s3key": event.s3.object.key}}}
    openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
      var deletedEntry = false;
-     //console.log(searchResponse);
+     //console.log(JSON.stringify(searchResponse));
      searchResponse.hits.hits.map((searchHit) => {
  
          // Objects in S3 are globally unique when inclueding the bucket with the path
          if (searchHit._source.bucket.trim() == event.s3.bucket.name.trim()) {
-           if (searchHit._source.filepath.trim() == event.s3.object.key.trim()) {
-             //console.log(searchHit);
+           if (searchHit._source.s3key.trim() == event.s3.object.key.trim()) {
+             //console.log(JSON.stringify(searchHit));
              deletedEntry = true;
              var response = openSearchClient('DELETE', event.s3.bucket.name + '/_doc/' + searchHit._id, '');
              console.log("Deleted index item for event!\n\n" + JSON.stringify(event));

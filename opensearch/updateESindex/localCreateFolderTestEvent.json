@@ -27,7 +27,7 @@
                     "arn": "arn:aws:s3:::patterns-s3docrepo-documents"
                 },
                 "object": {
-                    "key": "IMF/Tangled 2 IMF/IMF_OV_ENG/scott/",
+                    "key": "IMF/Tangled+2+IMF/IMF_OV_ENG/scott+test/test+for+scott.txt",
                     "size": 328166,
                     "eTag": "bb0168b06b7384229845270f7a0ed631",
                     "sequencer": "005E7B43DE7209615C"
