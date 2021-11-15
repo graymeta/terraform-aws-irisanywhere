@@ -73,4 +73,10 @@ module "iris-secrets" {
 * `s3_meta_access_key` - (Optional) Access key for S3 write access.
 * `s3_meta_secret_key` - (Optional) Secret key value for S3 write access.
 * `s3_meta_bucketname` - (Optional) S3 bucket name for write access.
+
+* `os_region` - (Optional) Region OpenSearch node is deployed in.
+* `os_endpoint` - (Optional) FQDN of OpenSearch endpoint.
+* `os_accessid` - (Optional) Access ID credential for signing OpenSearch requests.
+* `os_secretkey` - (Optional) Secret Key credential for signing OpenSearch requests.
+
 * `tags` -  (Optional) A map of the additional tags.
