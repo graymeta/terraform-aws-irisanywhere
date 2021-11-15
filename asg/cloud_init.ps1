@@ -5,6 +5,7 @@ $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
+$search_enabled = "${search_enabled}"
 
 #Retrieve and prepare Secrets
 try {
@@ -31,12 +32,15 @@ try {
     $s3_meta_access_key = $secretdata.s3_meta_access_key
     $s3_meta_secret_key = $secretdata.s3_meta_secret_key
 
+    $os_endpoint = $secretdata.os_endpoint
+    $os_region = $secretdata.os_region
+    $os_accessid = $secretdata.os_accessid
+    $os_secretkey = $secretdata.os_secretkey
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception accessing secret $iasecretarn" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
-
 }
 
 # Set Leaf Certs 
@@ -163,6 +167,17 @@ catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting Okta Config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Okta config from terraform"
+}
+
+try {
+    if($search_enabled){
+    set-opensearch -osenabled "true" -region "$os_region" -domain "$os_endpoint" -accessid "$os_accessid" -secretkey "$os_secretkey"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set OpenSearch config from terraform"}
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting OpenSearch Config" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting OpenSearch config from terraform"
 }
 # Set Iris Admin License 
 try {

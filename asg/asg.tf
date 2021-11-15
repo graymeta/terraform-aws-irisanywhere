@@ -67,6 +67,7 @@ data "template_file" "cloud_init" {
     ia_max_sessions       = var.ia_max_sessions
     ia_secret_arn         = var.ia_secret_arn
     ia_domain             = var.ia_domain
+    search_enabled        = var.search_enabled
   }
 }
 

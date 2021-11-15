@@ -116,7 +116,7 @@ variable "iam_policy_enabled" {
 
 variable "iam_role_name" {
   type        = string
-  description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
+  description = "(Optional) Provides the ability for customers to input their own IAM role name"
   default     = ""
 }
 
@@ -205,3 +205,38 @@ variable "user_init" {
   default     = ""
 }
 
+variable "sqs_arn_s3" {
+  type        = string
+  description = "(Optional) SQS ARN for S3 poling"
+  default     = ""
+}
+
+variable "search_enabled" {
+  type        = bool
+  description = "(Optional) OpenSearch region"
+  default     = false
+}
+
+# variable "os_region" {
+#   type        = string
+#   description = "(Optional) OpenSearch region"
+#   default     = ""
+# }
+
+# variable "os_endpoint" {
+#   type        = string
+#   description = "(Optional) OpenSearch region"
+#   default     = ""
+# }
+
+# variable "os_accessid" {
+#   type        = string
+#   description = "(Optional) OpenSearch region"
+#   default     = ""
+# }
+
+# variable "os_secretkey" {
+#   type        = string
+#   description = "(Optional) OpenSearch region"
+#   default     = ""
+# }

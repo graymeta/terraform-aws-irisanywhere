@@ -7,14 +7,14 @@ In order to deploy Iris Anywhere you will need to establish the following secret
 
 ## Example Usage
 
-```
+```hcl
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
 module "iris-secrets" {    
-    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.7"
+    source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.9"
     secret_name        = "yoursecretcredname"
     admin_console_id   = "null"
     admin_console_pw   = "null"
@@ -37,6 +37,13 @@ module "iris-secrets" {
     s3_meta_access_key = ""
     s3_meta_secret_key = ""
     s3_meta_bucketname = ""
+
+    os_region          = ""
+    os_endpoint        = ""
+    os_accessid        = ""
+    os_secretkey       = ""
+
+
     tags = {
     "costcenter" = "yourcostcenter"
   }
