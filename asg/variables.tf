@@ -216,27 +216,3 @@ variable "search_enabled" {
   description = "(Optional) OpenSearch region"
   default     = false
 }
-
-# variable "os_region" {
-#   type        = string
-#   description = "(Optional) OpenSearch region"
-#   default     = ""
-# }
-
-# variable "os_endpoint" {
-#   type        = string
-#   description = "(Optional) OpenSearch region"
-#   default     = ""
-# }
-
-# variable "os_accessid" {
-#   type        = string
-#   description = "(Optional) OpenSearch region"
-#   default     = ""
-# }
-
-# variable "os_secretkey" {
-#   type        = string
-#   description = "(Optional) OpenSearch region"
-#   default     = ""
-# }

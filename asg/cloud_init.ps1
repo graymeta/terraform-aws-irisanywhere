@@ -170,7 +170,7 @@ catch {
 }
 
 try {
-    if($search_enabled){
+    if($search_enabled -eq "true"){
     set-opensearch -osenabled "true" -region "$os_region" -domain "$os_endpoint" -accessid "$os_accessid" -secretkey "$os_secretkey"
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set OpenSearch config from terraform"}
 }
