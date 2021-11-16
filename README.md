@@ -110,6 +110,7 @@ module "irisanywhere1" {
   ia_secret_arn            = "arn:aws:secretsmanager:secret:1234567913397769129"
   s3_policy                = file("custom_policy.json")
   iam_policy_enabled       = true
+  search_enabled           = true
 }
   
 ```
@@ -152,6 +153,7 @@ The following arguments are supported:
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
 * `iam_role_name` - (Optional) Set name for IAM Role.
+* `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
 
 
 ### Attributes Reference:

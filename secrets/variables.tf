@@ -99,6 +99,25 @@ variable "s3_meta_bucketname" {
   description = "S3 bucket name for alternate bucket write access"
 }
 
+variable "os_region" {
+  type        = string
+  description = "Region OpenSearch is deployed"
+}
+
+variable "os_endpoint" {
+  type        = string
+  description = "FQDN of OpenSearch endpoint"
+}
+
+variable "os_accessid" {
+  type        = string
+  description = "AccessID for signed OpenSearch processes"
+}
+
+variable "os_secretkey" {
+  type        = string
+  description = "SecretKey for signed OpenSearch processes"
+}
 
 
 variable "tags" {

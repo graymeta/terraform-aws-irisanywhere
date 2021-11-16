@@ -47,3 +47,23 @@ output "iris_s3_lic_code" {
   description = "Iris Secrets"
   value       = var.iris_s3_lic_code
 }
+
+output "os_region" {
+  description = "Iris Secrets"
+  value       = var.os_region
+}
+
+output "os_endpoint" {
+  description = "Iris Secrets"
+  value       = var.os_endpoint
+}
+
+output "os_accessid" {
+  description = "Iris Secrets"
+  value       = var.os_accessid
+}
+
+output "os_secretkey" {
+  description = "Iris Secrets"
+  value       = var.os_secretkey
+}
