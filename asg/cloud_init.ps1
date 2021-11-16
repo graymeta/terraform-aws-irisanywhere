@@ -32,10 +32,10 @@ try {
     $s3_meta_access_key = $secretdata.s3_meta_access_key
     $s3_meta_secret_key = $secretdata.s3_meta_secret_key
 
-    $os_endpoint = $secretdata.os_endpoint
-    $os_region = $secretdata.os_region
-    $os_accessid = $secretdata.os_accessid
-    $os_secretkey = $secretdata.os_secretkey
+    $os_endpoint        = $secretdata.os_endpoint
+    $os_region          = $secretdata.os_region
+    $os_accessid        = $secretdata.os_accessid
+    $os_secretkey       = $secretdata.os_secretkey
 }
 catch {
     Write-host $_.Exception | Format-List -force
@@ -169,6 +169,7 @@ catch {
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Okta config from terraform"
 }
 
+# Set Search config:
 try {
     if($search_enabled -eq "true"){
     set-opensearch -osenabled "true" -region "$os_region" -domain "$os_endpoint" -accessid "$os_accessid" -secretkey "$os_secretkey"
@@ -178,21 +179,6 @@ catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting OpenSearch Config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting OpenSearch config from terraform"
-}
-# Set Iris Admin License 
-try {
-    $licpath = "$($env:PUBLIC)\Documents\GrayMeta\Iris Server\License\ForImport"
-    if ($liccontent) {
-        New-Item -Path $licpath\license.plic -ItemType File 
-        Add-content -Path $licpath\license.plic -Value "$liccontent"
-        # Write to IA event log what was inserted by TF
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA License from terraform "$liccontent""
-    } 
-}
-catch {
-    Write-host $_.Exception | Format-List -force
-    Write-host "Exception during the S3 Licensing process" -ForegroundColor Red 
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA License from terraform "$liccontent""
 }
 
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention

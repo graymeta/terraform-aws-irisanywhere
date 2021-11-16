@@ -21,9 +21,9 @@ resource "aws_elasticsearch_domain" "es" {
   advanced_options = var.advanced_options
 
   advanced_security_options {
-    enabled                        = var.advanced_security_options_enabled
+    enabled = var.advanced_security_options_enabled
     master_user_options {
-      master_user_arn      = var.advanced_security_options_master_user_arn
+      master_user_arn = var.advanced_security_options_master_user_arn
     }
   }
   snapshot_options {
@@ -58,6 +58,11 @@ resource "aws_elasticsearch_domain" "es" {
     kms_key_id = var.encrypt_at_rest_kms_key_id
   }
 
+  #ES domain policy bug in TF creates an issue with changes when none are presented setting this value for that purpose.
+  lifecycle {
+    ignore_changes = [advanced_options]
+  }
+
   tags = {
     Domain = var.tag_domain
   }
@@ -65,21 +70,23 @@ resource "aws_elasticsearch_domain" "es" {
 
 resource "aws_elasticsearch_domain_policy" "main" {
   domain_name     = aws_elasticsearch_domain.es.domain_name
-  access_policies = <<POLICIES
-{
-"Statement": [
+  access_policies = <<CONFIG
     {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": ["${var.advanced_security_options_master_user_arn}"
-         ]
-      },
-            "Action": "es:*",
-            "Resource": "${aws_elasticsearch_domain.es.arn}/*"
-        }
-    ]
-}
-POLICIES
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "es:*"
+                ],
+                "Principal": {
+                    "AWS": "*"
+                },
+                "Effect": "Allow",
+                "Resource": "${aws_elasticsearch_domain.es.arn}/*"
+            }
+        ]
+    }
+CONFIG
 }
 
 data "aws_subnet" "subnet" {
@@ -93,16 +100,15 @@ resource "aws_security_group" "es" {
   description = "Allow inbound traffic from Security Groups and CIDRs. Allow all outbound traffic"
 
   tags = merge(
-    map("Name", replace("${var.tag_domain}-sg", ".", ""))
-  )
+  map("Name", replace("${var.domain}-sg", ".", "")))
 }
 
 resource "aws_security_group_rule" "ingress_cidr_blocks" {
   security_group_id = aws_security_group.es.id
   description       = "Allow inbound traffic from CIDR blocks"
   type              = "ingress"
-  from_port         = var.ingress_port_range_start
-  to_port           = var.ingress_port_range_end
+  from_port         = 443
+  to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = var.allowed_cidr_blocks
 
