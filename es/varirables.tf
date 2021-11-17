@@ -134,20 +134,18 @@ variable "security_groups" {
   description = "List of sec groups allowed to connect"
 }
 
-variable "ingress_port_range_start" {
-  type        = number
-  default     = 443
-  description = "Port number for ElasticSearch"
-}
-
-variable "ingress_port_range_end" {
-  type        = number
-  default     = 443
-  description = "End port number for ElasticSearch"
-}
-
 variable "allowed_cidr_blocks" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
   description = "List of CIDR blocks to allow access to OpenSearch"
+}
+
+variable "ia_secret_arn" {
+  type        = string
+  description = "(Required) arn of secrets for configuring application. See Readme for instructions for required inputs"
+}
+
+variable "bucketlist" {
+  type        = string
+  description = "(Required) list of S3 buckets"
 }

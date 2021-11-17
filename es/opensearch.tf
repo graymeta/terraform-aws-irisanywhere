@@ -60,7 +60,7 @@ resource "aws_elasticsearch_domain" "es" {
 
   #ES domain policy bug in TF creates an issue with changes when none are presented setting this value for that purpose.
   lifecycle {
-    ignore_changes = [advanced_options]
+    ignore_changes = [advanced_options, tags]
   }
 
   tags = {
