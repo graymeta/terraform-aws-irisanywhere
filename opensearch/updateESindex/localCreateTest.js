@@ -8,7 +8,7 @@ process.env.language = 'en'
 process.env.domain = 'os-endpoint.graymeta.com'
 
 // Lambda handler
-const { handler } = require('./app')
+const { handler } = require('./index')
 
 const main = async () => {
   console.time('localCreateTest')
