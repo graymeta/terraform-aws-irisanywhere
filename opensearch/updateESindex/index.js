@@ -89,6 +89,7 @@
    }
  }
  
+ // Escape and non-standard filesystem naming characters per 'https://www.w3schools.com/tags/ref_urlencode.ASP'
  function escapeS3Key(s3Key) {
   const searchPlus = '\\+';
   const searchRegExp = new RegExp(searchPlus, 'g');
@@ -96,6 +97,7 @@
   return decodeURIComponent(s3Key.replace(searchRegExp, '%20'));
  }
 
+ // Generic OpenSearch client
  function openSearchClient(httpMethod, path, requestBody) {
    return new Promise((resolve, reject) => {
      const endpoint = new AWS.Endpoint(process.env.domain)
