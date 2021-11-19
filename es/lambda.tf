@@ -36,8 +36,8 @@ resource "aws_iam_role" "lamda_es_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
-    role       = aws_iam_role.lamda_es_role.name
-    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  role       = aws_iam_role.lamda_es_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 resource "aws_lambda_function" "update-es-index-lambda" {
@@ -48,7 +48,7 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   runtime       = "nodejs12.x"
 
   vpc_config {
-    subnet_ids         = [var.subnet_id[0],var.subnet_id[1]]
+    subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
     security_group_ids = [aws_security_group.es.id]
   }
 
