@@ -44,8 +44,8 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   filename      = local.update_es_index_lambda_zip
   function_name = "updateESindex-${var.domain}"
   role          = aws_iam_role.lamda_es_role.arn
-  handler       = "add-to-es-index"
-  runtime       = "nodejs12.x"
+  handler       = "index.handler"
+  runtime       = "nodejs14.x"
 
   vpc_config {
     subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
