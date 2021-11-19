@@ -37,28 +37,32 @@
  }
  
  // Add S3 Object to bucket index
- const processCreateEvent = (event) => {
-   
-  const search = '\\+';
-  const searchRegExp = new RegExp(search, 'g');
+ function processCreateEvent(event) {
 
+  var s3Key = escapeS3Key(event.s3.object.key);
+  
    // Payload object for ES index insertion
    var response = openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
-     s3key : event.s3.object.key,
-     filepath: event.s3.object.key.replace(searchRegExp, ' '),
-     filename: event.s3.object.key.replace(/^.*[\\\/]/, '').replace(searchRegExp, ' '),
+     s3key : s3Key,
+     filepath: s3Key,
+     filename: s3Key.replace(/^.*[\\\/]/, ''),
      bucket: event.s3.bucket.name,
      etag: event.s3.object.eTag,
      filesize: event.s3.object.Size,
      lastmodified : Date.now()
-   }));
-   console.log("Inserted index item for event!\n\n" + JSON.stringify(event));
+   })).then((insertResponse) => {
+      if ('created' == insertResponse.result) {
+        console.log("Inserted index item for event!\n\n" + JSON.stringify(event));
+      } else {
+        console.log("Failed to insert index item for event!\n\n" + JSON.stringify(event));
+      }
+   });
  }
  
  // Delete S3 Object from bucket index
- const processDeleteEvent = (event) => {
-   
-   var requestBody = {"query": {"term": {"s3key": event.s3.object.key}}}
+ function processDeleteEvent(event)  {
+   var s3EventKey = escapeS3Key(event.s3.object.key);
+   var requestBody = {"query": {"term": {"s3key": s3EventKey}}}
    openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
      var deletedEntry = false;
      //console.log(JSON.stringify(searchResponse));
@@ -66,7 +70,7 @@
  
          // Objects in S3 are globally unique when inclueding the bucket with the path
          if (searchHit._source.bucket.trim() == event.s3.bucket.name.trim()) {
-           if (searchHit._source.s3key.trim() == event.s3.object.key.trim()) {
+           if (searchHit._source.s3key.trim() == s3EventKey.trim()) {
              //console.log(JSON.stringify(searchHit));
              deletedEntry = true;
              var response = openSearchClient('DELETE', event.s3.bucket.name + '/_doc/' + searchHit._id, '');
@@ -75,17 +79,22 @@
          }
      });
      if (!deletedEntry) {
-       console.log("Didn't delete index item for event!\n\n" + JSON.stringify(event));
+       console.log("Failed to delete index item for event!\n\n" + JSON.stringify(event));
      }
    });
  }
  
- const openSearchClient = (httpMethod, path, requestBody) => {
+ function escapeS3Key(s3Key) {
+  const searchPlus = '\\+';
+  const searchRegExp = new RegExp(searchPlus, 'g');
+
+  return decodeURI(s3Key.replace(searchRegExp, '%20'));
+ }
+
+ function openSearchClient(httpMethod, path, requestBody) {
    return new Promise((resolve, reject) => {
      const endpoint = new AWS.Endpoint(process.env.domain)
-     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
- 
-     //console.log(requestBody);
+     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION);
  
      request.method = httpMethod;
      request.path += path;
@@ -95,6 +104,7 @@
      request.headers['Content-Length'] = Buffer.byteLength(request.body)
  
      const credentials = { accessKeyId: process.env.domain_key_id, secretAccessKey: process.env.domain_secret_key, region: process.env.region }
+     //const credentials = new AWS.SharedIniFileCredentials('default');
      const signer = new AWS.Signers.V4(request, 'es')
      signer.addAuthorization(credentials, new Date())
  
@@ -106,7 +116,7 @@
          responseBody += chunk;
        });
        response.on('end', function (chunk) {
-         //console.log(responseBody);
+         //console.log("ResponseBody:" + responseBody);
          resolve(JSON.parse(responseBody));
        });
      }, function(error) {
