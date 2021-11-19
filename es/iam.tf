@@ -3,11 +3,11 @@ resource "aws_iam_access_key" "iris_s3_index" {
 }
 
 resource "aws_iam_user" "iris_s3_index" {
-  name = "iris_s3_index"
+  name = "iris_s3_index-${var.domain}"
 }
 
 resource "aws_iam_user_policy" "iris_s3_index" {
-  name = "Iris_s3_Index"
+  name = "Iris_s3_Index-${var.domain}"
   user = aws_iam_user.iris_s3_index.name
 
   policy = <<EOF

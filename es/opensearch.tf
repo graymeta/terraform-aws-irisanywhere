@@ -23,17 +23,14 @@ resource "aws_elasticsearch_domain" "es" {
   advanced_security_options {
     enabled = var.advanced_security_options_enabled
     master_user_options {
-      master_user_arn = var.advanced_security_options_master_user_arn
+      master_user_arn = aws_iam_user.iris_s3_index.arn
     }
   }
   snapshot_options {
     automated_snapshot_start_hour = 23
   }
   vpc_options {
-    subnet_ids = [
-      var.subnet_id[0],
-      var.subnet_id[1],
-    ]
+    subnet_ids = [var.subnet_id[0],var.subnet_id[1],]
 
     security_group_ids = [aws_security_group.es.id]
 
@@ -68,7 +65,7 @@ resource "aws_elasticsearch_domain" "es" {
   }
 }
 
-resource "aws_elasticsearch_domain_policy" "main" {
+resource "aws_elasticsearch_domain_policy" "iris_s3" {
   domain_name     = aws_elasticsearch_domain.es.domain_name
   access_policies = <<CONFIG
     {

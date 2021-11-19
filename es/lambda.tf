@@ -31,16 +31,27 @@ data "aws_iam_policy_document" "policy" {
 }
 
 resource "aws_iam_role" "lamda_es_role" {
-  name               = "lambda_es_role"
+  name               = "lambda_es_role-${var.domain}"
   assume_role_policy = data.aws_iam_policy_document.policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
+    role       = aws_iam_role.lamda_es_role.name
+    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 resource "aws_lambda_function" "update-es-index-lambda" {
   filename      = local.update_es_index_lambda_zip
-  function_name = "updateESindex"
+  function_name = "updateESindex-${var.domain}"
   role          = aws_iam_role.lamda_es_role.arn
   handler       = "add-to-es-index"
   runtime       = "nodejs12.x"
+
+  vpc_config {
+    subnet_ids         = [var.subnet_id[0],var.subnet_id[1]]
+    security_group_ids = [aws_security_group.es.id]
+  }
+
   environment {
     variables = {
       domain            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_endpoint"]
