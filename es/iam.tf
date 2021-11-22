@@ -6,9 +6,8 @@ resource "aws_iam_user" "iris_s3_index" {
   name = "iris_s3_index-${var.domain}"
 }
 
-
 resource "aws_iam_policy_attachment" "AWSLambdaVPC-role-attach" {
-  name       = "AWSLambdaVPC-role-attach"
+  name       = "AWSLambdaVPC-role-attach-${var.domain}"
   users      = [aws_iam_user.iris_s3_index.name]
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
