@@ -35,7 +35,6 @@ module "irisadmin" {
   ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
 }
 ```
-
 ### Arguement Reference:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `hostname_prefix` - (Required) A unique name.
