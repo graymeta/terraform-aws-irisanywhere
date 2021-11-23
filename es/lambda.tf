@@ -9,7 +9,6 @@ locals {
   update_es_index_lambda_zip = "outputs/updateesindex.zip"
 }
 
-
 data "archive_file" "update-es-index" {
   type        = "zip"
   source_file = "${path.module}/lambda/index.js"
@@ -40,7 +39,6 @@ resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-
 resource "aws_iam_role_policy_attachment" "AWSLambdaBasicExecutionRole" {
   role       = aws_iam_role.lamda_es_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -65,7 +63,6 @@ resource "aws_lambda_function" "update-es-index-lambda" {
       domain_secret_key = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_secretkey"]
       region            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
     }
-
   }
 }
 
@@ -88,5 +85,5 @@ resource "aws_lambda_permission" "s3objectperm" {
 
 resource "aws_cloudwatch_log_group" "update-es-index" {
   name              = "/aws/lambda/${aws_lambda_function.update-es-index-lambda.function_name}"
-  retention_in_days = 14
+  retention_in_days = 7
 }
