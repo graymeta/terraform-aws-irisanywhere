@@ -19,7 +19,7 @@ resource "aws_autoscaling_group" "iris" {
 
   warm_pool {
     pool_state                  = "Stopped"
-    min_size                    = var.asg_size_min
+    min_size                    = var.asg_size_max - (var.asg_size_max - 1)
     max_group_prepared_capacity = var.asg_size_max - (var.asg_size_max - 1)
   }
 
