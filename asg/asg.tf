@@ -17,11 +17,11 @@ resource "aws_autoscaling_group" "iris" {
   vpc_zone_identifier   = var.subnet_id
   target_group_arns     = ["${aws_lb_target_group.port443.id}"]
 
-  warm_pool {
-    pool_state                  = "Stopped"
-    min_size                    = var.asg_size_min
-    max_group_prepared_capacity = var.asg_size_max - (var.asg_size_max - 1)
-  }
+   warm_pool {
+     pool_state                  = "Stopped"
+     min_size                    = var.asg_size_max - (var.asg_size_max - 1)
+     max_group_prepared_capacity = var.asg_size_max - (var.asg_size_max - 1)
+   }
 
   launch_template {
     id      = aws_launch_template.iris.id
