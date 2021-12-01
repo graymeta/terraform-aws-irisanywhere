@@ -271,6 +271,6 @@ $tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
 
 # Restarting host to invoke autologon
-Start-Sleep -Seconds 10
+#Start-Sleep -Seconds 10
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 
