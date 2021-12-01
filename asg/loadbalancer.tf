@@ -54,7 +54,7 @@ resource "aws_lb_target_group" "port443" {
     interval            = var.lb_check_interval
     timeout             = 5
     protocol            = "HTTP"
-    matcher             = "200"
+    matcher             = "200,429"
     healthy_threshold   = 2
     unhealthy_threshold = var.lb_unhealthy_threshold
   }

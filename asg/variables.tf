@@ -133,7 +133,7 @@ variable "key_name" {
 variable "lb_algorithm_type" {
   type        = string
   description = "(Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`"
-  default     = "round_robin"
+  default     = "least_outstanding_requests"
 }
 
 variable "lb_check_interval" {
