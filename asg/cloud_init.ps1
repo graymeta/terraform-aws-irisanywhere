@@ -6,6 +6,9 @@ $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
 $search_enabled = "${search_enabled}"
+$s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
+$s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
+
 
 #Retrieve and prepare Secrets
 try {
