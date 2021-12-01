@@ -96,6 +96,9 @@ try {
         new-item $dir -ItemType Directory
         tiercli config "$dir" target s3 '""' '""' http://s3.amazonaws.com
         tiercli config "$dir" container  "$i"
+        if($s3_sse_cmk_enabled = "true") {
+            tiercli config "$dir" sse SSE-KMS "$s3_sse_cmk_arn"
+        }
         tiercli config reload
     #add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
