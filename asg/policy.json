@@ -20,6 +20,18 @@
             "Sid": "",
             "Effect": "Allow",
             "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
                 "kms:CreateGrant",
                 "kms:ListGrants",
                 "kms:RevokeGrant"
