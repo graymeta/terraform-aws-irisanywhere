@@ -226,6 +226,7 @@ Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to t
 * s3-index.exe is installed on the Iris Admin server instance.
 * AWS CLI is installed on the AWS Iris Admin server instance.
 * AWS IAM policy credentials have access to the desired S3 bucket.
+* AWS IAM policy credentials have access to the OpenSearch endpoint.
 
 ### Executing The s3-index.exe
 Locate the s3-index.exe directory and run the following command from that directory
@@ -235,7 +236,7 @@ Locate the s3-index.exe directory and run the following command from that direct
 Required by s3-index.exe
 * `region`  : AWS region
 * `bucket`  : Name of s3 buckeet to be indexed
-* `domain`  : Domain of the opensearch service
+* `domain`  : Domain of the OpenSearch service
 
 Optional
 * `awsProfile` : Name of AWS profile if other than default
