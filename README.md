@@ -220,13 +220,21 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 ### Creating DNS for the Iris ASG load balancer
 Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
 
-# Indexing Your Assets
-## Prerequisite:
-* Insure AWC CLI is installed on the admin server
-* Insure s3-index.exe is installed on the admin server
+## Indexing Your Assets
+### Prerequisites:
+* Insure AWS CLI is installed on the AWS admin server instance.
+* Insure s3-index.exe is installed on the admin server instance.
+* Insure AWS IAM policy credentials have access to the desired S3 bucket
 
-## Executing The s3-index.exe
-From the s3-index.exe root directory
+### Executing The s3-index.exe
+From the s3-index.exe root directory run the following command.
 ```
-`.\s3-index --region [aws region] --bucket [bucket to be indexed] --domain [domain of the opensearch service] --awsProfile [OPTIONAL - name of aws profile if other than default] `
+.\s3-index --region [aws region] --bucket [bucket to be indexed] --domain [domain of the opensearch service] --awsProfile [name of aws profile if other than default]
 ```
+Required by s3-index.exe
+* `region`  : AWS region
+* `bucket`  : Name of s3 buckeet to be indexed
+* `domain`  : Domain of the opensearch service
+
+Optional
+* `awsProfile` : Name of AWS profile if other than default
