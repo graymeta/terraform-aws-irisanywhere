@@ -219,7 +219,7 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 
 ### Creating DNS for the Iris ASG load balancer
 Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
-
+***
 
 ## Indexing The S3 Bucket
 ### Prerequisites:
