@@ -231,11 +231,11 @@ Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to t
 ### Executing The s3-index.exe
 Locate the s3-index.exe directory and run the following command from that directory
 ```
-.\s3-index --region [aws region] --bucket [bucket name] --domain [domain name] --awsProfile [profile name]
+.\s3-index --region [AWS region] --bucket [bucket name] --domain [domain name] --awsProfile [profile name]
 ```
 Required by s3-index.exe
 * `region`  : AWS region
-* `bucket`  : Name of s3 buckeet to be indexed
+* `bucket`  : Name of s3 bucket to be indexed
 * `domain`  : Domain of the OpenSearch service
 
 Optional
