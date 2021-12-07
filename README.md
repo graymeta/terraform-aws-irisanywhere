@@ -221,5 +221,12 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
 
 ### Indexing Your Assets
-#Prerequisite:
-Insure AWC CLI is installed on the admin server
+# Prerequisite:
+* Insure AWC CLI is installed on the admin server
+* Insure s3-index.exe is installed on the admin server
+
+# 
+From the s3-index.exe root directory
+```
+`.\s3-index --region [aws region] --bucket [bucket to be indexed] --domain [domain of the opensearch service] --awsProfile [OPTIONAL - name of aws profile if other than default] `
+```
