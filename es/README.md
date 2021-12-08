@@ -12,7 +12,7 @@ Prerequisites:
 * `version` - Current version is `v0.0.11`.
 
 ## Example Usage
-
+  
 ```hcl
 provider "aws" {
   region  = "us-west-2"
@@ -54,7 +54,7 @@ The following secret keys must be set for OpenSearch to work properly.
 
 
 ### Attributes Reference:
-
+***
 
 ## Indexing The S3 Bucket
 ### Prerequisites:
