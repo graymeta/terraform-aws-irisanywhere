@@ -233,7 +233,7 @@ From the terminal execute the aws configure command.
 ``` 
 ~ % aws configure
 ```
-You will be prompted for the following configuration credentials
+You will be prompted for the following configuration credentials...
 ```
 AWS Access Key ID []: [Enter Your Access Key ID Here]
 AWS Secrete Access Key []: [Enter Your Secret Access Key ID Here]
