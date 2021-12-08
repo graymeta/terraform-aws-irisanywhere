@@ -231,7 +231,10 @@ Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to t
 ### Configure The AWS Environment
 From the terminal execute the aws configure command.
 ``` 
-aws configure
+~ % aws configure
+```
+You will be prompted for the following configuration credentials
+```
 AWS Access Key ID []: [Enter Your Access Key ID Here]
 AWS Secrete Access Key []: [Enter Your Secret Access Key ID Here]
 Default region name []: [Enter aws region name i.e. us-east-1]
