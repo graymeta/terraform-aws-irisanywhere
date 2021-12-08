@@ -228,6 +228,17 @@ Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to t
 * AWS IAM policy credentials have access to the desired S3 bucket.
 * AWS IAM policy credentials have access to the OpenSearch endpoint.
 
+### Configure The AWS Environment
+From the terminal execute the aws configure command.
+``` 
+aws configure
+AWS Access Key ID []: [Enter Your Access Key ID Here]
+AWS Secrete Access Key []: [Enter Your Secret Access Key ID Here]
+Default region name []: [Enter aws region name i.e. us-east-1]
+Default output format []: [Enter your preferred output format i.e. json]
+```
+Once the AWS environment is configured with proper credentials, proceed to executing the next step.
+
 ### Executing The s3-index.exe
 Locate the s3-index.exe directory and run the following command from that directory
 ```
