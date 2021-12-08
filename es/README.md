@@ -12,7 +12,7 @@ Prerequisites:
 * `version` - Current version is `v0.0.11`.
 
 ## Example Usage
-
+  
 ```hcl
 provider "aws" {
   region  = "us-west-2"
@@ -34,7 +34,7 @@ bucketlist                                = "s3bucket1"
 }
 
 ```
-### Arguement Reference:
+### Argument Reference:
 * `domain` - (Required) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `instance_type` - (Required) Elasticsearch instance type for data nodes in the cluster.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
@@ -53,5 +53,39 @@ The following secret keys must be set for OpenSearch to work properly.
     os_secretkey       = ""
 
 
-
 ### Attributes Reference:
+***
+
+## Indexing The S3 Bucket
+### Prerequisites:
+* s3-index.exe is installed on the Iris Admin server instance.
+* AWS CLI is installed on the AWS Iris Admin server instance.
+* AWS IAM policy credentials have access to the desired S3 bucket.
+* AWS IAM policy credentials have access to the OpenSearch endpoint.
+
+### Configure The AWS Environment
+From the terminal execute the aws configure command.
+``` 
+~ % aws configure
+```
+You will be prompted for the following configuration credentials...
+```
+AWS Access Key ID []: [Enter Your Access Key ID Here]
+AWS Secrete Access Key []: [Enter Your Secret Access Key ID Here]
+Default region name []: [Enter aws region name i.e. us-east-1]
+Default output format []: [Enter your preferred output format i.e. json]
+```
+Once the AWS environment is configured with proper credentials, proceed to executing the next step.
+
+### Executing The s3-index.exe
+Locate the s3-index.exe directory and run the following command from that directory
+```
+.\s3-index --region [AWS region] --bucket [bucket name] --domain [domain name] --awsProfile [profile name]
+```
+Required by s3-index.exe
+* `region`  : AWS region
+* `bucket`  : Name of s3 bucket to be indexed
+* `domain`  : Domain of the OpenSearch service
+
+Optional
+* `awsProfile` : Name of AWS profile if other than default
