@@ -6,6 +6,9 @@ $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
 $search_enabled = "${search_enabled}"
+$s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
+$s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
+
 
 #Retrieve and prepare Secrets
 try {
@@ -76,8 +79,8 @@ if($s3_meta_bucketname){
         $dir = "D:\irisanywhere\$($i)"
         new-item $dir -ItemType Directory
         Write-Host "Found Meta config for bucket $i to directory "$dir" with meta credentials $s3_meta_access_key"
-        tiercli config "$dir" target s3 '""' '""' http://s3.amazonaws.com
-        #tiercli config "$dir" target s3 "$iris_s3_access_key" "$iris_s3_secret_key" http://s3.amazonaws.com
+        tiercli config "$dir" target s3 '""' '""' https://s3.amazonaws.com
+        #tiercli config "$dir" target s3 "$iris_s3_access_key" "$iris_s3_secret_key" https://s3.amazonaws.com
         tiercli config "$dir" container  "$i"
         tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key"    
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta bucket $s3_meta_bucketname  & $dir"
@@ -94,8 +97,13 @@ try {
     foreach($i in $bucketlist){
         $dir = "D:\irisanywhere\$($i)"
         new-item $dir -ItemType Directory
-        tiercli config "$dir" target s3 '""' '""' http://s3.amazonaws.com
+        tiercli config "$dir" target s3 '""' '""' https://s3.amazonaws.com
         tiercli config "$dir" container  "$i"
+        if($s3_sse_cmk_enabled = "true") {
+            tiercli config "$dir" sse SSE-KMS "$s3_sse_cmk_arn"
+        }
+        tiercli config policy reclaimspace turn on
+        tiercli config policy reclaimspace minused 90
         tiercli config reload
     #add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF

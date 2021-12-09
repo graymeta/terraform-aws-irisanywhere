@@ -216,3 +216,15 @@ variable "search_enabled" {
   description = "(Optional) OpenSearch region"
   default     = false
 }
+
+variable "s3_sse_cmk_enabled" {
+  type        = bool
+  description = "(Optional) Enables S3 SSE"
+  default     = false
+}
+
+variable "s3_sse_cmk_arn" {
+  type        = string
+  description = "(Optional) ARN of Custom KMS Key"
+  default     = false
+}
