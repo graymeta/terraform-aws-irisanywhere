@@ -231,12 +231,24 @@ variable "s3_sse_cmk_arn" {
 
 variable "ia_video_codec" {
   type        = string
-  description = "(Optional) Sets video codec for Iris Anywhere streams"
+  description = "(Optional) Sets video codec for Iris Anywhere streams. Default is VP9."
   default     = "VP9"
 }
 
 variable "ia_video_bitrate" {
   type        = string
-  description = "(Optional) Sets video bitrate for streams"
+  description = "(Optional) Sets video bitrate for Iris Anywhere streams. Default is 10000 bits/sec."
   default     = "10000"
+}
+
+variable "asg_warm_pool_min" {
+  type        = string
+  description = "(Optional) Default is 0"
+  default     = "0"
+}
+
+variable "asg_warm_pool_max" {
+  type        = string
+  description = "(Optional) Default is 0"
+  default     = "0"
 }

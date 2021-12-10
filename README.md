@@ -128,6 +128,8 @@ The following arguments are supported:
 * `asg_size_desired` - (Required) The number of EC2 instances that should be running in the group.
 * `asg_size_max` - (Required) Maximum size of the Auto Scaling Group.
 * `asg_size_min` - (Required) Minimum size of the Auto Scaling Group.
+* `asg_warm_pool_min` - (Optional) Minimum size of the Auto Scaling Group Warm Pool. Default is 0.
+* `asg_warm_pool_max` - (Optional) Maximum size of the Auto Scaling Group Warm Pool. Default is 0.
 * `base_ami` - (Optional) The AMI from which to launch the instance.  Default to latest released AMI
 * `disk_data_iops` - (Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2.
 * `disk_data_size` - (Optional) EBS volume size.  Default to `300`
