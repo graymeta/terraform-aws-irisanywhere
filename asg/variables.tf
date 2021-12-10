@@ -226,7 +226,7 @@ variable "s3_sse_cmk_enabled" {
 variable "s3_sse_cmk_arn" {
   type        = string
   description = "(Optional) ARN of Custom KMS Key"
-  default     = false
+  default     = ""
 }
 
 variable "ia_video_codec" {
@@ -238,5 +238,5 @@ variable "ia_video_codec" {
 variable "ia_video_bitrate" {
   type        = string
   description = "(Optional) Sets video bitrate for streams"
-  default     = "5000"
+  default     = "10000"
 }
