@@ -153,7 +153,10 @@ The following arguments are supported:
 * `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
 * `iam_role_name` - (Optional) Set name for IAM Role.
 * `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
-
+* `s3_sse_cmk_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
+* `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
+* `ia_video_bitrate` - (Optional) Sets video codec for Iris Anywhere. Default is 10000 bits/sec.
+* `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP9.
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
