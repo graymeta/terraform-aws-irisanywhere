@@ -70,6 +70,8 @@ data "template_file" "cloud_init" {
     search_enabled        = var.search_enabled
     s3_sse_cmk_enabled    = var.s3_sse_cmk_enabled
     s3_sse_cmk_arn        = var.s3_sse_cmk_arn
+    ia_video_bitrate      = var.ia_video_bitrate
+    ia_video_codec        = var.ia_video_codec
   }
 }
 

@@ -8,6 +8,8 @@ $iadomain = "${ia_domain}"
 $search_enabled = "${search_enabled}"
 $s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
 $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
+$ia_video_bitrate = "${ia_video_bitrate}"
+$ia_video_codec = "${ia_video_codec}"
 
 
 #Retrieve and prepare Secrets
@@ -119,7 +121,6 @@ catch {
 # Set Iris Admin Customer ID:
 try {
     set-customer -id "$admin_customer_id"
-    # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set Customer ID from terraform $admin_customer_id"
 }
 catch {
@@ -131,7 +132,6 @@ catch {
 # Set Iris Admin Server credentials:
 try {
     set-iaadmincreds -uid "$admin_db_id" -pass "$admin_db_pw"
-    # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin server credentials from terraform"
 }
 catch {
@@ -143,7 +143,6 @@ catch {
 # Set Iris Admin Server host:
 try {
     set-iaadmin -licserver "$admin_server" 
-    # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set IA Admin Server from terraform "$admin_server""
 }
 catch {
@@ -155,13 +154,23 @@ catch {
 # Set Iris Anywhere Max Sessions:
 try {
     set-maxsessions -sessions "$MaxSessions"
-    # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set max sessions to $MaxSessions"
 }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception setting max session value" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting max sessions to $MaxSessions"
+}
+
+# Set Iris Anywhere Video bitrate settings:
+try {
+    set-videobitrate -bitrate "$ia_video_bitrate" -codec "$ia_video_codec"
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Set video bitrate to $ia_video_bitrate and codec to $ia_video_codec"
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting video bitrate value" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting bitrate value to $ia_video_bitrate and codec to $ia_video_codec"
 }
 
 # Set Okta config:

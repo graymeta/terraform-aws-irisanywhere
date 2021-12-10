@@ -228,3 +228,15 @@ variable "s3_sse_cmk_arn" {
   description = "(Optional) ARN of Custom KMS Key"
   default     = false
 }
+
+variable "ia_video_codec" {
+  type        = string
+  description = "(Optional) Sets video codec for Iris Anywhere streams"
+  default     = "VP9"
+}
+
+variable "ia_video_bitrate" {
+  type        = string
+  description = "(Optional) Sets video bitrate for streams"
+  default     = "5000"
+}
