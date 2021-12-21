@@ -7,7 +7,7 @@ Prerequisites:
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12, 13 & 14 compatible.
-* `version` - Current version is `v0.0.13`. Note moddule version requires Iris Anywhere AMI version 1.5.4.21.
+* `version` - Current version is `v0.0.14`. Note moddule version requires Iris Anywhere AMI version 1.6.0.22.
 
 ***
 ## Iris Anywhere Admin Server
@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.13"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.14"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -72,7 +72,7 @@ locals {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.13"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.14"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
   lb_check_interval       = 30
