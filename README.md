@@ -7,7 +7,7 @@ Prerequisites:
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12, 13 & 14 compatible.
-* `version` - Current version is `v0.0.9`.
+* `version` - Current version is `v0.0.14`. Note moddule version requires Iris Anywhere AMI version 1.6.0.22.
 
 ***
 ## Iris Anywhere Admin Server
@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.10"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.14"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -72,7 +72,7 @@ locals {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.9"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.14"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
   lb_check_interval       = 30
@@ -157,7 +157,7 @@ The following arguments are supported:
 * `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
 * `s3_sse_cmk_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
 * `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
-* `ia_video_bitrate` - (Optional) Sets video codec for Iris Anywhere. Default is 10000 bits/sec.
+* `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is 10000.
 * `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP9.
 
 ### Attributes Reference:

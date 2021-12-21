@@ -59,3 +59,8 @@ variable "ia_secret_arn" {
   description = "ARN containing secrets for Iris Admin"
 }
 
+variable "instance_protection" {
+  type        = bool
+  description = "Enables instance protection"
+  default     = true
+}

@@ -9,7 +9,7 @@ Prerequisites:
 * Certificates created or imported in AWS Certificate Manager.
 * OpenSearch requires two subnets for high availability.
 * Terraform 12, 13 & 14 compatible.
-* `version` - Current version is `v0.0.11`.
+* `version` - Current version is `v0.0.13`.
 
 ## Example Usage
   
@@ -20,7 +20,7 @@ provider "aws" {
 }
 
 module "ia-opensearch" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//es?ref=v0.0.11"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//es?ref=v0.0.13"
 
 domain                                    = "es-domain-name" 
 instance_type                             = "m4.xlarge.elasticsearch"
