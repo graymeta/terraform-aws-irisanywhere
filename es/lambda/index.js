@@ -1,3 +1,4 @@
+
 /**************************
  * This program is protected under international and U.S. copyright laws as
  * an unpublished work. This program is confidential and proprietary to the
@@ -14,7 +15,7 @@
 
  const AWS = require('aws-sdk');
  
- AWS.config.region = process.env.region 
+ AWS.config.region = process.env.AWS_REGION; 
  
  // The Lambda handler
  exports.handler = (event) => {
@@ -22,7 +23,6 @@
    // Handle each incoming S3 object in the event
    Promise.all(
      event.Records.map((event) => {
-       
        try {
          if (event.eventName.startsWith('ObjectCreated:')) {
            processCreateEvent(event)
@@ -108,9 +108,8 @@
      request.headers['host'] = endpoint.host;
      request.headers['Content-Type'] = 'application/json';
      request.headers['Content-Length'] = Buffer.byteLength(request.body)
- 
-     const credentials = { accessKeyId: process.env.domain_key_id, secretAccessKey: process.env.domain_secret_key, region: process.env.region }
-     //const credentials = new AWS.SharedIniFileCredentials('default');
+     
+     const credentials = { accessKeyId: AWS.config.credentials.accessKeyId, secretAccessKey: AWS.config.credentials.secretAccessKey, sessionToken: AWS.config.credentials.sessionToken };
      const signer = new AWS.Signers.V4(request, 'es')
      signer.addAuthorization(credentials, new Date())
  
@@ -122,7 +121,7 @@
          responseBody += chunk;
        });
        response.on('end', function (chunk) {
-         //console.log("ResponseBody:" + responseBody);
+         console.log("ResponseBody:" + responseBody);
          resolve(JSON.parse(responseBody));
        });
      }, function(error) {
