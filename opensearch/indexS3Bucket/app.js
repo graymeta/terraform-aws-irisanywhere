@@ -28,7 +28,7 @@
  const folderMap = new Map();
  
  var awsProfile = 'default';
- var credentialsDurationSecs = 3600; //to be utilized if 1 hour isn't sufficient index time (requires change of MaxDuration of policy allowance)
+ var credentialsDurationSecs = 3600;
  
  var numberFileObjectsUpdated = 0;
  var numberFileObjectsUpdateFailed = 0;
@@ -56,16 +56,22 @@
      process.env.AWS_PROFILE = args['awsProfile'];
      awsProfile = args['awsProfile'];
    }
+   if (args['osRoleArn'] != null) {
+     process.env.osRoleArn = args['osRoleArn'];
+     awsProfile = args['osRoleArn'];
+   } else {
+     throw '\'--osRoleArn\' parameter is required!';
+   }
    
    var sts = new AWS.STS();
    await (async () => {
      try {
        const data = await sts.assumeRole({
-         RoleArn: 'arn:aws:iam::913397769129:role/ia_pilot_admin-t3xlarge-Role',
-         RoleSessionName: 'JRGstsOpenSearch',
+         RoleArn: process.env.osRoleArn,
+         RoleSessionName: 'IA_S3_Index',
          DurationSeconds: credentialsDurationSecs
        }).promise();
-       console.log('Assumed role success :)');
+       console.log('Assumed role success');
        //console.log(data);
        AWS.config.update({ 
          accessKeyId: data.Credentials.AccessKeyId,
@@ -73,14 +79,13 @@
          sessionToken: data.Credentials.SessionToken
        });
      } catch (err) {
-       console.log('Cannot assume role :(');
+       console.log('Cannot assume role');
        console.log(err, err.stack);
      }
    })();
  
    console.log("\nSyncing Bucket:" + process.env.bucket + "\n\nOpenSearch Domain Endpoint:" + process.env.domain + "\n\nRegion:" + process.env.AWS_REGION);
  
-   
  
    //Runtime timer begin
    console.time('indexS3Bucket');
@@ -235,4 +240,3 @@
  }
  
  main().catch(error => console.error(error))
- 
