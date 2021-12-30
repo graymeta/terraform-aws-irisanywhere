@@ -23,7 +23,7 @@ resource "aws_elasticsearch_domain" "es" {
   advanced_security_options {
     enabled = var.advanced_security_options_enabled
     master_user_options {
-      master_user_arn = aws_iam_user.iris_s3_index.arn
+      master_user_arn = aws_iam_role.s3_indexer_role.arn
     }
   }
   snapshot_options {

@@ -25,29 +25,48 @@ data "aws_iam_policy_document" "policy" {
       type        = "Service"
     }
 
+      principals {
+      type        = "AWS"
+      identifiers = ["${var.arn_of_indexresource}"]
+   }   
+
     actions = ["sts:AssumeRole"]
   }
 }
 
-resource "aws_iam_role" "lamda_es_role" {
-  name               = "lambda_es_role-${var.domain}"
+data "template_file" "iris_s3_policy" {
+  template = file("${path.module}/s3-index-policy.json")
+}
+
+resource "aws_iam_policy" "s3_indexer_policy" {
+  name   = "s3_indexer_policy-${var.domain}"
+  policy = data.template_file.iris_s3_policy.rendered
+}
+
+resource "aws_iam_role" "s3_indexer_role" {
+  name               = "s3_indexer_role-${var.domain}"
   assume_role_policy = data.aws_iam_policy_document.policy.json
 }
 
+resource "aws_iam_role_policy_attachment" "s3_indexer_policy_att" {
+  role       = aws_iam_role.s3_indexer_role.name
+  policy_arn = aws_iam_policy.s3_indexer_policy.arn
+}
+
 resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" {
-  role       = aws_iam_role.lamda_es_role.name
+  role       = aws_iam_role.s3_indexer_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 resource "aws_iam_role_policy_attachment" "AWSLambdaBasicExecutionRole" {
-  role       = aws_iam_role.lamda_es_role.name
+  role       = aws_iam_role.s3_indexer_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_function" "update-es-index-lambda" {
   filename      = local.update_es_index_lambda_zip
   function_name = "updateESindex-${var.domain}"
-  role          = aws_iam_role.lamda_es_role.arn
+  role          = aws_iam_role.s3_indexer_role.arn
   handler       = "index.handler"
   runtime       = "nodejs14.x"
 
@@ -59,8 +78,6 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   environment {
     variables = {
       domain            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_endpoint"]
-      domain_key_id     = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_accessid"]
-      domain_secret_key = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_secretkey"]
       region            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
     }
   }
@@ -87,3 +104,4 @@ resource "aws_cloudwatch_log_group" "update-es-index" {
   name              = "/aws/lambda/${aws_lambda_function.update-es-index-lambda.function_name}"
   retention_in_days = 7
 }
+
