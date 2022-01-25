@@ -106,7 +106,10 @@ try {
         }
         tiercli config policy reclaimspace turn on
         tiercli config policy reclaimspace minused 90
-        tiercli config reload
+        tiercli utils clear_rehydrate "$dir"
+        tiercli config reload 
+        tiercli op clean "$dir"
+        
     #add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
     # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform $i" 
