@@ -1,43 +1,23 @@
-resource "aws_iam_access_key" "iris_s3_index" {
-  user = aws_iam_user.iris_s3_index.name
-}
 
 resource "aws_iam_user" "iris_s3_index" {
   name = "iris_s3_index-${var.domain}"
 }
 
-resource "aws_iam_user_policy" "iris_s3_index" {
-  name = "Iris_s3_Index-${var.domain}"
-  user = aws_iam_user.iris_s3_index.name
+data "aws_iam_policy_document" "es_policy" {
+  statement {
+    actions   = ["es:*"]
+    resources = ["${aws_elasticsearch_domain.es.arn}/*"]
+    effect    = "Allow"
+  }
+}
 
-  policy = <<EOF
-{
-    "Version":"2012-10-17",
-    "Statement":[
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetBucketLocation",
-                "s3:GetBucketVersioning",
-                "s3:ListBucket",
-                "s3:ListBucketVersions"
-            ],
-            "Resource": [
-                "arn:aws:s3:::${var.bucketlist}"
-            ]
-       },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion"
-            ],
-            "Resource": [
-                "arn:aws:s3:::${var.bucketlist}/*"
-            ]
-        }
-    ]
- }
+resource "aws_iam_policy" "es-policy" {
+  name        = "${var.domain}-policy"
+  description = "My test policy"
+  policy      = data.aws_iam_policy_document.es_policy.json
+}
 
-EOF
+resource "aws_iam_user_policy_attachment" "es-attach" {
+  user       = aws_iam_user.iris_s3_index.name
+  policy_arn = aws_iam_policy.es-policy.arn
 }

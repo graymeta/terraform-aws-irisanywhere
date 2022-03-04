@@ -55,6 +55,13 @@ The following secret keys must be set for OpenSearch to work properly.
 
 ### Attributes Reference:
 ***
+* Create an IAM access and secret keys for the user OpenSearch created and store data in AWS Secrets Manager
+* Populate the key info created by OS in the secrets used by IA ASG created by OS
+* Add the IAM user created by OpenSearch as a Master User (OpenSearch, Select Domain, Edit Security, Set IAM ARN as master user by adding the IAM User ARN )
+* Redeploy IA ASG with newly created secrets for OpenSearch
+
+## Configuring ASG for OpenSearch
+
 
 ## Indexing The S3 Bucket
 ### Prerequisites:
