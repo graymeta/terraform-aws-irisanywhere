@@ -28,7 +28,7 @@ data "aws_iam_policy_document" "policy" {
     principals {
       type        = "AWS"
       identifiers = ["${var.arn_of_indexresource}"]
-   }
+    }
 
     actions = ["sts:AssumeRole"]
   }
@@ -77,8 +77,8 @@ resource "aws_lambda_function" "update-es-index-lambda" {
 
   environment {
     variables = {
-      domain            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_endpoint"]
-      region            = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
+      domain = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_endpoint"]
+      region = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
     }
   }
 }
