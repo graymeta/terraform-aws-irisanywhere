@@ -1,4 +1,3 @@
-
 /**************************
  * This program is protected under international and U.S. copyright laws as
  * an unpublished work. This program is confidential and proprietary to the
@@ -19,8 +18,6 @@ const AWS = require('aws-sdk');
 AWS.config.region = process.env.AWS_REGION;
 process.env.language = 'en'
 
-const s3 = new AWS.S3();
-
 const args = require('minimist')(process.argv.slice(2));
 
 const indexCreationJson = { "mappings" : {"properties" : { "s3key" : { "type" : "keyword" }, "filepath" : { "type" : "text" }, "filename" : { "type" : "text" }, "bucket" : { "type" : "keyword" },"etag" : { "type" : "keyword" },"filesize" : { "type" : "long" }, "lastmodified" : { "type" : "date" }}}};
@@ -28,6 +25,7 @@ const indexCreationJson = { "mappings" : {"properties" : { "s3key" : { "type" : 
 const folderMap = new Map();
 
 var awsProfile = 'default';
+var credentialsDurationSecs = 3600;
 
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
@@ -55,11 +53,37 @@ const main = async () => {
     process.env.AWS_PROFILE = args['awsProfile'];
     awsProfile = args['awsProfile'];
   }
+  if (args['osRoleArn'] != null) {
+    process.env.AWS_ROLE_ARN = args['osRoleArn'];
+    //awsProfile = args['osRoleArn'];
+  } else {
+    throw '\'--osRoleArn\' parameter is required!';
+  }
   
+  var sts = new AWS.STS();
+  await (async () => {
+    try {
+      const data = await sts.assumeRole({
+        RoleArn: process.env.AWS_ROLE_ARN,
+        RoleSessionName: 'IA_S3_Index',
+        DurationSeconds: credentialsDurationSecs
+      }).promise();
+      //console.log('Assumed role success');
+      //console.log(data);
+      AWS.config.update({ 
+        accessKeyId: data.Credentials.AccessKeyId,
+        secretAccessKey: data.Credentials.SecretAccessKey,
+        sessionToken: data.Credentials.SessionToken
+      });
+    } catch (err) {
+      console.log('Cannot assume role');
+      console.log(err, err.stack);
+    }
+   })();
+
+  const s3Client = new AWS.S3( {credentials: AWS.config.credentials } );
 
   console.log("\nSyncing Bucket:" + process.env.bucket + "\n\nOpenSearch Domain Endpoint:" + process.env.domain + "\n\nRegion:" + process.env.AWS_REGION);
-
-  
 
   //Runtime timer begin
   console.time('indexS3Bucket');
@@ -83,8 +107,13 @@ const main = async () => {
   //create new bucket index
   await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
 
-  await Promise.all(arrayOfParams.map(params => getAllKeys(params)));
+  //await new Promise(r => setTimeout(r, 2000));
+
+  await Promise.all(arrayOfParams.map(params => getAllKeys(params, s3Client)));
+
   console.timeEnd('indexS3Bucket')
+
+  return 0;
 };
 
 /*
@@ -97,10 +126,10 @@ If you use the API to upload an object with key foo/bar.txt, this does not creat
 Of course, the only way to upload such an object with the console is to "create" the folder unless it already appears -- but appears in the console does not necessarily equate to exists as a distinct object.
 */
 
-async function getAllKeys(params) {
-  var fileObjects = [];
+async function getAllKeys(params, s3Client) {
 
-  const response = await s3.listObjectsV2(params).promise();
+  var fileObjects = [];
+  const response = await s3Client.listObjectsV2(params).promise();
   response.Contents.forEach(async function(obj) {
     if (!obj.Key.endsWith('/')) {
       var folderName = obj.Key.substring(0,obj.Key.lastIndexOf("/")+1);
@@ -159,7 +188,7 @@ async function getAllKeys(params) {
 
   if (response.NextContinuationToken) {
     params.ContinuationToken = response.NextContinuationToken;
-    await getAllKeys(params); // RECURSIVE CALL
+    await getAllKeys(params, s3Client); // RECURSIVE CALL
   }
 }
 
@@ -188,7 +217,7 @@ const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) 
     request.headers['Content-Type'] = 'application/json';
     request.headers['Content-Length'] = Buffer.byteLength(request.body)
 
-    const credentials = new AWS.SharedIniFileCredentials(awsProfile);
+    const credentials = { accessKeyId: AWS.config.credentials.accessKeyId, secretAccessKey: AWS.config.credentials.secretAccessKey, sessionToken: AWS.config.credentials.sessionToken };
     const signer = new AWS.Signers.V4(request, 'es')
     signer.addAuthorization(credentials, new Date())
 
