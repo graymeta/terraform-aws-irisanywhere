@@ -82,7 +82,7 @@ resource "aws_launch_template" "iris" {
   key_name      = var.key_name
   user_data     = base64encode(join("\n", ["<powershell>", "${data.template_file.cloud_init.rendered}", "${var.user_init}", "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
   ebs_optimized = true
-
+  update_default_version = var.update_asg_lt
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name
   }

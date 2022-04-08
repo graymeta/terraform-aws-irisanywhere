@@ -10,8 +10,6 @@ try {
     $admin_console_id   = $secretdata.admin_console_id
     $admin_console_pw   = $secretdata.admin_console_pw
 
-    #TEMP create event log for debugging
-    New-EventLog -LogName IrisAdmin -Source "IrisAdmin" ; Start-Sleep -Seconds 10
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1001 -message "I have started initializing"
 }
 catch {

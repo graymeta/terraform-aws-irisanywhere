@@ -64,3 +64,8 @@ variable "instance_protection" {
   description = "Enables instance protection"
   default     = true
 }
+
+variable "ssl_certificate_arn" {
+  type        = string
+  description = "(Required) The ARN of the SSL server certificate."
+}

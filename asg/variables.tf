@@ -252,3 +252,9 @@ variable "asg_warm_pool_max" {
   description = "(Optional) Default is 0"
   default     = "0"
 }
+
+variable "update_asg_lt" {
+  type        = string
+  description = "(Optional) Default is true"
+  default     = "true"
+}
