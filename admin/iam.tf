@@ -1,21 +1,3 @@
-# Create instance profile
-# resource "aws_iam_instance_profile" "iris_adm" {
-#   name = "iris_adm"
-#   role = aws_iam_role.iris_adm_role.name
-# }
-
-# resource "aws_iam_role" "iris_adm_role" {
-#   name = "iris_adm_role"
-
-#   assume_role_policy = file("${path.module}/adm_role.json")
-# }
-
-
-# data "template_file" "iris_adm_policy" {
-#   template = file("${path.module}/policy.json")
-# }
-
-########
 
 data "template_file" "iris_adm_role" {
   template = file("${path.module}/adm_role.json")

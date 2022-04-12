@@ -149,3 +149,8 @@ variable "bucketlist" {
   type        = string
   description = "(Required) list of S3 buckets"
 }
+
+variable "arn_of_indexresource" {
+  type        = string
+  description = "(Required) ARN of Role trusted to index"
+}
