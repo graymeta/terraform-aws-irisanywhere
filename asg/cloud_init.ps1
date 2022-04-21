@@ -6,6 +6,7 @@ $certkeyarn = "${ia_cert_key_arn}"
 $iasecretarn = "${ia_secret_arn}"
 $iadomain = "${ia_domain}"
 $search_enabled = "${search_enabled}"
+$s3_sse_bucketkey_enabled = "${s3_sse_bucketkey_enabled}"
 $s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
 $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
 $ia_video_bitrate = "${ia_video_bitrate}"
@@ -53,7 +54,10 @@ try {
     if($certcrtarn) {$crt=Get-SECSecretValue $certcrtarn ; $crt = $crt | select -expandproperty secretstring ; add-content -Value $crt 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.crt'
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Leaf Cert Added" }
     if($certkeyarn) {$key=Get-SECSecretValue $certkeyarn ; $key = $key | select -expandproperty secretstring ; add-content -Value $key 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.key'
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Private key added" }
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Private key added" 
+        # Disable HTTP redir
+        set-httpredir -enable true
+    }
 }
 catch {
     Write-host $_.Exception | Format-List -force
@@ -107,6 +111,9 @@ try {
         tiercli config "$dir" container  "$i"
         if($s3_sse_cmk_enabled = "true") {
             tiercli config "$dir" sse SSE-KMS "$s3_sse_cmk_arn"
+        }
+        if($s3_sse_bucketkey_enabled = "true") {
+            tiercli config "$dir" sse SSE-KMS "bucket-key"
         }
         tiercli config policy reclaimspace turn on
         tiercli config policy reclaimspace minused 90

@@ -223,6 +223,12 @@ variable "s3_sse_cmk_enabled" {
   default     = false
 }
 
+variable "s3_sse_bucketkey_enabled" {
+  type        = bool
+  description = "(Optional) Enables S3 SSE Bucket Key "
+  default     = false
+}
+
 variable "s3_sse_cmk_arn" {
   type        = string
   description = "(Optional) ARN of Custom KMS Key"
