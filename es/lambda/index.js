@@ -18,11 +18,14 @@
  
  // The Lambda handler
  exports.handler = (event) => {
- 
    // Handle each incoming S3 object in the event
    Promise.all(
      event.Records.map((event) => {
        try {
+        if(isPresent(event.Sns)) {
+          let snsMsg = formatMsg(event.Sns.Message)
+          event = JSON.parse(snsMsg).Records[0]
+        }
          if (event.eventName.startsWith('ObjectCreated:')) {
            processCreateEvent(event)
          } else if (event.eventName.startsWith('ObjectRemoved:')) {
@@ -34,6 +37,15 @@
      })
    )
  }
+ 
+ function isPresent(o) {
+   return (o != undefined && o != null) ? true : false;
+ }
+ 
+ function formatMsg(unformattedJSONString) {
+  return unformattedJSONString.replace(/\\/g,"");
+ }
+ 
  
  // Add S3 Object to bucket index
  function processCreateEvent(event) {
