@@ -110,6 +110,7 @@ module "irisanywhere1" {
   s3_policy                = file("custom_policy.json")
   iam_policy_enabled       = true
   search_enabled           = true
+  s3_sse_bucketkey_enabled = true
 }
   
 ```
@@ -156,6 +157,7 @@ The following arguments are supported:
 * `iam_role_name` - (Optional) Set name for IAM Role.
 * `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
 * `s3_sse_cmk_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
+* `s3_sse_bucketkey_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
 * `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
 * `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is 10000.
 * `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP9.

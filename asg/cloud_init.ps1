@@ -300,6 +300,7 @@ $tag = New-Object Amazon.EC2.Model.Tag
 $tag.Key = "Name"
 $tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
+Rename-Computer -NewName $instanceid -force
 
 # Restarting host to invoke autologon
 #Start-Sleep -Seconds 10
