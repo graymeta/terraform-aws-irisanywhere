@@ -1,5 +1,5 @@
 resource "aws_sqs_queue" "iris_qa_sqs" {
-  name = var.sqs_name
+  name                    = var.sqs_name
   sqs_managed_sse_enabled = true
 }
 

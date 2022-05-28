@@ -17,5 +17,5 @@ variable "db_username" {}
 variable "db_version" {}
 variable "instance_id" {}
 variable "subnet_ids" {
-type = list 
-}   
+  type = list
+}
