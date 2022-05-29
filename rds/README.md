@@ -9,7 +9,7 @@ provider "aws" {
 }
 
 module "irisadminrds" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=rds-sqs"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=v0.0.XX"
   instance_id          = "YourNameHere"
   db_snapshot          = ""
   subnet_ids           = ["subnet-id-az1", "subnet-id-az2"]

@@ -57,6 +57,5 @@ variable "subnet_ids" {
     }
 variable "ia_secret_arn" {
   type        = string
-  sensitive   = true
   description = "(Required) arn of secrets for configuring the Iris Admin db. See Readme for instructions for required inputs"
     }
