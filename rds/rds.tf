@@ -1,3 +1,10 @@
+data "aws_secretsmanager_secret" "secret-arn" {
+  arn = var.ia_secret_arn
+}
+data "aws_secretsmanager_secret_version" "iris-secret" {
+  secret_id = data.aws_secretsmanager_secret.secret-arn.id
+}
+
 resource "aws_db_instance" "default" {
   allocated_storage          = "${var.allocated_storage}"
   apply_immediately          = "${var.apply_immediately}"
@@ -8,15 +15,15 @@ resource "aws_db_instance" "default" {
   engine                     = "postgres"
   engine_version             = "${var.db_version}"
   final_snapshot_identifier  = "GrayMetaIrisAdmin-${var.instance_id}-final"
-  identifier                 = "gm-irisadmin${var.instance_id}"
+  identifier                 = "gm-irisadmin-${var.instance_id}"
   instance_class             = "${var.db_instance_size}"
   kms_key_id                 = "${var.db_kms_key_id}"
   multi_az                   = "${var.db_multi_az}"
   name                       = "postgres"
-  password                   = "${var.db_password}"
+  password                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_pw"]
   storage_encrypted          = "${var.db_storage_encrypted}"
   storage_type               = "gp2"
-  username                   = "${var.db_username}"
+  username                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_id"]
   vpc_security_group_ids     = ["${aws_security_group.rds.id}"]
 
   snapshot_identifier = "${var.db_snapshot == "final" ?

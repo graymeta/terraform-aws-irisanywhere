@@ -57,32 +57,32 @@ data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
 
   vars = {
-    name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
-    metric_check_interval = var.asg_check_interval
-    health_check_interval = var.lb_check_interval
-    unhealthy_threshold   = var.lb_unhealthy_threshold
-    cooldown              = var.asg_scalein_cooldown
-    ia_cert_crt_arn       = var.ia_cert_crt_arn
-    ia_cert_key_arn       = var.ia_cert_key_arn
-    ia_max_sessions       = var.ia_max_sessions
-    ia_secret_arn         = var.ia_secret_arn
-    ia_domain             = var.ia_domain
-    search_enabled        = var.search_enabled
+    name                     = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+    metric_check_interval    = var.asg_check_interval
+    health_check_interval    = var.lb_check_interval
+    unhealthy_threshold      = var.lb_unhealthy_threshold
+    cooldown                 = var.asg_scalein_cooldown
+    ia_cert_crt_arn          = var.ia_cert_crt_arn
+    ia_cert_key_arn          = var.ia_cert_key_arn
+    ia_max_sessions          = var.ia_max_sessions
+    ia_secret_arn            = var.ia_secret_arn
+    ia_domain                = var.ia_domain
+    search_enabled           = var.search_enabled
     s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
-    s3_sse_cmk_enabled    = var.s3_sse_cmk_enabled
-    s3_sse_cmk_arn        = var.s3_sse_cmk_arn
-    ia_video_bitrate      = var.ia_video_bitrate
-    ia_video_codec        = var.ia_video_codec
+    s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
+    s3_sse_cmk_arn           = var.s3_sse_cmk_arn
+    ia_video_bitrate         = var.ia_video_bitrate
+    ia_video_codec           = var.ia_video_codec
   }
 }
 
 resource "aws_launch_template" "iris" {
-  name_prefix   = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
-  image_id      = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
-  instance_type = var.instance_type
-  key_name      = var.key_name
-  user_data     = base64encode(join("\n", ["<powershell>", "${data.template_file.cloud_init.rendered}", "${var.user_init}", "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
-  ebs_optimized = true
+  name_prefix            = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+  image_id               = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  instance_type          = var.instance_type
+  key_name               = var.key_name
+  user_data              = base64encode(join("\n", ["<powershell>", "${data.template_file.cloud_init.rendered}", "${var.user_init}", "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+  ebs_optimized          = true
   update_default_version = var.update_asg_lt
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name

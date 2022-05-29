@@ -5,8 +5,8 @@ resource "aws_lb" "irisadmin" {
   subnets                    = var.subnet_id
 
   tags = {
-    Name               = "IrisAdmin-LB"
-    ApplicationName    = "IrisAdmin"
+    Name            = "IrisAdmin-LB"
+    ApplicationName = "IrisAdmin"
   }
 }
 
@@ -51,7 +51,7 @@ resource "aws_lb_target_group" "iadm" {
 #Instance Attachment
 resource "aws_alb_target_group_attachment" "instance_attach" {
   target_group_arn = aws_lb_target_group.iadm.arn
-  count            = length(aws_instance.iris_adm.*.id) 
+  count            = length(aws_instance.iris_adm.*.id)
   target_id        = element(aws_instance.iris_adm.*.id, count.index)
   port             = 8021
 }
