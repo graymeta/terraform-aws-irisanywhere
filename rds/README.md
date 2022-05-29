@@ -11,7 +11,6 @@ provider "aws" {
 module "irisadminrds" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=v0.0.XX"
   instance_id          = "YourNameHere"
-  db_snapshot          = ""
   subnet_ids           = ["subnet-id-az1", "subnet-id-az2"]
   ia_secret_arn        = "arn:aws:secretsmanager:region:acct#:secret:secretarn"
   }
