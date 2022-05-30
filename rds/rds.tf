@@ -39,4 +39,10 @@ resource "aws_db_instance" "default" {
       identifier,
     ]
   }
+   tags = merge(
+    var.additional_tags,
+    {
+      Name = "IrisAdmin"
+    },
+  )
 }
