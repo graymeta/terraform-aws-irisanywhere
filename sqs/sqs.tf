@@ -22,8 +22,7 @@ resource "aws_sqs_queue_policy" "my_sqs_policy" {
       "Sid": "First",
       "Effect": "Allow",
       "Principal": "*",
-      "Action": ["SQS:SendMessage",
-      "SQS:ReceiveMessage"],
+      "Action": ["SQS:SendMessage"],
       "Resource": "${aws_sqs_queue.iris_qa_sqs.arn}"
     }
   ]

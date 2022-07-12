@@ -11,6 +11,7 @@ $s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
 $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
 $ia_video_bitrate = "${ia_video_bitrate}"
 $ia_video_codec = "${ia_video_codec}"
+$s3_progressive_retrieval = "${s3_progressive_retrieval}"
 
 
 #Retrieve and prepare Secrets
@@ -212,10 +213,23 @@ catch {
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting OpenSearch config from terraform"
 }
 
+# Set progressive_retrieval
+try {
+    if($s3_progressive_retrieval -eq "false"){
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Tiger Technology\tiger-bridge\tiersvc\settings" -name "progressive_restore_mode" -value 0 }
+}
+catch {
+    Write-host $_.Exception | Format-List -force
+    Write-host "Exception setting Progressive Retrieval config" -ForegroundColor Red 
+    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Progressive Retrieval config from terraform"
+}
+
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
 
 try {
     $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
+
+    if($IsNullOrWhiteSpace -eq $iris_serviceacct -or $iris_serviceacct -eq ""){$iris_serviceacct = "iris-service"}
 
     # Import System.Web assembly
     Add-Type -AssemblyName System.Web
@@ -300,9 +314,8 @@ $tag = New-Object Amazon.EC2.Model.Tag
 $tag.Key = "Name"
 $tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 Rename-Computer -NewName $instanceid -force
 
-# Restarting host to invoke autologon
-#Start-Sleep -Seconds 10
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
+
 

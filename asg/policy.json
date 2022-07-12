@@ -20,14 +20,6 @@
             "Sid": "",
             "Effect": "Allow",
             "Action": [
-                "sqs:sendmessage"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "",
-            "Effect": "Allow",
-            "Action": [
                 "kms:Encrypt",
                 "kms:Decrypt",
                 "kms:ReEncrypt*",

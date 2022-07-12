@@ -248,19 +248,25 @@ variable "ia_video_bitrate" {
 }
 
 variable "asg_warm_pool_min" {
-  type        = string
+  type        = number
   description = "(Optional) Default is 0"
-  default     = "0"
+  default     = 0
 }
 
 variable "asg_warm_pool_max" {
-  type        = string
-  description = "(Optional) Default is 0"
-  default     = "0"
+  type        = number
+  description = "(Optional) Default is 1"
+  default     = 1
 }
 
 variable "update_asg_lt" {
   type        = string
   description = "(Optional) Default is true"
   default     = "true"
+}
+
+variable "s3_progressive_retrieval" {
+  type        = bool
+  description = "(Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`"
+  default     = true
 }

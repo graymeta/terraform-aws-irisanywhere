@@ -73,6 +73,7 @@ data "template_file" "cloud_init" {
     s3_sse_cmk_arn           = var.s3_sse_cmk_arn
     ia_video_bitrate         = var.ia_video_bitrate
     ia_video_codec           = var.ia_video_codec
+    s3_progressive_retrieval    = var.s3_progressive_retrieval
   }
 }
 

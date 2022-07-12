@@ -69,3 +69,10 @@ variable "ssl_certificate_arn" {
   type        = string
   description = "(Required) The ARN of the SSL server certificate."
 }
+
+variable "associate_public_ip" {
+  type        = bool
+  description = "(Optional) Associates Public IP to instances. Default is false."
+  default     = false
+}
+
