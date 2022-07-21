@@ -119,6 +119,7 @@ try {
         tiercli config policy reclaimspace turn on
         tiercli config policy reclaimspace minused 90
         tiercli utils clear_rehydrate "$dir"
+        tiercli config include $dir
         tiercli config reload 
         tiercli op clean "$dir"
         
@@ -223,9 +224,7 @@ catch {
     Write-host "Exception setting Progressive Retrieval config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Progressive Retrieval config from terraform"
 }
-
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
-
 try {
     $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
 
@@ -238,7 +237,6 @@ try {
     $newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
     $password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
     $credential     = New-Object System.Management.Automation.PSCredential ("$iris_serviceacct", $password)
-    # Add logic to remove pw var, add event log entry and catch exceptions
 
     # Stores credential securely
     $credential | Export-CliXml -Path $credfile
@@ -316,6 +314,3 @@ $tag.Value = "${name}-"+$instanceid
 New-EC2Tag -Resource $instanceid -Tag $tag
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 Rename-Computer -NewName $instanceid -force
-
-
-
