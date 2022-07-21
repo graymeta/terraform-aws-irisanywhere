@@ -119,7 +119,7 @@ try {
         tiercli config policy reclaimspace turn on
         tiercli config policy reclaimspace minused 90
         tiercli utils clear_rehydrate "$dir"
-        tiercli config include $dir
+        tiercli config include "$dir"
         tiercli config reload 
         tiercli op clean "$dir"
         
