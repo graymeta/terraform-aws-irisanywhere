@@ -1,5 +1,4 @@
 Write-Output "TIMING: Cloud_init start at $(Get-Date)"
-
 $MaxSessions = "${ia_max_sessions}"
 $certcrtarn = "${ia_cert_crt_arn}"
 $certkeyarn = "${ia_cert_key_arn}"
@@ -12,12 +11,12 @@ $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
 $ia_video_bitrate = "${ia_video_bitrate}"
 $ia_video_codec = "${ia_video_codec}"
 $s3_progressive_retrieval = "${s3_progressive_retrieval}"
-
-
+$s3_reclaim_maxused = "${s3_reclaim_maxused}"
+$s3_reclaim_minused = "${s3_reclaim_minused}"
+$s3_reclaim_age = "${s3_reclaim_age}"
 #Retrieve and prepare Secrets
 try {
     $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
-
     #Set init variables
     $admin_customer_id  = $secretdata.admin_customer_id
     $admin_db_id        = $secretdata.admin_db_id
@@ -29,16 +28,13 @@ try {
     $iris_s3_lic_code   = $secretdata.iris_s3_lic_code
     $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
     $iris_serviceacct   = $secretdata.iris_serviceacct
-
     $okta_issuer        = $secretdata.okta_issuer
     $okta_clientid	    = $secretdata.okta_clientid
     $okta_redirecturi   = $secretdata.okta_redirecturi
     $okta_scope         = $secretdata.okta_scope
-
     $s3_meta_bucketname = $secretdata.s3_meta_bucketname
     $s3_meta_access_key = $secretdata.s3_meta_access_key
     $s3_meta_secret_key = $secretdata.s3_meta_secret_key
-
     $os_endpoint        = $secretdata.os_endpoint
     $os_region          = $secretdata.os_region
     $os_accessid        = $secretdata.os_accessid
@@ -49,7 +45,6 @@ catch {
     Write-host "Exception accessing secret $iasecretarn" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
 }
-
 # Set Leaf Certs 
 try {
     if($certcrtarn) {$crt=Get-SECSecretValue $certcrtarn ; $crt = $crt | select -expandproperty secretstring ; add-content -Value $crt 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\Certs\server.crt'
@@ -65,7 +60,6 @@ catch {
     Write-host "Exception adding certificates" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception adding certificates from terraform"
 }
-
 # Set S3 Licensing
 try {
     add-s3license -tbuid "$iris_s3_lic_id" -tbpw "$iris_s3_lic_code" # provided by GM, supplied by TF 
@@ -77,20 +71,21 @@ catch {
     Write-host "Exception setting S3 license" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error adding S3 license from terraform "$iris_s3_lic_id""
 }
-
 # Set S3 Bucket 
-
 if($s3_meta_bucketname){
     $bucketlist=$iris_s3_bucketname -split ", "
+    $bucketpaths = New-Object System.Collections.ArrayList
     foreach($i in $bucketlist){
-        $dir = "D:\irisanywhere\$($i)"
+        $dir = "D:\irisanywhere\$($i)"        
         new-item $dir -ItemType Directory
         Write-Host "Found Meta config for bucket $i to directory "$dir" with meta credentials $s3_meta_access_key"
         tiercli config "$dir" target s3 '""' '""' https://s3.amazonaws.com
         #tiercli config "$dir" target s3 "$iris_s3_access_key" "$iris_s3_secret_key" https://s3.amazonaws.com
         tiercli config "$dir" container  "$i"
         tiercli config policy reclaimspace turn on
-        tiercli config policy reclaimspace minused 90
+        tiercli config policy reclaimspace age $s3_reclaim_age
+        tiercli config policy reclaimspace maxused $s3_reclaim_maxused
+        tiercli config policy reclaimspace minused $s3_reclaim_minused
         tiercli utils clear_rehydrate "$dir"
         tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key"    
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta bucket $s3_meta_bucketname  & $dir"
@@ -99,12 +94,14 @@ if($s3_meta_bucketname){
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta secret key $s3_meta_secret_key"    
     tiercli config reload
     tiercli op clean "$dir"
+    $bucketpaths.add("$dir")
+    tiercli config include $bucketpaths
 }
 else {
-
 try {
     Unregister-ScheduledTask -TaskName "HDD_init" -Confirm:$false  -ErrorAction SilentlyContinue | Out-Null
     $bucketlist=$iris_s3_bucketname -split ", "
+    $bucketpaths = New-Object System.Collections.ArrayList
     foreach($i in $bucketlist){
         $dir = "D:\irisanywhere\$($i)"
         new-item $dir -ItemType Directory
@@ -117,16 +114,18 @@ try {
             tiercli config "$dir" sse SSE-KMS "bucket-key"
         }
         tiercli config policy reclaimspace turn on
-        tiercli config policy reclaimspace minused 90
+        tiercli config policy reclaimspace age $s3_reclaim_age
+        tiercli config policy reclaimspace maxused $s3_reclaim_maxused
+        tiercli config policy reclaimspace minused $s3_reclaim_minused
         tiercli utils clear_rehydrate "$dir"
-        tiercli config include "$dir"
         tiercli config reload 
         tiercli op clean "$dir"
         
     #add-s3bucketonly -bucketname "$i" -accesskey "$iris_s3_access_key" -secretkey "$iris_s3_secret_key" # provided by GM, supplied by TF 
-    # Write to IA event log what was inserted by TF
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Added S3 Bucket from terraform $i" 
+    $bucketpaths.add("$dir")
     }
+    tiercli config include $bucketpaths
 }
 catch {
     Write-host $_.Exception | Format-List -force
@@ -155,7 +154,6 @@ catch {
     Write-host "Exception setting Iris Admin credentials" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin server credentials from terraform"
 }
-
 # Set Iris Admin Server host:
 try {
     set-iaadmin -licserver "$admin_server" 
@@ -166,7 +164,6 @@ catch {
     Write-host "Exception setting IrisAdmin ID" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting IA Admin Server from terraform "$admin_server""
 }
-
 # Set Iris Anywhere Max Sessions:
 try {
     set-maxsessions -sessions "$MaxSessions"
@@ -177,7 +174,6 @@ catch {
     Write-host "Exception setting max session value" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting max sessions to $MaxSessions"
 }
-
 # Set Iris Anywhere Video bitrate settings:
 try {
     set-videobitrate -bitrate "$ia_video_bitrate" -codec "$ia_video_codec"
@@ -188,7 +184,6 @@ catch {
     Write-host "Exception setting video bitrate value" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting bitrate value to $ia_video_bitrate and codec to $ia_video_codec"
 }
-
 # Set Okta config:
 try {
     if($okta_issuer){
@@ -201,7 +196,6 @@ catch {
     Write-host "Exception setting Okta Config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting Okta config from terraform"
 }
-
 # Set Search config:
 try {
     if($search_enabled -eq "true"){
@@ -213,7 +207,6 @@ catch {
     Write-host "Exception setting OpenSearch Config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting OpenSearch config from terraform"
 }
-
 # Set progressive_retrieval
 try {
     if($s3_progressive_retrieval -eq "false"){
@@ -227,36 +220,20 @@ catch {
 # Creates Secure Credential, User and sets autologon for Iris to Run w/o intervention
 try {
     $credfile = "$($env:ProgramFiles)\GrayMeta\Iris Anywhere\ia.cred"
-
     if($IsNullOrWhiteSpace -eq $iris_serviceacct -or $iris_serviceacct -eq ""){$iris_serviceacct = "iris-service"}
-
-    # Import System.Web assembly
     Add-Type -AssemblyName System.Web
-
-    # Generate random password
     $newpassword    =[System.Web.Security.Membership]::GeneratePassword(16,3)
     $password       = ConvertTo-SecureString $newpassword -AsPlainText -Force
     $credential     = New-Object System.Management.Automation.PSCredential ("$iris_serviceacct", $password)
-
-    # Stores credential securely
     $credential | Export-CliXml -Path $credfile
-
-    # Retreives credential securely
     $credential = Import-CliXml -Path $credfile
-
-    # Creates Local User for logon
     New-localuser -name "$iris_serviceacct"  -fullname "Iris-service-account" -Password $credential.Password -Description "service account Iris Anywhere" -UserMayNotChangePassword -AccountNeverExpires -PasswordNeverExpires
-
-    # Adds User to local Admin
     Add-LocalGroupMember -Group "Administrators" -Member "$iris_serviceacct" 
-
-    # Sets autologon
     $autologon  = "$($env:ChocolateyInstall)\bin\autologon.exe"
     $username   =  $credential.username
     $domain     = "$env:COMPUTERNAME"
     $password   =  $credential.Password 
     Start-Process $autologon -ArgumentList $username,$domain,$newpassword
-    # Remove vars
     remove-variable autologon ; remove-variable username ; remove-variable domain ; remove-variable password ; remove-variable newpassword
 }
 catch {
@@ -264,7 +241,6 @@ catch {
     Write-host "Exception establishing autologon configuration" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception establishing autologon configuration"
 }
-
 #CW Config
 try {
     & $env:ProgramFiles\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1 -a fetch-config -m ec2 -c file:$env:ProgramFiles\Amazon\AmazonCloudWatchAgent\config.json -s
@@ -275,18 +251,15 @@ catch {
     Write-host "Error setting cloudwatch config" -ForegroundColor Red 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error setting config"
 }
-
 # Setup the ia-asg service
 $nodefqdn= -join("$env:COMPUTERNAME",".","$iadomain")
 $ia_https_url="https://$($nodefqdn):443"
 $ia_http_url="http://127.0.0.1:8080"
-
 if($certkeyarn){
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_https_url, [System.EnvironmentVariableTarget]::Machine)
 
     $HostFile = 'C:\Windows\System32\drivers\etc\hosts'     
     Add-content -path $HostFile -value "127.0.0.1 `t $nodefqdn"
-
 }else {
     [System.Environment]::SetEnvironmentVariable('gm_ia_addr', $ia_http_url, [System.EnvironmentVariableTarget]::Machine)
 }
