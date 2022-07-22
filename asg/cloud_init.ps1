@@ -83,9 +83,13 @@ if($s3_meta_bucketname){
         #tiercli config "$dir" target s3 "$iris_s3_access_key" "$iris_s3_secret_key" https://s3.amazonaws.com
         tiercli config "$dir" container  "$i"
         tiercli config policy reclaimspace turn on
+<<<<<<< HEAD
         tiercli config policy reclaimspace age $s3_reclaim_age
         tiercli config policy reclaimspace maxused $s3_reclaim_maxused
         tiercli config policy reclaimspace minused $s3_reclaim_minused
+=======
+        tiercli config policy reclaimspace minused 80
+>>>>>>> ab5f1d4dc0360fd908d1f42584874f53304b3b88
         tiercli utils clear_rehydrate "$dir"
         tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key"    
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta bucket $s3_meta_bucketname  & $dir"
@@ -114,9 +118,13 @@ try {
             tiercli config "$dir" sse SSE-KMS "bucket-key"
         }
         tiercli config policy reclaimspace turn on
+<<<<<<< HEAD
         tiercli config policy reclaimspace age $s3_reclaim_age
         tiercli config policy reclaimspace maxused $s3_reclaim_maxused
         tiercli config policy reclaimspace minused $s3_reclaim_minused
+=======
+        tiercli config policy reclaimspace minused 80
+>>>>>>> ab5f1d4dc0360fd908d1f42584874f53304b3b88
         tiercli utils clear_rehydrate "$dir"
         tiercli config reload 
         tiercli op clean "$dir"
