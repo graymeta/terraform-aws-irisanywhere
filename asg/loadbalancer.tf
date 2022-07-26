@@ -60,9 +60,10 @@ resource "aws_lb_target_group" "port443" {
   }
 
   stickiness {
-    type            = "lb_cookie"
-    cookie_duration = 1800
+    type            = "app_cookie"
+    cookie_duration = 60
     enabled         = true
+    cookie_name     = "iris-anywhere-sess"
   }
 
   tags = local.merged_tags

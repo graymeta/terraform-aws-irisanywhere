@@ -279,7 +279,7 @@ variable "s3_reclaim_maxused" {
 
 variable "s3_reclaim_minused" {
   type        = number
-  description = "(Required defaults) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80`" 
+  description = "(Required defaults) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80`"
   default     = 80
 }
 
