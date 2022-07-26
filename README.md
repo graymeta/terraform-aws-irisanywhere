@@ -159,6 +159,14 @@ The following arguments are supported:
 * `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
 * `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is 10000.
 * `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP9.
+* `asg_warm_pool_min` - (Optional) Warm pool minimum value. Default is 0
+* `asg_warm_pool_max` "(Optional) Warm pool maximum value
+* `update_asg_lt` - (Optional) Updates launch template to latest. Default is true
+* `s3_progressive_retrieval` = (Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`
+* `s3_reclaim_maxused` = (Optional) Sets the Max used scratch space available threshold before data is offlined.  Default to `90` 
+* `s3_reclaim_minused` = (Optional) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80` 
+* `s3_reclaim_age` (Optional) Sets the age of files threshold for data stored before data is offlined.  Default to `8h`
+
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
