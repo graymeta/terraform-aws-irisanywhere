@@ -68,6 +68,7 @@ data "template_file" "cloud_init" {
     ia_secret_arn            = var.ia_secret_arn
     ia_domain                = var.ia_domain
     search_enabled           = var.search_enabled
+    s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
     s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
     s3_sse_cmk_arn           = var.s3_sse_cmk_arn
     ia_video_bitrate         = var.ia_video_bitrate

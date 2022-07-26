@@ -229,6 +229,12 @@ variable "s3_sse_cmk_arn" {
   default     = ""
 }
 
+variable "s3_sse_bucketkey_enabled" {
+  type        = bool
+  description = "(Optional) Enables S3 SSE Bucket Key "
+  default     = false
+}
+
 variable "ia_video_codec" {
   type        = string
   description = "(Optional) Sets video codec for Iris Anywhere streams. Default is VP9."
@@ -252,6 +258,8 @@ variable "asg_warm_pool_max" {
   description = "(Optional) Default is 0"
   default     = "0"
 }
+
+
 
 variable "s3_progressive_retrieval" {
   type        = bool
