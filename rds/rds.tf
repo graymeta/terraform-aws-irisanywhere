@@ -19,7 +19,7 @@ resource "aws_db_instance" "default" {
   instance_class             = var.db_instance_size
   kms_key_id                 = var.db_kms_key_id
   multi_az                   = var.db_multi_az
-  db_name                       = "postgres"
+  db_name                    = "postgres"
   password                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_pw"]
   storage_encrypted          = var.db_storage_encrypted
   storage_type               = "gp2"
@@ -39,7 +39,7 @@ resource "aws_db_instance" "default" {
       identifier,
     ]
   }
-   tags = merge(
+  tags = merge(
     var.additional_tags,
     {
       Name = "IrisAdmin"

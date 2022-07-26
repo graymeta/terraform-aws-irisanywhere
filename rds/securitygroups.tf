@@ -13,8 +13,8 @@ resource "aws_security_group" "rds" {
     protocol    = "tcp"
     cidr_blocks = var.access_cidr
   }
-  
-   tags = merge(
+
+  tags = merge(
     var.additional_tags,
     {
       Name = "IrisAdmin"

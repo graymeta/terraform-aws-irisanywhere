@@ -2,7 +2,7 @@ resource "aws_sqs_queue" "iris_qa_sqs" {
   name                    = var.sqs_name
   sqs_managed_sse_enabled = true
 
-   tags = merge(
+  tags = merge(
     var.additional_tags,
     {
       Name = "IrisAdmin"

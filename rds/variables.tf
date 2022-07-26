@@ -9,21 +9,21 @@ variable "access_cidr" {
   type        = list(string)
 }
 variable "apply_immediately" {
-  default   = true
-  type      = bool
+  default = true
+  type    = bool
 }
 variable "allocated_storage" {
-  default     = 100 
+  default     = 100
   description = "(Required) Storage for Iris Aadmin db"
   type        = number
 }
 variable "db_backup_retention" {
-  default     = "3" 
+  default     = "3"
   description = "(Required) Number of backups retained by RDS"
   type        = number
 }
 variable "db_backup_window" {
-  default     = "03:00-04:00" 
+  default     = "03:00-04:00"
   description = "(Required) Time of backup window"
   type        = string
 }
@@ -53,13 +53,13 @@ variable "db_storage_encrypted" {
   type        = bool
 }
 variable "db_version" {
-  default     = 14 
+  default     = 14
   description = "(Required) Postgres Database version"
   type        = number
 }
 variable "instance_id" {
   description = "(Required) Name for your Iris Admin DB"
-  type        = string   
+  type        = string
 }
 variable "subnet_ids" {
   description = "(Required) List of subnets in VPC but different AZ's"
