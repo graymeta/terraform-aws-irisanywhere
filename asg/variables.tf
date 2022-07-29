@@ -229,6 +229,12 @@ variable "s3_sse_cmk_arn" {
   default     = ""
 }
 
+variable "s3_sse_bucketkey_enabled" {
+  type        = bool
+  description = "(Optional) Enables S3 SSE Bucket Key "
+  default     = false
+}
+
 variable "ia_video_codec" {
   type        = string
   description = "(Optional) Sets video codec for Iris Anywhere streams. Default is VP9."
@@ -252,3 +258,30 @@ variable "asg_warm_pool_max" {
   description = "(Optional) Default is 0"
   default     = "0"
 }
+
+
+
+variable "s3_progressive_retrieval" {
+  type        = bool
+  description = "(Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`"
+  default     = true
+}
+
+variable "s3_reclaim_maxused" {
+  type        = number
+  description = "(Required defaults) Sets the Max used scratch space available threshold before data is offlined.  Default to `90`"
+  default     = 90
+}
+
+variable "s3_reclaim_minused" {
+  type        = number
+  description = "(Required defaults) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80`"
+  default     = 80
+}
+
+variable "s3_reclaim_age" {
+  type        = string
+  description = "(Required) Sets the age of files threshold for data stored before data is offlined.  Default to `8h`"
+  default     = "8h"
+}
+
