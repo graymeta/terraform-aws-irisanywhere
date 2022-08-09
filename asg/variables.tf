@@ -285,3 +285,10 @@ variable "s3_reclaim_age" {
   default     = "8h"
 }
 
+variable "alb_cookie_duration" {
+  type        = number
+  description = "(Required) Sets the age of cookie session.  Default to `60s`"
+  default     = "60"
+}
+
+
