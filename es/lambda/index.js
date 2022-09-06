@@ -18,13 +18,16 @@
  
  // The Lambda handler
  exports.handler = (event) => {
- 
    // Handle each incoming S3 object in the event
    Promise.all(
      event.Records.map((event) => {
        try {
+        if(isPresent(event.Sns)) {
+          let snsMsg = formatMsg(event.Sns.Message)
+          event = JSON.parse(snsMsg).Records[0]
+        }
          if (event.eventName.startsWith('ObjectCreated:')) {
-           processCreateEvent(event)
+           processCreateEvents(event)
          } else if (event.eventName.startsWith('ObjectRemoved:')) {
            processDeleteEvent(event)
          }
@@ -35,30 +38,86 @@
    )
  }
  
+ //Note this plural function is different than the singular function
+ function processCreateEvents(event) {
+  var s3EventKey = escapeS3Key(event.s3.object.key);
+  
+  if(isPresent(s3EventKey)) {
+   //Start by inserting full key path
+   processCreateEvent(event);
+   //Determine folder count in key.
+   var keysToIndex = s3EventKey.toString().split("/")
+   var keysLen = keysToIndex.length;
+
+   //initial key substring which is entire key path
+   var keySubString = s3EventKey;
+   
+   for(var i=0; i<(keysLen-1); i++) {
+    var keySubStringIndex = keySubString.lastIndexOf("/");
+    keySubString = s3EventKey.substring(0,keySubStringIndex);
+    event.s3.object.key = keySubString.concat("/");
+    //create the event with the new key
+    processCreateEvent(event);
+   }
+  }
+ }
+ 
+ function isPresent(o) {
+   return (o != undefined && o != null) ? true : false;
+ }
+ 
+ function formatMsg(unformattedJSONString) {
+  return unformattedJSONString.replace(/\\/g,"");
+ }
+ 
+ 
  // Add S3 Object to bucket index
  function processCreateEvent(event) {
-
   var s3EventKey = escapeS3Key(event.s3.object.key);
   
    // Payload object for ES index insertion, ignore any hidden folders or files (begins with .)
    if (!s3EventKey.startsWith(".")) {
-     var response = openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
-       s3key: s3EventKey,
-       filepath: s3EventKey,
-       filename: s3EventKey.replace(/^.*[\\\/]/, ''),
-       bucket: event.s3.bucket.name,
-       etag: event.s3.object.eTag,
-       filesize: event.s3.object.Size,
-       lastmodified: Date.now()
-     })).then((insertResponse) => {
-       if ('created' == insertResponse.result) {
-         console.log("Inserted index item for event!\n\n" + JSON.stringify(event));
-       } else {
-         console.log("Failed to insert index item for event!\n\n" + JSON.stringify(event));
-       }
-     });
+    //Does object already exist in the index
+
+     var requestBody = { "query": { "term": { "s3key": s3EventKey } } };
+     openSearchClient('GET', event.s3.bucket.name + '/_search', JSON.stringify(requestBody)).then((searchResponse) => {
+      let objExists = (parseInt(searchResponse.hits.total.value, 10) > 0)  ?  true :  false;
+      if(!objExists) {
+       var response = openSearchClient('POST', event.s3.bucket.name + '/_doc', JSON.stringify({
+         s3key: s3EventKey,
+         filepath: s3EventKey,
+         filename: s3EventKey.replace(/^.*[\\\/]/, ''),
+         bucket: event.s3.bucket.name,
+         etag: event.s3.object.eTag,
+         filesize: event.s3.object.Size,
+         lastmodified: Date.now()
+       })).then((insertResponse) => {
+         if ('created' == insertResponse.result) {
+           console.log("Inserted index item for event!\n\n" + JSON.stringify(event));
+         } else {
+           console.log("Failed to insert index item for event!\n\n" + JSON.stringify(event));
+         }
+       });
+       
+    } else {
+       //if objExists
+       searchResponse.hits.hits.map((searchHit) => {
+         var updateRequestBody = JSON.stringify({doc: {lastmodified: Date.now()}});
+         var response = openSearchClient('POST', event.s3.bucket.name + '/_update/' + searchHit._id, updateRequestBody)
+         .then((updateResponse) =>
+         {
+          if('updated' == updateResponse.result) {
+            console.log("Updated object ID: " + JSON.stringify(event));
+          } else {
+            console.log("Failed to update object ID: " +JSON.stringify(event));
+          }
+         });
+       });
+     }      
+   });
   }
  }
+ 
  
  // Delete S3 Object from bucket index, ignore any hidden folders or files (begins with .)
  function processDeleteEvent(event)  {
