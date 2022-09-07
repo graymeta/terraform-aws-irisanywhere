@@ -27,7 +27,7 @@
           event = JSON.parse(snsMsg).Records[0]
         }
          if (event.eventName.startsWith('ObjectCreated:')) {
-           processCreateEvent(event)
+           processCreateEvents(event)
          } else if (event.eventName.startsWith('ObjectRemoved:')) {
            processDeleteEvent(event)
          }
@@ -36,6 +36,30 @@
        }
      })
    )
+ }
+ 
+ //Note this plural function is different than the singular function
+ function processCreateEvents(event) {
+  var s3EventKey = escapeS3Key(event.s3.object.key);
+  
+  if(isPresent(s3EventKey)) {
+   //Start by inserting full key path
+   processCreateEvent(event);
+   //Determine folder count in key.
+   var keysToIndex = s3EventKey.toString().split("/")
+   var keysLen = keysToIndex.length;
+
+   //initial key substring which is entire key path
+   var keySubString = s3EventKey;
+   
+   for(var i=0; i<(keysLen-1); i++) {
+    var keySubStringIndex = keySubString.lastIndexOf("/");
+    keySubString = s3EventKey.substring(0,keySubStringIndex);
+    event.s3.object.key = keySubString.concat("/");
+    //create the event with the new key
+    processCreateEvent(event);
+   }
+  }
  }
  
  function isPresent(o) {
@@ -49,7 +73,6 @@
  
  // Add S3 Object to bucket index
  function processCreateEvent(event) {
-
   var s3EventKey = escapeS3Key(event.s3.object.key);
   
    // Payload object for ES index insertion, ignore any hidden folders or files (begins with .)
