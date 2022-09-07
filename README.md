@@ -93,7 +93,7 @@ module "irisanywhere1" {
   disk_os_size            = 300
   disk_os_type            = "gp2"
   hostname_prefix         = "iris1"
-  instance_type           = "c5d.9xlarge"
+  instance_type           = "c5n.9xlarge"
   key_name                = "my_key"
 
   ssl_certificate_arn     = "<cert_arn>"
