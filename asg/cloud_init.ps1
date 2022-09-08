@@ -45,10 +45,12 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
     }
     try {
-    Initialize-Disk 1 -PartitionStyle GPT -Confirm:$false | Out-Null
-    New-Partition -DiskNumber 1 -UseMaximumSize -DriveLetter D | Out-Null
-    Format-Volume -DriveLetter D -FileSystem NTFS -Confirm:$false | Out-Null
-    New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null }
+        Stop-Service -Name ShellHWDetection | Out-Null
+        Initialize-Disk 1 -PartitionStyle GPT -Confirm:$false | Out-Null
+        New-Partition -DiskNumber 1 -UseMaximumSize -DriveLetter D | Out-Null
+        Format-Volume -DriveLetter D -FileSystem NTFS -Confirm:$false | Out-Null
+        New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null 
+        Start-Service -Name ShellHWDetection | Out-Null}
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error staging EBS"
     }
