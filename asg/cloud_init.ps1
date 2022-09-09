@@ -91,7 +91,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
             tiercli config policy reclaimspace maxused $s3_reclaim_maxused
             tiercli config policy reclaimspace minused $s3_reclaim_minused
             tiercli utils clear_rehydrate "$dir"
-            tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key"    
+            tiercli config "$dir" meta "$s3_meta_bucketname" "$s3_meta_access_key" "$s3_meta_secret_key" yes
             Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta bucket $s3_meta_bucketname  & $dir"
         }
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Meta access key $s3_meta_access_key" 
