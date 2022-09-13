@@ -64,3 +64,9 @@ variable "instance_protection" {
   description = "Enables instance protection"
   default     = true
 }
+
+variable "associate_public_ip" {
+  type        = bool
+  description = "(Optional) Associates Public IP to instances. Default is false."
+  default     = false
+}

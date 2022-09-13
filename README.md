@@ -7,7 +7,7 @@ Prerequisites:
 * Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12, 13 & 14 compatible.
-* `version` - Current version is `v0.0.15`. Note moddule version requires Iris Anywhere AMI version 1.6.0.22.
+* `version` - Current version is `v0.0.21`. Note moddule version requires Iris Anywhere AMI access.
 * No AWS Root user security context should be used in the deployment of any/all Iris Anywhere services.  Please follow the policy of least privilege for all access granted as part of the deployment. 
 
 ***
@@ -25,7 +25,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.15"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.21"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -73,7 +73,7 @@ locals {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.15"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.21"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
   lb_check_interval       = 30
@@ -94,7 +94,7 @@ module "irisanywhere1" {
   disk_os_size            = 300
   disk_os_type            = "gp2"
   hostname_prefix         = "iris1"
-  instance_type           = "c5d.9xlarge"
+  instance_type           = "c5n.9xlarge"
   key_name                = "my_key"
 
   ssl_certificate_arn     = "<cert_arn>"
@@ -144,7 +144,7 @@ The following arguments are supported:
 * `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
-* `s3_policy` - (Optional) Provides customers the ability to supply their own IAM policy for instance profile - file("custom_policy.json")
+* `s3_policy` - (Optional) Provides customers the ability to supply their own IAM policy for instance profile to access S3 buckets - file("custom_policy.json")
 * `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
