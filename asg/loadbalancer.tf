@@ -6,8 +6,8 @@ resource "aws_lb" "iris_alb" {
   enable_deletion_protection = false
 
   tags = merge(
-    local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""))
+    local.merged_tags, {
+    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "")}
   )
 }
 

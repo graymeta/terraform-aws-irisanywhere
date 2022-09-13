@@ -8,10 +8,8 @@ resource "aws_security_group" "iris_adm" {
   description = replace("${var.hostname_prefix}-${var.instance_type}-iris-admin", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
-  tags = merge(
-    local.merged_tags,
-    map("Name", format("${var.hostname_prefix}-iris-admin"))
-  )
+  tags = merge(local.merged_tags, {
+    "Name"= format("${var.hostname_prefix}-iris-admin")})
 }
 
 # Allow all outbound traffic

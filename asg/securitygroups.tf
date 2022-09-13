@@ -9,8 +9,8 @@ resource "aws_security_group" "alb" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
-    local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""))
+    local.merged_tags, {
+    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "")}
   )
 }
 
@@ -50,8 +50,8 @@ resource "aws_security_group" "iris" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
-    local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", ""))
+    local.merged_tags, {
+    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "")}
   )
 }
 

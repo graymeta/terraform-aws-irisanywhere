@@ -31,15 +31,12 @@ resource "aws_instance" "iris_adm" {
     ]
   }
 
-  tags = merge(
-    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
-    local.merged_tags
-  )
 
-  volume_tags = merge(
-    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
-    local.merged_tags
-  )
+  tags = merge(local.merged_tags, {
+    "Name" = format("${var.hostname_prefix}-%02d", count.index + 1)})
+
+  volume_tags = merge(local.merged_tags, {
+    "Name"= format("${var.hostname_prefix}-%02d", count.index + 1)})
 
   root_block_device {
     volume_type           = var.volume_type

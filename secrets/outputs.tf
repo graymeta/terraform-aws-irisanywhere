@@ -67,3 +67,8 @@ output "os_secretkey" {
   description = "Iris Secrets"
   value       = var.os_secretkey
 }
+
+output "arn" {
+  description = "AWS SecretManager Secret ARN"
+  value       = aws_secretsmanager_secret.iris_secrets.arn
+}
