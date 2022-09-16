@@ -125,3 +125,9 @@ variable "tags" {
   description = "(Optional) A map of the additional tags."
   default     = {}
 }
+
+variable "recovery_days" {
+  type        = number
+  description = "Days available to recover secret if deleted"
+  default = 0
+}

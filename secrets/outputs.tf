@@ -72,3 +72,8 @@ output "arn" {
   description = "AWS SecretManager Secret ARN"
   value       = aws_secretsmanager_secret.iris_secrets.arn
 }
+
+output "recovery_days" {
+  description = "Recovery window in days"
+  value       = var.recovery_days
+}

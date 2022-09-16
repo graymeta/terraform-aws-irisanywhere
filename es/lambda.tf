@@ -64,11 +64,12 @@ resource "aws_iam_role_policy_attachment" "AWSLambdaBasicExecutionRole" {
 }
 
 resource "aws_lambda_function" "update-es-index-lambda" {
-  filename      = local.update_es_index_lambda_zip
-  function_name = "updateESindex-${var.domain}"
-  role          = aws_iam_role.s3_indexer_role.arn
-  handler       = "index.handler"
-  runtime       = "nodejs14.x"
+  source_code_hash = filebase64sha256("${path.module}/lambda/index.js")
+  filename         = local.update_es_index_lambda_zip
+  function_name    = "updateESindex-${var.domain}"
+  role             = aws_iam_role.s3_indexer_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs14.x"
 
   vpc_config {
     subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
