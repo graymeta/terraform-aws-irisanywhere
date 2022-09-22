@@ -16,6 +16,11 @@ Deploys Iris Admin management server. This application provides comprehensive ad
 
 The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's https://{IPv4 DNS}:8021 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
 
+## Resulting AWS Services and Architecture Diagram
+
+![Iris Anywhere FTR](https://user-images.githubusercontent.com/13397511/191809033-b4e93fe0-42c7-4edb-baaa-132d439abcfc.jpg)
+
+
 ## Example Usage
 
 ```
