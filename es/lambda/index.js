@@ -7,7 +7,7 @@
  *
  * Copyright (C) 2021 GrayMeta, Inc. All rights reserved.
  * Original Author: Scott Sharp
- * 
+ *
  **************************/
  'use strict'
 
@@ -39,25 +39,34 @@
  
  //Note this plural function is different than the singular function
  async function processCreateEvents(event) {
-   var s3EventKey = escapeS3Key(event.s3.object.key);
+   var s3EventKey = escapeS3Key(event.s3.object.key).trim();
    
    if(isPresent(s3EventKey)) {
-     //Start by inserting full key path
-     await processCreateEvent(event).then(resultData => console.log(resultData));
-     //Determine folder count in key.
      var keysToIndex = s3EventKey.toString().split("/")
      var keysLen = keysToIndex.length;
+     //If event ONLY contains folders
+     var isFolder = ( (s3EventKey.length-1) == s3EventKey.lastIndexOf("/")) ? true : false; 
+     
+     //This processes initial event with full key path
+     //ONLY INSERT FULL KEY if it contains a file.  AVOID folder events here.
+     if(!isFolder) {
+       await processCreateEvent(event).then(resultData => console.log(resultData));
+     }
+     //Determine folder count in key.
+     
      //initial key substring which is entire key path
      var keySubString = s3EventKey;
-     
+
+     //LOOP creates new event keys for each folder in key path
      for(var i=0; i<(keysLen-1); i++) {
       var keySubStringIndex = keySubString.lastIndexOf("/");
       keySubString = s3EventKey.substring(0,keySubStringIndex);
       event.s3.object.key = keySubString.concat("/");
+      event.s3.object.size = 0;
       //create the event with the new key
       await processCreateEvent(event).then(resultData => console.log(resultData));
-      //await processCreateEvent(event);
-    }
+     }
+    
    }
  }
  
@@ -87,13 +96,13 @@
           filename: s3EventKey.replace(/^.*[\\\/]/, ''),
           bucket: event.s3.bucket.name,
           etag: event.s3.object.eTag,
-          filesize: event.s3.object.Size,
+          filesize: event.s3.object.size,
           lastmodified: Date.now()
         })).then((insertResponse) => {
           if ('created' == insertResponse.result) {
-             resolve("Inserted index item for event!\n\n" + JSON.stringify(event))
+             resolve("\nINSERTED INDEX ITEM FOR EVENT\n" + JSON.stringify(event))
           } else {
-             reject("Failed to insert index item for event!\n\n" + JSON.stringify(event))
+             reject("Failed to insert index item for event!\n" + JSON.stringify(event))
           }
         });
         
@@ -105,13 +114,13 @@
           .then((updateResponse) =>
           {
            if('updated' == updateResponse.result) {
-             resolve("Updated object ID: " + JSON.stringify(event))
+             resolve("\nUPDATED OBJECT ID:\n" + JSON.stringify(event))
            } else {
              reject("Failed to update object ID: " +JSON.stringify(event))
            }
           });
         });
-      }      
+      } //else      
      });
     } //!objExists
   }) //end of promise
@@ -132,12 +141,12 @@
            if (searchHit._source.s3key.trim() == s3EventKey.trim()) {
              deletedEntry = true;
              var response = openSearchClient('DELETE', event.s3.bucket.name + '/_doc/' + searchHit._id, '');
-             console.log("Deleted index item for event!\n\n" + JSON.stringify(event));
+             console.log("\nDELETED INDEX ITEM FOR EVENT\n" + JSON.stringify(event));
            }
          }
        });
        if (!deletedEntry) {
-         console.log("Failed to delete index item for event!\n\n" + JSON.stringify(event));
+         console.error("Failed to delete index item for event!\n" + JSON.stringify(event));
        }
      });
    }
@@ -175,11 +184,11 @@
          responseBody += chunk;
        });
        response.on('end', function (chunk) {
-         console.log("ResponseBody:" + responseBody);
+         console.log("\nResponseBody:" + responseBody);
          resolve(JSON.parse(responseBody));
        });
      }, function(error) {
-       console.log('Error: ' + error)
+       console.error('Error: ' + error)
        reject()
      })
    })
