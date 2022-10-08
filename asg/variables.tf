@@ -291,4 +291,10 @@ variable "alb_cookie_duration" {
   default     = "60"
 }
 
+variable "s3_enterprise" {
+  type        = bool
+  description = "Uses Config Map for S3 buckets configured with SSE"
+  default     = "false"
+}
+
 
