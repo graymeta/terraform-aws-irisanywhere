@@ -48,13 +48,13 @@ resource "aws_security_group_rule" "allow_postgresql" {
 }
 
 
-# Allow Postgres inbound traffic
-resource "aws_security_group_rule" "allow_8021" {
+# Allow HTTPS inbound traffic
+resource "aws_security_group_rule" "allow_https" {
   security_group_id = aws_security_group.iris_adm.id
-  description       = "Allow 8021"
+  description       = "Allow HTTPS"
   type              = "ingress"
-  from_port         = "8021"
-  to_port           = "8021"
+  from_port         = var.https_console_port
+  to_port           = var.https_console_port
   protocol          = "tcp"
   cidr_blocks       = var.access_cidr
 }

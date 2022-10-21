@@ -70,3 +70,15 @@ variable "associate_public_ip" {
   description = "(Optional) Associates Public IP to instances. Default is false."
   default     = false
 }
+
+variable "https_console_port" {
+  type        = number
+  description = "(Optional) Updates the HTTPS port for Iris Admin Console."
+  default     = 8021
+}
+
+variable "http_console_port" {
+  type        = number
+  description = "(Optional) Updates the HTTP port for Iris Admin Console."
+  default     = 8020
+}

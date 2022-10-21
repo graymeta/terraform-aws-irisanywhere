@@ -1,5 +1,7 @@
 <powershell>
 $iasecretarn = "${ia_secret_arn}"
+$https_console_port = "${https_console_port}"
+$http_console_port = "${http_console_port}"
 
 #Retrieve and prepare Secrets
 try {
@@ -27,7 +29,7 @@ $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.
 
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
 try {
-    Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
+    Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DATAFOLDER=C:\PostgreSQLData /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
 
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1000 -message "Iris Admin installed"
 }

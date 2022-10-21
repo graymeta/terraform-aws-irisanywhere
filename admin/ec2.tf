@@ -3,6 +3,8 @@ data "template_file" "cloud_init" {
 
   vars = {
     ia_secret_arn = var.ia_secret_arn
+    https_console_port = var.https_console_port
+    http_console_port = var.http_console_port
   }
 }
 
