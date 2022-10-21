@@ -54,7 +54,7 @@ resource "aws_autoscaling_group" "iris" {
 }
 
 data "template_file" "cloud_init" {
-  template = file("${path.module}/cloud_init.ps1")
+  template = file("${path.module}/cloud_local.ps1")
 
   vars = {
     name                     = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
@@ -77,6 +77,7 @@ data "template_file" "cloud_init" {
     s3_reclaim_maxused       = var.s3_reclaim_maxused
     s3_reclaim_minused       = var.s3_reclaim_minused
     s3_reclaim_age           = var.s3_reclaim_age
+    s3_enterprise            = var.s3_enterprise
   }
 }
 
