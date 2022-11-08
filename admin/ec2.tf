@@ -1,11 +1,16 @@
+
 data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_init.ps1")
-
+  
   vars = {
-    ia_secret_arn      = var.ia_secret_arn
+    
+    ia_secret_arn = var.ia_secret_arn
+    enterprise_ha = var.enterprise_ha
+    dbserver      = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
     https_console_port = var.https_console_port
-    http_console_port  = var.http_console_port
+    http_console_port = var.http_console_port
   }
+
 }
 
 resource "aws_instance" "iris_adm" {
@@ -33,20 +38,21 @@ resource "aws_instance" "iris_adm" {
     ]
   }
 
-  tags = merge(
-    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
-    local.merged_tags
-  )
 
-  volume_tags = merge(
-    map("Name", format("${var.hostname_prefix}-%02d", count.index + 1)),
-    local.merged_tags
-  )
+  tags = merge(local.merged_tags, {
+    "Name" = format("${var.hostname_prefix}-%02d", count.index + 1)})
+
+  volume_tags = merge(local.merged_tags, {
+    "Name"= format("${var.hostname_prefix}-%02d", count.index + 1)})
 
   root_block_device {
     volume_type           = var.volume_type
     volume_size           = var.volume_size
     delete_on_termination = "true"
   }
+
+    depends_on = [
+    aws_db_instance.default
+  ]
 }
 
