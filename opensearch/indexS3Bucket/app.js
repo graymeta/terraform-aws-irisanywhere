@@ -102,14 +102,28 @@ const main = async () => {
   // delete bucket index if exists
   try {
     await openSearchClient('DELETE', process.env.bucket, '');
-  } catch (error) {}
+  } catch (error) {
+    console.log("DELETE bucket index ERROR: " +error)
+  }
+
+  // Take a breath after a deleting the index
+  await new Promise(r => setTimeout(r, 5000));
 
   //create new bucket index
-  await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
+  try {
+    await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
+  } catch (error) {
+    console.log("DELETE bucket index ERROR: " +error)
+  }
 
-  //await new Promise(r => setTimeout(r, 2000));
+  await new Promise(r => setTimeout(r, 1000));
 
-  await Promise.all(arrayOfParams.map(params => getAllKeys(params, s3Client)));
+  try {
+      await Promise.all(arrayOfParams.map(params => getAllKeys(params, s3Client)));
+  } catch (error) {
+      console.log("Promise was rejected within getAllKeys method: "+error);
+  }
+  
 
   console.timeEnd('indexS3Bucket')
 
