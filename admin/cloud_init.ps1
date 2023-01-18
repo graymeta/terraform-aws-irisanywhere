@@ -1,7 +1,10 @@
 <powershell>
 $iasecretarn = "${ia_secret_arn}"
+$enterprise_ha = "${enterprise_ha}"
+$dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
+
 
 #Retrieve and prepare Secrets
 try {
@@ -29,8 +32,13 @@ $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.
 
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
 try {
-    Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DATAFOLDER=C:\PostgreSQLData /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
 
+if($enterprise_ha -eq "true"){
+    
+    Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DBHOST=$dbserver /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
+}else{
+    Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
+}
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1000 -message "Iris Admin installed"
 }
 catch {
@@ -40,5 +48,5 @@ catch {
 }
 #Check and Cleanup
 $irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion 
-Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green
+if($irisdbvercheck){Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green}else{Write-host "GrayMeta Iris Server installation $irisdbvercheck failed"  -ForegroundColor red}
 </powershell>

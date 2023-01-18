@@ -30,7 +30,7 @@ resource "aws_elasticsearch_domain" "es" {
     automated_snapshot_start_hour = 23
   }
   vpc_options {
-    subnet_ids = [var.subnet_id[0], var.subnet_id[1], ]
+    subnet_ids = var.subnet_id
 
     security_group_ids = [aws_security_group.es.id]
 

@@ -71,6 +71,18 @@ variable "associate_public_ip" {
   default     = false
 }
 
+variable "enterprise_ha" {
+  type        = bool
+  description = "(Optional) Enables multiple instance with load balancers"
+  default     = false
+}
+
+variable "additional_tags" {
+  default     = {}
+  description = "Additional resource tags"
+  type        = map(string)
+}
+
 variable "https_console_port" {
   type        = number
   description = "(Optional) Updates the HTTPS port for Iris Admin Console."
@@ -81,4 +93,10 @@ variable "http_console_port" {
   type        = number
   description = "(Optional) Updates the HTTP port for Iris Admin Console."
   default     = 8020
+}
+
+variable "disable_rdp" {
+  type        = bool
+  description = "(Optional) Disables RDP in SG"
+  default     = false
 }

@@ -1,6 +1,6 @@
 data "aws_subnet" "subnet" {
-  count = "${length(var.subnet_id)}"
-  id    = "${element(var.subnet_id, count.index)}"
+  count = length(var.subnet_id)
+  id    = element(var.subnet_id, count.index)
 }
 
 resource "aws_security_group" "iris_adm" {
@@ -8,10 +8,8 @@ resource "aws_security_group" "iris_adm" {
   description = replace("${var.hostname_prefix}-${var.instance_type}-iris-admin", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
-  tags = merge(
-    local.merged_tags,
-    map("Name", format("${var.hostname_prefix}-iris-admin"))
-  )
+  tags = merge(local.merged_tags, {
+  "Name" = format("${var.hostname_prefix}-iris-admin") })
 }
 
 # Allow all outbound traffic
@@ -27,6 +25,7 @@ resource "aws_security_group_rule" "egress" {
 
 # Allow RDP inbound traffic
 resource "aws_security_group_rule" "allow_rdp" {
+  count             = var.disable_rdp ? 0 : 1
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow RDP"
   type              = "ingress"
@@ -48,10 +47,10 @@ resource "aws_security_group_rule" "allow_postgresql" {
 }
 
 
-# Allow HTTPS inbound traffic
+# Allow Postgres inbound traffic
 resource "aws_security_group_rule" "allow_https" {
   security_group_id = aws_security_group.iris_adm.id
-  description       = "Allow HTTPS"
+  description       = "Allow 8021"
   type              = "ingress"
   from_port         = var.https_console_port
   to_port           = var.https_console_port
