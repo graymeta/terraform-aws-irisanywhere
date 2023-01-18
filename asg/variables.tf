@@ -18,13 +18,13 @@ variable "asg_check_interval" {
 
 variable "asg_scalein_cooldown" {
   type        = number
-  description = "(Optional) Scale in cooldown period.  Default to `300`"
+  description = "(Optional) Scale in cooldown period.  Default to `420`"
   default     = 420
 }
 
 variable "asg_scalein_evaluation" {
   type        = number
-  description = "(Optional) Scale in evaluation periods.  Default to `2`"
+  description = "(Optional) Scale in evaluation periods.  Default to `10`"
   default     = 10
 }
 
@@ -36,7 +36,7 @@ variable "asg_scalein_threshold" {
 
 variable "asg_scaleout_cooldown" {
   type        = number
-  description = "(Optional) Scale out cooldown period.  Default to `300`"
+  description = "(Optional) Scale out cooldown period.  Default to `420`"
   default     = 420
 }
 
@@ -110,7 +110,7 @@ variable "hostname_prefix" {
 
 variable "iam_policy_enabled" {
   type        = bool
-  description = "Enabled custom policy for IAM/S3 objects default is false"
+  description = "(Optional) Enabled custom policy for IAM/S3 objects default is false"
   default     = false
 }
 
@@ -259,8 +259,6 @@ variable "asg_warm_pool_max" {
   default     = "0"
 }
 
-
-
 variable "s3_progressive_retrieval" {
   type        = bool
   description = "(Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`"
@@ -288,7 +286,7 @@ variable "s3_reclaim_age" {
 variable "alb_cookie_duration" {
   type        = number
   description = "(Required) Sets the age of cookie session.  Default to `60s`"
-  default     = "60"
+  default     = 60
 }
 
 variable "s3_enterprise" {

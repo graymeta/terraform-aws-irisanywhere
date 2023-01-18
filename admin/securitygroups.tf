@@ -1,6 +1,6 @@
 data "aws_subnet" "subnet" {
-  count = "${length(var.subnet_id)}"
-  id    = "${element(var.subnet_id, count.index)}"
+  count = length(var.subnet_id)
+  id    = element(var.subnet_id, count.index)
 }
 
 resource "aws_security_group" "iris_adm" {
@@ -9,7 +9,7 @@ resource "aws_security_group" "iris_adm" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(local.merged_tags, {
-    "Name"= format("${var.hostname_prefix}-iris-admin")})
+  "Name" = format("${var.hostname_prefix}-iris-admin") })
 }
 
 # Allow all outbound traffic
@@ -25,7 +25,7 @@ resource "aws_security_group_rule" "egress" {
 
 # Allow RDP inbound traffic
 resource "aws_security_group_rule" "allow_rdp" {
-  count = var.disable_rdp ? 0 : 1
+  count             = var.disable_rdp ? 0 : 1
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow RDP"
   type              = "ingress"

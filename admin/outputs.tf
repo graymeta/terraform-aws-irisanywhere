@@ -12,11 +12,11 @@ output "private_ip" {
 
 output "alb_dns_name" {
   description = "The DNS name of the load balancer."
-  value       = aws_lb.irisadmin.*.dns_name 
+  value       = aws_lb.irisadmin.*.dns_name
 }
 
 output "alb_dns_name_none" {
   description = "The DNS name of the load balancer."
-  value       = join("", aws_lb.irisadmin.*.dns_name )
+  value       = join("", aws_lb.irisadmin.*.dns_name)
 }
 

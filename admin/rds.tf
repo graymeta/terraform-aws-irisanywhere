@@ -6,9 +6,7 @@ data "aws_secretsmanager_secret_version" "iris-secret" {
 }
 
 resource "aws_db_instance" "default" {
-  #count = var.enterprise_ha == "true" ? 1 : 0
   count = var.enterprise_ha ? 1 : 0
-
   allocated_storage          = var.allocated_storage
   apply_immediately          = var.apply_immediately
   auto_minor_version_upgrade = "false"
@@ -29,10 +27,10 @@ resource "aws_db_instance" "default" {
   username                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_id"]
   vpc_security_group_ids     = ["${aws_security_group.rds.id}"]
 
-#   snapshot_identifier = "${var.db_snapshot == "final" ?
-#     format("GrayMetaIrisAdmin-${var.hostname_prefix}-final") :
-#     var.db_snapshot
-#   }"
+  #   snapshot_identifier = "${var.db_snapshot == "final" ?
+  #     format("GrayMetaIrisAdmin-${var.hostname_prefix}-final") :
+  #     var.db_snapshot
+  #   }"
 
   lifecycle {
     ignore_changes = [
@@ -68,8 +66,8 @@ output "endpoint" {
 }
 
 data "aws_subnet" "subnetinfo" {
-  count = "${length(var.subnet_id)}"
-  id    = "${element(var.subnet_id, count.index)}"
+  count = length(var.subnet_id)
+  id    = element(var.subnet_id, count.index)
 }
 
 resource "aws_security_group" "rds" {
@@ -136,7 +134,7 @@ variable "db_storage_encrypted" {
   type        = bool
 }
 variable "db_version" {
-  default     = 14
+  default     = 14.2
   description = "(Required) Postgres Database version"
   type        = number
 }
