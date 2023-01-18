@@ -6,7 +6,7 @@ data "aws_secretsmanager_secret_version" "iris-secret" {
 }
 
 resource "aws_db_instance" "default" {
-  count = var.enterprise_ha ? 1 : 0
+  count                      = var.enterprise_ha ? 1 : 0
   allocated_storage          = var.allocated_storage
   apply_immediately          = var.apply_immediately
   auto_minor_version_upgrade = "false"
