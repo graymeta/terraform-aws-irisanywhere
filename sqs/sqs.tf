@@ -3,8 +3,8 @@ resource "aws_sqs_queue" "iris_qa_sqs" {
   sqs_managed_sse_enabled = true
 
   tags = merge(
-    var.additional_tags,{
-    Name = "IrisAdmin"},
+    var.additional_tags, {
+    Name = "IrisAdmin" },
   )
 }
 
