@@ -3,7 +3,8 @@
 The following contains instructions for deploying Iris Admin into an AWS environment.  Iris Admin can be deployed with a single instance or in High Availability mode. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of Iris Anywhere/Play products. Further Iris Admin manages Users, permissions and Licenses for Iris products (Anywhere & Play). 
 
 # Requirements
-* Compatible with terraform v1.2.X or later.
+
+* Iris Admin version 8.7.0.109 or later.
 * IAM priviliges to deploy EC2, Load balancers and DB instances; Create, attach IAM policies and roles.
 * Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
 * Access to GrayMeta Iris Admin AMI's - Contact support@graymeta.com.
