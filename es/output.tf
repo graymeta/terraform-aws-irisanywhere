@@ -13,6 +13,10 @@ output "endpoint" {
 output "kibana_endpoint" {
   value = aws_elasticsearch_domain.es.kibana_endpoint
 }
+
+output "lambda_arn" {
+  value = aws_lambda_function.update-es-index-lambda.arn
+}
 output "subnet_id" {
   value       = var.subnet_id
   description = "ARN ES domain"

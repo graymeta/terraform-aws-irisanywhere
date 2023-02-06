@@ -294,3 +294,9 @@ variable "s3_enterprise" {
   description = "Uses Config Map for S3 buckets configured with SSE"
   default     = "false"
 }
+
+variable "terminate_on_shutdown" {
+  type = bool
+  description = "Terminate ASG instances on shutdown"
+  default = false
+}
