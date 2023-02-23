@@ -16,6 +16,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_reclaim_minused = "${s3_reclaim_minused}"
     $s3_reclaim_age = "${s3_reclaim_age}"
     $s3_enterprise = "${s3_enterprise}"
+    $haproxy = "${haproxy}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -49,6 +50,9 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 #Run init locally
     C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1
 
+#Start SSM Service
+Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
+
 #Update Instance
     $webclient = new-object net.webclient
     $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
@@ -59,5 +63,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $tag.Key = "Name"
     $tag.Value = "${name}-"+$instanceid
     New-EC2Tag -Resource $instanceid -Tag $tag
+
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
     Rename-Computer -NewName $instanceid -force
