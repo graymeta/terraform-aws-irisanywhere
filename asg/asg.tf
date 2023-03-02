@@ -111,7 +111,8 @@ resource "aws_launch_template" "iris" {
   user_data              = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
   update_default_version = var.update_asg_lt
   ebs_optimized          = true
-
+  instance_initiated_shutdown_behavior = var.terminate_on_shutdown ? "terminate" : "stop"
+  
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name
   }

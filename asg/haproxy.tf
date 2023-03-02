@@ -226,7 +226,7 @@ variable "volume_type" {
 variable "volume_size" {
   type        = number
   description = "EBS volume size.  Default to `10`"
-  default     = "60"
+  default     = "10"
 }
 
 variable "instance_count" {
@@ -256,7 +256,7 @@ variable "additional_tags" {
 variable "hap_loglevel" {
   type        = string
   default     = "warning"
-  description = "Logging level for Haproxy. May use info, debug, notice, error. Default is warning."
+  description = "Logging level for Haproxy. May use emerg, alert, crit, err, warning, notice, info, debug. Default is warning."
 }
 
 

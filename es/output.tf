@@ -26,3 +26,7 @@ output "domain_endpoint" {
   description = "your domain endpoint URL"
 }
 
+output "lambda_arn" {
+  value = aws_lambda_function.update-es-index-lambda.arn
+}
+

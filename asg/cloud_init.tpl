@@ -15,9 +15,10 @@ runcmd:
 - wget -P /etc/haproxy/utils/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/remove-node-lb.sh" ; chmod 500 /etc/haproxy/utils/remove-node-lb.sh
 - wget -P /etc/haproxy/utils/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/get-asg-nodes.sh" ; chmod 500 /etc/haproxy/utils/get-asg-nodes.sh
 - wget -P /etc/haproxy/utils/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/get-lb-benodes.sh" ; chmod 500 /etc/haproxy/utils/get-lb-benodes.sh
-- mkdir /etc/haproxy/errors; wget -P /etc/haproxy/errors/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/503.http" ; chmod 550 /etc/haproxy/errors/503.http
+- wget -P /etc/haproxy/utils/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/logging.sh" ; chmod 500 /etc/haproxy/utils/logging.sh
+- wget -P /etc/haproxy/errors/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/503.http" ; chmod 550 /etc/haproxy/errors/503.http
 - wget -P /etc/rsyslog.d/ "https://gm-iris.s3.us-west-1.amazonaws.com/haproxy/99-haproxy.conf" ; chmod 550 /etc/rsyslog.d/99-haproxy.conf
-- systemctl enable haproxy.service ; systemctl start haproxy.service ; systemctl restart haproxy.service 
+- systemctl enable haproxy.service 
 - touch /etc/profile.d/gmvars.sh ; chmod 550 /etc/profile.d/gmvars.sh
 - echo export "ASGID='${asg_name}'" >> /etc/profile.d/gmvars.sh
 - echo export "AWSREGION='${aws_region}'" >> /etc/profile.d/gmvars.sh
@@ -26,5 +27,5 @@ runcmd:
 - (crontab -l ; echo "* * * * * /etc/haproxy/utils/remove-node-lb.sh") | crontab -
 - sed -i 's/443 ssl check/${port} check /' /etc/haproxy/haproxy.cfg
 - sed -i 's/local0 warning/local0 ${hap_loglevel}/' /etc/haproxy/haproxy.cfg
-- sed -i 's/sock/sock" "HAPPW=${statspw}/' /lib/systemd/system/haproxy.service ; systemctl daemon-reload ; systemctl restart haproxy ; systemctl restart rsyslog
+- sed -i 's/sock/sock" "HAPPW=${statspw}/' /lib/systemd/system/haproxy.service
 - reboot
