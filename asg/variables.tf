@@ -324,8 +324,3 @@ variable "warm_pool" {
   description = "If this block is configured, add a Warm Pool to the specified Auto Scaling group. See [warm_pool](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_group#warm_pool)."
   default     = null
 }
-
-variable "terminate_on_shutdown" {
-  type        = bool
-  description = "Terminate ASG instances on shutdown. Default to True."
-  default     = false
