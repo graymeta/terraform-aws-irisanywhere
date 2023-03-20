@@ -114,3 +114,7 @@ output "subnet_id" {
 output "tags" {
   value = var.tags
 }
+
+output "ha_proxy_fqdn" {
+  value = aws_instance.ha.private_dns
+}
