@@ -1,7 +1,7 @@
 output "alb_dns_name" {
   description = "The DNS name of the load balancer."
   #  value       = aws_lb.iris_alb[0].dns_name
-  value = var.haproxy == true ? null : aws_lb.iris_alb[0].dns_name
+  value = var.haproxy == true ? aws_instance.ha.private_dns : aws_lb.iris_alb[0].dns_name
 }
 
 output "asg_name" {
@@ -113,8 +113,4 @@ output "subnet_id" {
 
 output "tags" {
   value = var.tags
-}
-
-output "ha_proxy_fqdn" {
-  value = aws_instance.ha.private_dns
 }
