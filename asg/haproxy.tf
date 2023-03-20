@@ -22,7 +22,7 @@ data "template_file" "cloud_init_ha" {
 
   vars = {
     hostname = format("${var.hostname_prefix}")
-    #ssl_certificate_cert = var.ssl_certificate_cert 
+    #ssl_certificate_cert = var.ssl_certificate_cert
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
 
     aws_region   = data.aws_region.current.name
@@ -72,25 +72,25 @@ resource "aws_instance" "ha" {
 
 }
 
-resource "aws_eip" "eip_haproxy" {
-  count    = var.haproxy == true ? 1 : 0
-  instance = aws_instance.ha[0].id
-  vpc      = true
+# resource "aws_eip" "eip_haproxy" {
+#   count    = var.haproxy == true ? 1 : 0
+#   instance = aws_instance.ha[0].id
+#   vpc      = true
 
-  tags = {
-    Name = "eip-${var.hostname_prefix}"
-  }
+#   tags = {
+#     Name = "eip-${var.hostname_prefix}"
+#   }
 
-  lifecycle {
-    prevent_destroy = false
-  }
-}
+#   lifecycle {
+#     prevent_destroy = false
+#   }
+# }
 
-resource "aws_eip_association" "eip_assoc_ha" {
-  count         = var.haproxy == true ? 1 : 0
-  instance_id   = aws_instance.ha[0].id
-  allocation_id = aws_eip.eip_haproxy[0].id
-}
+# resource "aws_eip_association" "eip_assoc_ha" {
+#   count         = var.haproxy == true ? 1 : 0
+#   instance_id   = aws_instance.ha[0].id
+#   allocation_id = aws_eip.eip_haproxy[0].id
+# }
 #IAM
 
 data "template_file" "ha_role" {
