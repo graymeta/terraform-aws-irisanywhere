@@ -83,10 +83,6 @@ output "disk_os_type" {
   value = var.disk_os_type
 }
 
-output "ha_proxy_instance_id" {
-  value = var.haproxy == true ? aws_instance.ha[0].id : null
-}
-
 output "hostname_prefix" {
   value = var.hostname_prefix
 }
