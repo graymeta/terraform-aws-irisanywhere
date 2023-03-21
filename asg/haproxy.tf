@@ -22,7 +22,6 @@ data "template_file" "cloud_init_ha" {
 
   vars = {
     hostname = format("${var.hostname_prefix}")
-    #ssl_certificate_cert = var.ssl_certificate_cert 
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
 
     aws_region   = data.aws_region.current.name
@@ -59,10 +58,10 @@ resource "aws_instance" "ha" {
     ]
   }
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-%02d", count.index + 1) })
+  "Name" = format("${var.hostname_prefix}-haproxy-%02d", count.index + 1) })
 
   volume_tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-%02d", count.index + 1) })
+  "Name" = format("${var.hostname_prefix}-haproxy-%02d", count.index + 1) })
 
   root_block_device {
     volume_type           = var.volume_type
@@ -73,7 +72,7 @@ resource "aws_instance" "ha" {
 }
 
 resource "aws_eip" "eip_haproxy" {
-  count    = var.haproxy == true ? 1 : 0
+  count    = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
   instance = aws_instance.ha[0].id
   vpc      = true
 
@@ -87,7 +86,7 @@ resource "aws_eip" "eip_haproxy" {
 }
 
 resource "aws_eip_association" "eip_assoc_ha" {
-  count         = var.haproxy == true ? 1 : 0
+  count         = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
   instance_id   = aws_instance.ha[0].id
   allocation_id = aws_eip.eip_haproxy[0].id
 }
