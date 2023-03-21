@@ -1,7 +1,7 @@
 output "alb_dns_name" {
   description = "The DNS name of the load balancer."
   #  value       = aws_lb.iris_alb[0].dns_name
-  value = var.haproxy == true ? aws_instance.ha[0].private_dns : aws_lb.iris_alb[0].dns_name
+  value = var.haproxy == true ? null : aws_lb.iris_alb[0].dns_name
 }
 
 output "asg_name" {
@@ -81,6 +81,10 @@ output "disk_os_size" {
 
 output "disk_os_type" {
   value = var.disk_os_type
+}
+
+output "ha_proxy_instance_id" {
+  value = var.haproxy == true ? aws_instance.ha[0].id : null
 }
 
 output "hostname_prefix" {
