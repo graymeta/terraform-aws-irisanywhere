@@ -22,7 +22,6 @@ data "template_file" "cloud_init_ha" {
 
   vars = {
     hostname = format("${var.hostname_prefix}")
-    #ssl_certificate_cert = var.ssl_certificate_cert
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
 
     aws_region   = data.aws_region.current.name
