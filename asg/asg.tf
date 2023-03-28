@@ -1,26 +1,22 @@
-data "null_data_source" "tags" {
-  count = length(keys(local.merged_tags))
-
-  inputs = {
-    key                 = "${element(keys(local.merged_tags), count.index)}"
-    value               = "${element(values(local.merged_tags), count.index)}"
-    propagate_at_launch = true
-  }
-}
 
 resource "aws_autoscaling_group" "iris" {
-  name                  = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
-  desired_capacity      = var.asg_size_desired
-  max_size              = var.asg_size_max
-  min_size              = var.asg_size_min
-  protect_from_scale_in = true
-  vpc_zone_identifier   = var.subnet_id
-  target_group_arns     = ["${aws_lb_target_group.port443.id}"]
+  name                    = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+  desired_capacity        = var.asg_size_desired
+  max_size                = var.asg_size_max
+  min_size                = var.asg_size_min
+  protect_from_scale_in   = true
+  vpc_zone_identifier     = var.subnet_id
+  target_group_arns       = var.haproxy == true ? null : aws_lb_target_group.port443[*].id
+  default_instance_warmup = 600
 
-  warm_pool {
-    pool_state                  = "Stopped"
-    min_size                    = var.asg_warm_pool_min
-    max_group_prepared_capacity = var.asg_warm_pool_max
+
+  dynamic "warm_pool" {
+    for_each = var.warm_pool != null ? [var.warm_pool] : []
+    content {
+      pool_state                  = "Stopped"
+      min_size                    = var.asg_warm_pool_min
+      max_group_prepared_capacity = var.asg_warm_pool_max
+    }
   }
 
   launch_template {
@@ -44,14 +40,21 @@ resource "aws_autoscaling_group" "iris" {
     "GroupTotalInstances",
   ]
 
-  tags = flatten(["${data.null_data_source.tags.*.outputs}"])
-
   lifecycle {
     ignore_changes = [
       desired_capacity,
     ]
   }
 }
+
+resource "aws_autoscaling_lifecycle_hook" "iris_init" {
+  name                   = "iris_init"
+  autoscaling_group_name = aws_autoscaling_group.iris.name
+  default_result         = "CONTINUE"
+  heartbeat_timeout      = 600
+  lifecycle_transition   = "autoscaling:EC2_INSTANCE_LAUNCHING"
+}
+
 
 data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_local.ps1")
@@ -78,16 +81,22 @@ data "template_file" "cloud_init" {
     s3_reclaim_minused       = var.s3_reclaim_minused
     s3_reclaim_age           = var.s3_reclaim_age
     s3_enterprise            = var.s3_enterprise
+    haproxy                  = var.haproxy
+    saml_enabled             = var.saml_enabled
+    saml_cert_secret_arn     = var.saml_cert_secret_arn
   }
 }
 
 resource "aws_launch_template" "iris" {
-  name_prefix   = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
-  image_id      = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
-  instance_type = var.instance_type
-  key_name      = var.key_name
-  user_data     = base64encode(join("\n", ["<powershell>", "${data.template_file.cloud_init.rendered}", "${var.user_init}", "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
-  ebs_optimized = true
+  name_prefix                          = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+  image_id                             = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
+  instance_type                        = var.instance_type
+  key_name                             = var.key_name
+  user_data                            = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+  update_default_version               = var.update_asg_lt
+  ebs_optimized                        = true
+  instance_initiated_shutdown_behavior = var.terminate_on_shutdown ? "terminate" : "stop"
+
 
   iam_instance_profile {
     name = aws_iam_instance_profile.iris.name
@@ -117,8 +126,9 @@ resource "aws_launch_template" "iris" {
   }
 
   network_interfaces {
-    associate_public_ip_address = var.alb_internal ? false : true
-    security_groups             = [aws_security_group.iris.id]
+    associate_public_ip_address = var.associate_public_ip
+    #associate_public_ip_address = var.alb_internal ? false : true
+    security_groups = [aws_security_group.iris.id]
   }
 
   tag_specifications {
