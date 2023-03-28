@@ -16,31 +16,41 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_reclaim_minused = "${s3_reclaim_minused}"
     $s3_reclaim_age = "${s3_reclaim_age}"
     $s3_enterprise = "${s3_enterprise}"
+    $haproxy = "${haproxy}"
+    $saml_enabled = "${saml_enabled}"
+    $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
         #Set init variables
-        $admin_customer_id  = $secretdata.admin_customer_id
-        $admin_db_id        = $secretdata.admin_db_id
-        $admin_db_pw        = $secretdata.admin_db_pw
-        $admin_server       = $secretdata.admin_server
-        $iris_s3_bucketname = $secretdata.iris_s3_bucketname
-        $iris_s3_access_key = $secretdata.iris_s3_access_key
-        $iris_s3_secret_key = $secretdata.iris_s3_secret_key
-        $iris_s3_lic_code   = $secretdata.iris_s3_lic_code
-        $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
-        $iris_serviceacct   = $secretdata.iris_serviceacct
-        $okta_issuer        = $secretdata.okta_issuer
-        $okta_clientid	    = $secretdata.okta_clientid
-        $okta_redirecturi   = $secretdata.okta_redirecturi
-        $okta_scope         = $secretdata.okta_scope
-        $s3_meta_bucketname = $secretdata.s3_meta_bucketname
-        $s3_meta_access_key = $secretdata.s3_meta_access_key
-        $s3_meta_secret_key = $secretdata.s3_meta_secret_key
-        $os_endpoint        = $secretdata.os_endpoint
-        $os_region          = $secretdata.os_region
-        $os_accessid        = $secretdata.os_accessid
-        $os_secretkey       = $secretdata.os_secretkey
+        $admin_customer_id      = $secretdata.admin_customer_id
+        $admin_db_id            = $secretdata.admin_db_id
+        $admin_db_pw            = $secretdata.admin_db_pw
+        $admin_server           = $secretdata.admin_server
+        $iris_s3_bucketname     = $secretdata.iris_s3_bucketname
+        $iris_s3_access_key     = $secretdata.iris_s3_access_key
+        $iris_s3_secret_key     = $secretdata.iris_s3_secret_key
+        $iris_s3_lic_code       = $secretdata.iris_s3_lic_code
+        $iris_s3_lic_id         = $secretdata.iris_s3_lic_id
+        $iris_serviceacct       = $secretdata.iris_serviceacct
+        $okta_issuer            = $secretdata.okta_issuer
+        $okta_clientid	        = $secretdata.okta_clientid
+        $okta_redirecturi       = $secretdata.okta_redirecturi
+        $okta_scope             = $secretdata.okta_scope
+        $s3_meta_bucketname     = $secretdata.s3_meta_bucketname
+        $s3_meta_access_key     = $secretdata.s3_meta_access_key
+        $s3_meta_secret_key     = $secretdata.s3_meta_secret_key
+        $os_endpoint            = $secretdata.os_endpoint
+        $os_region              = $secretdata.os_region
+        $os_accessid            = $secretdata.os_accessid
+        $os_secretkey           = $secretdata.os_secretkey
+
+        $saml_uniqueid          = $secretdata.saml_uniqueid
+        $saml_displayname       = $secretdata.saml_displayname
+        $saml_entryPoint        = $secretdata.saml_entryPoint
+        $saml_samlissuer        = $secretdata.saml_samlissuer
+        $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
+        $saml_acsUrlRelativePath= $secretdata.saml_acsUrlRelativePath
     }
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
@@ -48,6 +58,10 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 
 #Run init locally
     C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1
+
+#Start SSM Service
+Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
+
 
 #Update Instance
     $webclient = new-object net.webclient
@@ -59,5 +73,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $tag.Key = "Name"
     $tag.Value = "${name}-"+$instanceid
     New-EC2Tag -Resource $instanceid -Tag $tag
+
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
     Rename-Computer -NewName $instanceid -force

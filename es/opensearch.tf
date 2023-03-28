@@ -21,10 +21,11 @@ resource "aws_elasticsearch_domain" "es" {
   advanced_options = var.advanced_options
 
   advanced_security_options {
-    enabled = var.advanced_security_options_enabled
-    master_user_options {
-      master_user_arn = aws_iam_role.s3_indexer_role.arn
-    }
+    enabled = false #var.advanced_security_options_enabled
+    #AnonymousAuthEnabled = true
+    #master_user_options {
+    #master_user_arn = aws_iam_role.s3_indexer_role.arn
+    #}
   }
   snapshot_options {
     automated_snapshot_start_hour = 23
@@ -96,9 +97,10 @@ resource "aws_security_group" "es" {
   name        = replace("${var.domain}-sg", ".", "")
   description = "Allow inbound traffic from Security Groups and CIDRs. Allow all outbound traffic"
 
-  tags = merge(
-  map("Name", replace("${var.domain}-sg", ".", "")))
+  tags = {
+  Name = replace("${var.domain}-sg", ".", "") }
 }
+
 
 resource "aws_security_group_rule" "ingress_cidr_blocks" {
   security_group_id = aws_security_group.es.id

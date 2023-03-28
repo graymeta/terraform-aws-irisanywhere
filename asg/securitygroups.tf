@@ -9,8 +9,8 @@ resource "aws_security_group" "alb" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
-    local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""))
+    local.merged_tags, {
+    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "") }
   )
 }
 
@@ -50,8 +50,8 @@ resource "aws_security_group" "iris" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
-    local.merged_tags,
-    map("Name", replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", ""))
+    local.merged_tags, {
+    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "") }
   )
 }
 
@@ -93,7 +93,7 @@ resource "aws_security_group_rule" "iris_8080" {
   from_port                = 8080
   to_port                  = 8080
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id
+  source_security_group_id = var.haproxy == true ? aws_security_group.ha[0].id : aws_security_group.alb.id
 }
 
 resource "aws_security_group_rule" "iris_443" {
@@ -104,7 +104,9 @@ resource "aws_security_group_rule" "iris_443" {
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id
+  source_security_group_id = var.haproxy == true ? aws_security_group.ha[0].id : aws_security_group.alb.id
+
+
 }
 
 resource "aws_security_group_rule" "iris_udp" {

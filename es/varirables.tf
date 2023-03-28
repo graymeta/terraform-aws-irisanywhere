@@ -1,7 +1,7 @@
 variable "domain" {
   type        = string
   description = "Name of Domain"
-
+  default     = "irisanywhere-es"
 }
 
 variable "instance_type" {

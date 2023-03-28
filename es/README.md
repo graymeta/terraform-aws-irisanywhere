@@ -8,7 +8,7 @@ Prerequisites:
 * Iris Anywhere ASG set search_enabled to "true".
 * Certificates created or imported in AWS Certificate Manager.
 * OpenSearch requires two subnets for high availability.
-* Terraform 12, 13 & 14 compatible.
+* Terraform 12 > compatible.
 * `version` - Current version is `v0.0.13`.
 
 ## Example Usage
@@ -35,7 +35,9 @@ bucketlist                                = "s3bucket1"
 
 ```
 ### Argument Reference:
-* `domain` - (Required) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
+Name of Domain
+* `allowed_cidr_blocks` - (Required) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
+* `domain` - (Required) Name of es domain for cluster.  Default to `irisanywhere-es`
 * `instance_type` - (Required) Elasticsearch instance type for data nodes in the cluster.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `custom_endpoint` - (Required) Specifies custom FQDN for the domain.
