@@ -90,6 +90,11 @@ resource "aws_eip_association" "eip_assoc_ha" {
   instance_id   = aws_instance.ha[0].id
   allocation_id = aws_eip.eip_haproxy[0].id
 }
+
+output "ha_proxy_lb_fqdn" {
+  value = var.haproxy == true && var.associate_public_ip == true ? aws_eip.eip_haproxy[0].public_dns : null
+}
+
 #IAM
 
 data "template_file" "ha_role" {
