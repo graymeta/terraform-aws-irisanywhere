@@ -68,6 +68,7 @@ data "template_file" "cloud_init" {
     ia_cert_crt_arn          = var.ia_cert_crt_arn
     ia_cert_key_arn          = var.ia_cert_key_arn
     ia_max_sessions          = var.ia_max_sessions
+    ia_keepalivetimeout      = var.ia_keepalivetimeout
     ia_secret_arn            = var.ia_secret_arn
     ia_domain                = var.ia_domain
     search_enabled           = var.search_enabled

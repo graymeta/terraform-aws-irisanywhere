@@ -72,7 +72,7 @@ resource "aws_security_group_rule" "iris_rdp" {
   from_port         = 3389
   to_port           = 3389
   protocol          = "tcp"
-  cidr_blocks       = var.access_cidr
+  cidr_blocks       = var.rdp_access_cidr
 }
 
 resource "aws_security_group_rule" "iris_health" {

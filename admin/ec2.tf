@@ -20,7 +20,7 @@ resource "aws_instance" "iris_adm" {
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.iris_adm.id]
   subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(data.template_file.cloud_init.rendered)
+  user_data                   = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "</powershell>"]))
   associate_public_ip_address = var.associate_public_ip
 
   disable_api_termination = var.instance_protection ? true : false

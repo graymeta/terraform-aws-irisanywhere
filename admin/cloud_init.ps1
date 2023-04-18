@@ -1,4 +1,4 @@
-<powershell>
+#<powershell>
 $iasecretarn = "${ia_secret_arn}"
 $enterprise_ha = "${enterprise_ha}"
 $dbserver = "${dbserver}"
@@ -27,7 +27,7 @@ catch {
 
 $start_time=$(((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmssZ"))
 $start_time
-
+Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.exe*"} | select -ExpandProperty name
 
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
@@ -49,4 +49,5 @@ catch {
 #Check and Cleanup
 $irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion 
 if($irisdbvercheck){Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green}else{Write-host "GrayMeta Iris Server installation $irisdbvercheck failed"  -ForegroundColor red}
-</powershell>
+
+#</powershell>

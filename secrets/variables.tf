@@ -151,6 +151,37 @@ variable "s3_enterprise" {
   description = "List of S3 buckets and configs for SSE - requires keypair values"
 }
 
+variable "saml_uniqueID" {
+  type        = string
+  description = "(Optional) ID of IDP for SAML configuration (Either okta or ping-identity)."
+}
+
+variable "saml_displayName" {
+
+  type        = string
+  description = "(Optional) Display name of IDP for SAML configuration (Either Okta or Ping Identity)."
+}
+
+variable "saml_entryPoint" {
+  type        = string
+  description = "(Optional) Identity Provider Single Sign-On URL."
+}
+
+variable "saml_samlissuer" {
+  type        = string
+  description = "(Optional) - Identity Provider Issuer from SAML configuration (within SAML setup)."
+}
+
+variable "saml_acsUrlBasePath" {
+  type        = string
+  description = "(Optional) - URL path to visit Iris Anywhere (iris-url.domain.com/irisanywhere)."
+}
+
+variable "saml_acsUrlRelativePath" {
+  type        = string
+  description = "(Optional) ACS URL relative to Iris Anywhere server (eg. /auth/saml/idp/assertion-consumer-service)"
+}
+
 variable "tags" {
   type        = map(string)
   description = "(Optional) A map of the additional tags."
