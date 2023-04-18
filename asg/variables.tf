@@ -31,7 +31,7 @@ variable "asg_scalein_evaluation" {
 variable "asg_scalein_threshold" {
   type        = number
   description = "(Optional) Scale in if the number of sessions drop below.  Set to max sessions value plus 1"
-  default     = "3"
+  default     = 3
 }
 
 variable "asg_scaleout_cooldown" {
@@ -192,9 +192,9 @@ variable "ia_secret_arn" {
 }
 
 variable "ia_max_sessions" {
-  type        = string
+  type        = number
   description = "(Required) max number of sessions (users) per instance. Based on instance type and media playback requirements"
-  default     = "3"
+  default     = 3
 }
 
 variable "ia_domain" {
@@ -341,4 +341,22 @@ variable "saml_cert_secret_arn" {
   type        = string
   description = "Specifies the AWS Secret ARN for SAML configuration"
   default     = ""
+}
+
+variable "ia_keepalivetimeout" {
+  type        = number
+  description = "Specifies the keep alive timeout value for iris anywhere sessions when idle"
+  default     = 5
+}
+
+variable "rdp_access_cidr" {
+  type        = list(string)
+  description = "Specifies the network range for RDP"
+  default     = ["0.0.0.0/32"]
+}
+
+variable "disable_rdp" {
+  type        = bool
+  description = "Disables RDP for Iris Anywhere instances. Default false"
+  default     = false
 }

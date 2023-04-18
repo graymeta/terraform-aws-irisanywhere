@@ -145,8 +145,8 @@ The following arguments are supported:
 * `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
-* `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
-* `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
+* `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to `disabled`
+* `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to `disabled`
 * `ia_domain` - (Required) domain name of SSL wildcard SSL used for end to end SSL, ie "yourdomain.com", or "test.yourdomain.com". Domain must match cert SAN.
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
 * `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
@@ -154,22 +154,25 @@ The following arguments are supported:
 * `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
 * `s3_sse_cmk_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
 * `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
-* `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is 10000.
+* `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is `10000`.
 * `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP8.
-* `asg_warm_pool_min` - (Optional) Warm pool minimum value. Default is 0
+* `ia_keepalivetimeout` - (Optional) Sets timeout value when sessions are idle and no QC operations/activity occur. Default is 5.
+* `asg_warm_pool_min` - (Optional) Warm pool minimum value. Default is `off`
 * `asg_warm_pool_max` "(Optional) Warm pool maximum value
 * `update_asg_lt` - (Optional) Updates launch template to latest. Default is true
 * `s3_progressive_retrieval` = (Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`
 * `s3_reclaim_maxused` = (Optional) Sets the Max used scratch space available threshold before data is offlined.  Default to `90` 
 * `s3_reclaim_minused` = (Optional) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80` 
 * `s3_reclaim_age` (Optional) Sets the age of files threshold for data stored before data is offlined.  Default to `8h`
-* `s3_enterprise` (Optional) "Uses Config Map for S3 buckets configured with SSE - Contact GrayMeta for key/value info"
-* `haproxy` (Optional) "When set to enable, used haproxy as a load balancer instead of AWS ALB. Default set to false "
-* `mgmt_cidr` (Optional) "Subnet used to allow access to stats and ssh to HAProxy. Default is 0.0.0.0/32"
+* `s3_enterprise` (Optional) "Uses Config Map for S3 buckets configured with SSE - Contact GrayMeta for key/value info. Default set to `false`"
+* `haproxy` (Optional) "When set to enable, used haproxy as a load balancer instead of AWS ALB. Default set to `false` "
+* `mgmt_cidr` (Optional) "Subnet used to allow access to stats and ssh to HAProxy. Default is `["0.0.0.0/32"]`"
 * `ssl_certificate_cert` (Optional) "When HAProxy is enabled this certificate is used to terminate SSL on the load balancer. Cert with full chain (key, cert, intermediates) required" Place contents of cert in Secrets Manager and reference the arn of the secret to configure the LB.
-* `hap_loglevel` (Optional) "Logging level for Haproxy. May use info, debug, notice, error. Default is warning."
-* `saml_enabled` (Optional) ". Enables SAML in iris anywhere deployments. Requires populating secrets manager with configuration items. See secrets for more information. Default is false."
-* `saml_cert_secret_arn` (Optional) "Secret ARN containing SAML IDP certificate. Default is null. See Secrets for more info"
+* `hap_loglevel` (Optional) "Logging level for Haproxy. May use info, debug, notice, error. Default is `warning`."
+* `saml_enabled` (Optional) ". Enables SAML in iris anywhere deployments. Requires populating secrets manager with configuration items. See secrets for more information. Default is `false`."
+* `saml_cert_secret_arn` (Optional) "Secret ARN containing SAML IDP certificate. Default is `null`. See Secrets for more info"
+* `disable_rdp` (Optional) "Disables RDP for Iris Anywhere instances. Defaults to `false`"
+* `rdp_access_cidr` (Optional) "Specifies the network range for RDP. Default to `["0.0.0.0/32"]`"
 
 
 ### Attributes Reference:

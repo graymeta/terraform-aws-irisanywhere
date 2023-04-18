@@ -1,6 +1,7 @@
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 6009 -message "TIMING: Cloud_init start at $(Get-Date)"
 #Retrieve and prepare Secrets 
     $MaxSessions = "${ia_max_sessions}"
+    $keepalivetimeout = "${ia_keepalivetimeout}"
     $certcrtarn = "${ia_cert_crt_arn}"
     $certkeyarn = "${ia_cert_key_arn}"
     $iasecretarn = "${ia_secret_arn}"
@@ -61,7 +62,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
-
 
 #Update Instance
     $webclient = new-object net.webclient

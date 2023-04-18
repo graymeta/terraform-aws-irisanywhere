@@ -100,3 +100,9 @@ variable "disable_rdp" {
   description = "(Optional) Disables RDP in SG"
   default     = false
 }
+
+variable "user_init" {
+  type        = string
+  description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
+  default     = ""
+}
