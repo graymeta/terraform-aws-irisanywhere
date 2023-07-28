@@ -279,7 +279,7 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
 
 ### AWS Quotas & Service Limits
-Select an AWS service to view it's service limits.
+Select an AWS service to view its service limits.
 * [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html)
 * [Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html)
 * [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html)
