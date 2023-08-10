@@ -1,7 +1,10 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
 The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin Server deployed first. 
 
-Prerequisites:
+### Iris Anywhere and AWS
+* Iris Anywhere requires AWS core services which are supported in all AWS Regions
+  
+### Prerequisites
 * AWS account access
 * EC2 Windows Server 2022
 * Registered domain name (optional)
@@ -14,6 +17,8 @@ Prerequisites:
 * No AWS Root user security context should be used in the deployment of any/all Iris Anywhere services.  Please follow the policy of least privilege for all access granted as part of the deployment. 
 ***
 
+### Sizing of Infrastructure
+* Iris Anywhere provides multiple configurable options relating to infrastructure sizing, such as instance types, disk size, and autoscaling group size.  Each customer will have unique needs which will determine their sizing configuration.  Graymeta will work with the customer to determine the best sizing plan.
 
 ### Deployment Duration
 New customers can expect and initial deployment duration of 3-4 hours.  There are multiple components, some of which are optional, to an Iris Anywhere deployment.  The duration may vary based on specific customer needs and/or unique customer environments.
@@ -38,6 +43,7 @@ New customers can expect and initial deployment duration of 3-4 hours.  There ar
   * NAT Gateway (Billable Service)
   * SQS (optional) (Billable Service)
 
+
 ### Publicly Accessible Services
 * In most cases, ONLY the ALB or the HAProxy Load Balancer are publicly accessible resources.
 
@@ -47,14 +53,14 @@ New customers can expect and initial deployment duration of 3-4 hours.  There ar
 * AWS Secrets Manager holds sensitive configuration data for Iris Anywhere. This data contains encrypted key values.
 * S3 contains encrypted media content that is pulled to an instance where the content is again encrypted on the block storage (EBS).
 * As the media content is streamed to the Iris Anywhere player, it is AES encrypted. 
-* The networking is configured by utilizing the Graymeta irisanywhere version best suited for your needs. All networking components will be created for you when running the Graymeta terraform below.
+* The networking is configured by utilizing the Graymeta irisanywhere version best suited for the customer needs. All networking components will be created for when running the Graymeta terraform below.
 
 
 ***
 ## Iris Anywhere Admin Server
 Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
 
-The below example will allow you to deploy your Iris Admin Server. After the deployment is complete navigate to the instance's https://{IPv4 DNS}:8021 to log in to your Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license your product as well as retrieve the necessary variables to deploy your Iris Anywhere Autoscaling Groups.
+The below example will allow the customer to deploy the Iris Admin Server. After the deployment is complete navigate to the instance's https://{IPv4 DNS}:8021 to log in to the Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license the product as well as retrieve the necessary variables to deploy the Iris Anywhere Autoscaling Groups.
 
 ## Resulting AWS Services and Architecture Diagram
 ![Iris Anywhere FTR](https://user-images.githubusercontent.com/13397511/191809033-b4e93fe0-42c7-4edb-baaa-132d439abcfc.jpg)
@@ -100,7 +106,7 @@ In addition to all the arguments above the following attributes are exported:
 
 ***
 ## Iris Anywhere Autoscaling Groups
-Deploys Application Load Balancer and Autoscaling group.  We recommend that you do not deploy your Autoscaling Groups until your Iris Admin Server has been licensed with GrayMeta (support@graymeta.com).
+Deploys Application Load Balancer and Autoscaling group.  Graymeta recommends the customer does not deploy Autoscaling Groups until the Iris Admin Server has been licensed with GrayMeta (support@graymeta.com).
 
 ## Example Usage
 ```
@@ -251,9 +257,9 @@ resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
 `desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
 
 ### Creating Secrets for Iris Anywhere
-Before you can deploy Iris Admin and Iris Anywhere (ASG), you will need to create a secret in AWS Secrets Manager with the following keys/values:
+Before deploying Iris Admin and Iris Anywhere (ASG), the customer will need to create a secret in AWS Secrets Manager with the following keys/values:
 
-Required by Iris Admin server (these inputs are specified by you)
+Required by Iris Admin server (these inputs are specified by the customer)
 * Key : Value
 * `admin_db_id`        : userid for Iris Admin database
 * `admin_db_pw`        : password for Iris Admin database
@@ -276,7 +282,7 @@ Secrets required for End to End SSL (optional).  Create two seperate secret cred
 * `Certificate Private Key` in plain text.
 
 ### Creating DNS for the Iris ASG load balancer
-Create a DNS record for your Iris Anywhere implementation. A CNAME pointing to the load balancer.
+Create a DNS record for the Iris Anywhere implementation. A CNAME pointing to the load balancer.
 
 ### AWS Quotas & Service Limits
 Select an AWS service to view its service limits.
@@ -298,4 +304,4 @@ The Iris Anywhere platform has been designed to be highly reproducible.  If ever
 Each customer has different requirements based on multiple sets of criteria.  Graymeta will be provide a unique SLA that best suits the customers business requirements.
 
 ### Cost Structure
-A instance license for Curio supports unlimited users and is an annually reoccurring license fee.  Depending on the deployment type (saas vs. self-managed) there are different content ingest thresholds.  The GrayMeta core ML suite are included with the license and any additional ML capability (3rd party ML) customer must provide their own keys to supported services.
+
