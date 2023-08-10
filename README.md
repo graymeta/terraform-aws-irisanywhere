@@ -304,4 +304,4 @@ The Iris Anywhere platform has been designed to be highly reproducible.  If ever
 Each customer has different requirements based on multiple sets of criteria.  Graymeta will be provide a unique SLA that best suits the customers business requirements.
 
 ### Cost Structure
-
+![Iris Pricing Sheet](./Iris_Pricing_Sheet2023rv.png)
