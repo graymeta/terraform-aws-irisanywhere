@@ -1,4 +1,4 @@
-#<powershell>
+<powershell>
 $iasecretarn = "${ia_secret_arn}"
 $enterprise_ha = "${enterprise_ha}"
 $dbserver = "${dbserver}"
@@ -50,4 +50,4 @@ catch {
 $irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion 
 if($irisdbvercheck){Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green}else{Write-host "GrayMeta Iris Server installation $irisdbvercheck failed"  -ForegroundColor red}
 
-#</powershell>
+</powershell>
