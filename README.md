@@ -75,7 +75,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.21"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.26"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -84,6 +84,7 @@ module "irisadmin" {
   subnet_id       = ["subnet-foo1"]
   key_name        = "my_key"
   ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
+  associate_public_ip = true
 }
 ```
 ### Argument Reference:
