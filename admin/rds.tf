@@ -136,7 +136,7 @@ variable "db_storage_encrypted" {
   type        = bool
 }
 variable "db_version" {
-  default     = 14.1
+  default     = 14.8
   description = "(Required) Postgres Database version"
   type        = number
 }
