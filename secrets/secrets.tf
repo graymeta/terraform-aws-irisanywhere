@@ -33,7 +33,13 @@ resource "aws_secretsmanager_secret_version" "iris_config" {
     "os_endpoint":        "${var.os_endpoint}",
     "os_accessid":        "${var.os_accessid}",
     "os_secretkey":       "${var.os_secretkey}",
-    "s3_enterprise":      ${var.s3_enterprise}
+    "saml_uniqueID":      "${var.saml_uniqueID}",
+    "saml_displayName":   "${var.saml_displayName}",
+    "saml_entryPoint":    "${var.saml_entryPoint}",
+    "saml_samlissuer":    "${var.saml_samlissuer}",
+    "saml_acsUrlBasePath":      "${var.saml_acsUrlBasePath}",
+    "saml_acsUrlRelativePath":  "${var.saml_acsUrlRelativePath}",
+    "s3_enterprise":            "${var.s3_enterprise}"
     }
 EOF
 }

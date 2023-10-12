@@ -36,7 +36,11 @@
         },
         {
             "Effect": "Allow",
-            "Action": "autoscaling:DescribeAutoScalingInstances",
+            "Action": [
+                "autoscaling:DescribeAutoScalingInstances",
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:SetDesiredCapacity"
+            ],
             "Resource": "*"
         },
         {
