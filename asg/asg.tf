@@ -4,7 +4,7 @@ resource "aws_autoscaling_group" "iris" {
   desired_capacity        = var.asg_size_desired
   max_size                = var.asg_size_max
   min_size                = var.asg_size_min
-  protect_from_scale_in   = true
+  protect_from_scale_in   = false
   vpc_zone_identifier     = var.subnet_id
   target_group_arns       = var.haproxy == true ? null : aws_lb_target_group.port443[*].id
   default_instance_warmup = 600
