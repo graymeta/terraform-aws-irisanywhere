@@ -258,7 +258,7 @@ variable "additional_tags" {
 
 variable "hap_loglevel" {
   type        = string
-  default     = "warning"
+  default     = "info"
   description = "Logging level for Haproxy. May use info, debug, notice, error. Default is warning."
 }
 
