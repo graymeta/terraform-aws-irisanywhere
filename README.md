@@ -171,22 +171,22 @@ The following arguments are supported:
 * `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
 * `alb_internal` - (Optional) sets the application load balancer for Iris Anywhere to internal mode.  When set to `true` this also disables allocating public IP addresses to Iris Anywhere EC2 instances. Default to `false`
 * `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60` (seconds)
-* `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `300` (seconds)
-* `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `2` (evaluation periods)
-* `asg_scalein_threshold` - (Optional) Scale in if the number of sessions drop below.  Default to `5`
-* `asg_scaleout_cooldown` - (Optional) Scale out cooldown period.  Default to `300` (seconds)
+* `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `1800` (seconds)
+* `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `30` (evaluation periods)
+* `asg_scalein_threshold` - (Optional) Scale in if the number of sessions drop below.  Default to `3`
+* `asg_scaleout_cooldown` - (Optional) Scale out cooldown period.  Default to `600` (seconds)
 * `asg_scaleout_evaluation` - (Optional) Scale out evaluation periods. Default to `2` (evaluation periods)
-* `asg_scaleout_threshold` - (Optional) Scale out if the number of sessions drop below.  Default to `5`
+* `asg_scaleout_threshold` - (Optional) Scale out if the number of sessions drop below.  Default to `1`
 * `asg_size_desired` - (Required) The number of EC2 instances that should be running in the group.
 * `asg_size_max` - (Required) Maximum size of the Auto Scaling Group.
 * `asg_size_min` - (Required) Minimum size of the Auto Scaling Group.
-* `asg_warm_pool_min` - (Optional) Minimum size of the Auto Scaling Group Warm Pool. Default is 0.
-* `asg_warm_pool_max` - (Optional) Maximum size of the Auto Scaling Group Warm Pool. Default is 0.
+* `asg_warm_pool_min` - (Optional) Minimum size of the Auto Scaling Group Warm Pool. Default is `1`.
+* `asg_warm_pool_max` - (Optional) Maximum size of the Auto Scaling Group Warm Pool. Default is `1`.
 * `base_ami` - (Optional) The AMI from which to launch the instance.  Default to latest released AMI
 * `disk_data_iops` - (Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2.
 * `disk_data_size` - (Optional) EBS volume size.  Default to `300`
 * `disk_data_type` - (Optional) EBS volume type.  Default to `io2`
-* `disk_os_size` - (Optional) EBS volume size.  Default to `50`
+* `disk_os_size` - (Optional) EBS volume size.  Default to `60`
 * `disk_os_type` - (Optional) EBS volume type.  Default to `gp3`
 * `hostname_prefix` - (Required) A unique name.
 * `iam_policy_enabled` - (Optional) Enables the ability to add custom IAM policies for the instance profile
