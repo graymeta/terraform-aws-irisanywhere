@@ -29,6 +29,7 @@ module "irisadmin" {
   instance_type   = "t3.xlarge"
   subnet_id       = ["subnet-foo1"]
   key_name        = "your-key-name"
+  ami             = "ami-id"
   ia_secret_arn   = "arn:aws:secretsmanager:region:your-secret-arn"
 }
 
@@ -52,22 +53,24 @@ module "irisadmin-ha" {
   instance_type         = "t3.xlarge"
   subnet_id             = ["subnet-foo1", "subnet-foo2"]
   key_name              = "your-key-name"
+  ami                   = "ami-id"
   ia_secret_arn         = "arn:aws:secretsmanager:region:your-secret-arn"
   enterprise_ha         = true
   https_console_port    = 443
-      }
+}
 
     # To retreive the Server ID for instances, check the instance tags.
 ```
 ### Argument Reference:
-* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `associate_public_ip` - (Optional) Configures instances with public IP addresses. Default to `false`.
 * `hostname_prefix` - (Required) A unique name.
 * `instance_count` - (Required) Number of Instances to deploy.
 * `instance_type` - (Required) The type of the EC2 instance.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `key_name` - (Required) The key name to use for the instances.
+* `ami` - (Required) The ami for the Iris Admin version.
 * `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
+* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
+* `associate_public_ip` - (Optional) Configures instances with public IP addresses. Default to `false`.
 * `tags` -  (Optional) A map of the additional tags.
 * `volume_type` - (Optional) EBS volume type. Default to `gp3`.
 * `volume_size` - (Optional) EBS volume size. Default to `60`.
@@ -76,6 +79,7 @@ module "irisadmin-ha" {
 * `enterprise_ha` - (Optional) Builds multiple Iris Admin instances in diverse AZ along with RDS to support HA. Default to `false`.
 * `https_console_port` - (Optional) Configures port that Iris Admin web Console listens on with HTTPS. Default to `8021`.
 * `http_console_port` - (Optional) Configures port that Iris Admin web Console listens on HTTP. Default to `8020`.
+* `user_init` -  (Optional) Provides the ability for customers to input their own user-init scripts.
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
