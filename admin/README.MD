@@ -76,7 +76,7 @@ module "irisadmin-ha" {
 * `volume_size` - (Optional) EBS volume size. Default to `60`.
 * `disable_rdp` - (Optional) Disabled RDP access to the ec2 instances. Default to `false`.
 * `instance_protection` - (Optional) Configures instances with instance protection Enabled to avoid prevent losing local data. Default to `true`.
-* `enterprise_ha` - (Optional) Builds multiple Iris Admin instances in diverse AZ along with RDS to support HA. Default to `false`.
+* `enterprise_ha` - (Optional) Builds multiple Iris Admin instances in diverse AZ along with ELB and RDS to support HA. Default to `false`.
 * `https_console_port` - (Optional) Configures port that Iris Admin web Console listens on with HTTPS. Default to `8021`.
 * `http_console_port` - (Optional) Configures port that Iris Admin web Console listens on HTTP. Default to `8020`.
 * `user_init` -  (Optional) Provides the ability for customers to input their own user-init scripts.
