@@ -17,7 +17,7 @@ resource "aws_db_instance" "default" {
   db_subnet_group_name       = aws_db_subnet_group.default.id
   engine                     = "postgres"
   engine_version             = var.db_version
-  final_snapshot_identifier  = "GrayMeta-IrisAdmin-final"
+  final_snapshot_identifier  = "GrayMeta-IrisAdmin-${var.hostname_prefix}-${formatdate("YYYYMMDDhhmmss", timestamp())}-final"
   identifier                 = var.hostname_prefix
   instance_class             = var.db_instance_size
   kms_key_id                 = var.db_kms_key_id
