@@ -13,7 +13,7 @@ The following contains instructions/criteria for deploying Iris Anywhere into an
 * Iris Anywhere license provided by Graymeta - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Terraform 12, 13 & 14 compatible.
-* `version` - Current version is `v0.0.27`. Note moddule version requires Iris Anywhere AMI access.
+* `version` - Current version is `v0.0.29`. Note moddule version requires Iris Anywhere AMI access.
 * No AWS Root user security context should be used in the deployment of any/all Iris Anywhere services.  Please follow the policy of least privilege for all access granted as part of the deployment. 
 ***
 
@@ -75,7 +75,7 @@ provider "aws" {
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.27"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.29"
     
   access_cidr     = ["0.0.0.0/0"]
   hostname_prefix = "iadm"
@@ -124,7 +124,7 @@ locals {
 }
 
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.27"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.29"
   access_cidr = ["0.0.0.0/0"]
   alb_internal = false
   lb_check_interval       = 30
