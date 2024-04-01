@@ -16,6 +16,9 @@ resource "aws_autoscaling_group" "iris" {
       pool_state                  = "Stopped"
       min_size                    = var.asg_warm_pool_min
       max_group_prepared_capacity = var.asg_warm_pool_max
+      instance_reuse_policy {
+      reuse_on_scale_in = true
+    }
     }
   }
 
@@ -51,7 +54,7 @@ resource "aws_autoscaling_lifecycle_hook" "iris_init" {
   name                   = "iris_init"
   autoscaling_group_name = aws_autoscaling_group.iris.name
   default_result         = "CONTINUE"
-  heartbeat_timeout      = 600
+  heartbeat_timeout      = var.asg_scaleout_cooldown
   lifecycle_transition   = "autoscaling:EC2_INSTANCE_LAUNCHING"
 }
 
