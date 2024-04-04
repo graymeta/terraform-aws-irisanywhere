@@ -152,7 +152,7 @@ resource "aws_launch_template" "iris" {
 
 resource "aws_autoscaling_policy" "out" {
   name                   = replace("${var.hostname_prefix}-${var.instance_type}-ScaleOut", ".", "")
-  scaling_adjustment     = 1
+  scaling_adjustment     = 2
   adjustment_type        = "ChangeInCapacity"
   cooldown               = var.asg_scaleout_cooldown
   autoscaling_group_name = aws_autoscaling_group.iris.name
