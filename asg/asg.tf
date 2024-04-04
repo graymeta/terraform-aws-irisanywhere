@@ -7,7 +7,7 @@ resource "aws_autoscaling_group" "iris" {
   protect_from_scale_in   = false
   vpc_zone_identifier     = var.subnet_id
   target_group_arns       = var.haproxy == true ? null : aws_lb_target_group.port443[*].id
-  default_instance_warmup = 720
+  default_instance_warmup = 600
 
 
   dynamic "warm_pool" {
@@ -54,7 +54,7 @@ resource "aws_autoscaling_lifecycle_hook" "iris_init" {
   name                   = "iris_init"
   autoscaling_group_name = aws_autoscaling_group.iris.name
   default_result         = "CONTINUE"
-  heartbeat_timeout      = var.asg_scaleout_cooldown
+  heartbeat_timeout      = 600
   lifecycle_transition   = "autoscaling:EC2_INSTANCE_LAUNCHING"
 }
 
