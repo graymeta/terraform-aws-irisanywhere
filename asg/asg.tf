@@ -7,7 +7,7 @@ resource "aws_autoscaling_group" "iris" {
   protect_from_scale_in   = false
   vpc_zone_identifier     = var.subnet_id
   target_group_arns       = var.haproxy == true ? null : aws_lb_target_group.port443[*].id
-  default_instance_warmup = 600
+  default_instance_warmup = 500
 
 
   dynamic "warm_pool" {
