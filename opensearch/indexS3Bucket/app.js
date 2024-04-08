@@ -25,7 +25,7 @@ const indexCreationJson = { "mappings" : {"properties" : { "s3key" : { "type" : 
 const folderMap = new Map();
 
 var awsProfile = 'default';
-var credentialsDurationSecs = 3600;
+var credentialsDurationSecs = 10800;
 
 var numberFileObjectsUpdated = 0;
 var numberFileObjectsUpdateFailed = 0;
