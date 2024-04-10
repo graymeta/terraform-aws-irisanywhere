@@ -46,6 +46,12 @@ variable "asg_scaleout_evaluation" {
   default     = 2
 }
 
+variable "asg_scaleout_adjustment" {
+  type        = number
+  description = "(Optional) Number of instances to scale up"
+  default     = 1
+}
+
 variable "asg_scaleout_threshold" {
   type        = number
   description = "(Optional) Scale out if the number of sessions drop below.  Default set to 1"
