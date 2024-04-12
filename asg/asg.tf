@@ -54,7 +54,7 @@ resource "aws_autoscaling_lifecycle_hook" "iris_init" {
   name                   = "iris_init"
   autoscaling_group_name = aws_autoscaling_group.iris.name
   default_result         = "CONTINUE"
-  heartbeat_timeout      = 500
+  heartbeat_timeout      = var.asg_scaleout_cooldown
   lifecycle_transition   = "autoscaling:EC2_INSTANCE_LAUNCHING"
 }
 
