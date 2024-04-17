@@ -1,6 +1,6 @@
 
 resource "aws_autoscaling_group" "iris" {
-  name                    = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}", ".", "")
+  name                    = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
   desired_capacity        = var.asg_size_desired
   max_size                = var.asg_size_max
   min_size                = var.asg_size_min
@@ -63,7 +63,7 @@ data "template_file" "cloud_init" {
   template = file("${path.module}/cloud_local.ps1")
 
   vars = {
-    name                     = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}", ".", "")
+    name                     = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
     metric_check_interval    = var.asg_check_interval
     health_check_interval    = var.lb_check_interval
     unhealthy_threshold      = var.lb_unhealthy_threshold
@@ -92,7 +92,7 @@ data "template_file" "cloud_init" {
 }
 
 resource "aws_launch_template" "iris" {
-  name_prefix                          = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}", ".", "")
+  name_prefix                          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
   image_id                             = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type                        = var.instance_type
   key_name                             = var.key_name
@@ -151,7 +151,7 @@ resource "aws_launch_template" "iris" {
 }
 
 resource "aws_autoscaling_policy" "out" {
-  name                   = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ScaleOut", ".", "")
+  name                   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleOut", ".", "")
   scaling_adjustment     = var.asg_scaleout_adjustment
   adjustment_type        = "ChangeInCapacity"
   cooldown               = var.asg_scaleout_cooldown
@@ -159,7 +159,7 @@ resource "aws_autoscaling_policy" "out" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "out" {
-  alarm_name          = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ScaleOut", ".", "")
+  alarm_name          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleOut", ".", "")
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods  = var.asg_scaleout_evaluation
   metric_name         = "IrisAvailableSessions"
@@ -177,7 +177,7 @@ resource "aws_cloudwatch_metric_alarm" "out" {
 }
 
 resource "aws_autoscaling_policy" "in" {
-  name                   = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ScaleIn", ".", "")
+  name                   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleIn", ".", "")
   scaling_adjustment     = -1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = var.asg_scalein_cooldown
@@ -185,7 +185,7 @@ resource "aws_autoscaling_policy" "in" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "in" {
-  alarm_name          = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ScaleIn", ".", "")
+  alarm_name          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleIn", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = var.asg_scalein_evaluation
   metric_name         = "IrisAvailableSessions"

@@ -104,7 +104,7 @@ data "template_file" "ha_policy" {
   template = file("${path.module}/ha_policy.json")
 
   vars = {
-    cluster = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}", ".", "")
+    cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
   }
 }
 
@@ -134,8 +134,8 @@ resource "aws_iam_role_policy_attachment" "ha" {
 #sec groups
 resource "aws_security_group" "ha" {
   count       = var.haproxy ? 1 : 0
-  name_prefix = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ha", ".", "")
-  description = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-ha", ".", "")
+  name_prefix = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ha", ".", "")
+  description = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ha", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(local.merged_tags, {
