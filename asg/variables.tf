@@ -135,6 +135,12 @@ variable "instance_type" {
   default     = "c5n.9xlarge"
 }
 
+variable "deployment_name" {
+  type        = string
+  description = "(Optional) this will over write the instance type variable for naming"
+  default     = "1"
+}
+
 variable "key_name" {
   type        = string
   description = "(Required) The key name to use for the instances."

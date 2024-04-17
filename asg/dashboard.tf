@@ -13,6 +13,6 @@ data "template_file" "dashboard" {
 }
 
 resource "aws_cloudwatch_dashboard" "dashboard" {
-  dashboard_name = replace("${var.hostname_prefix}-${var.instance_type}", ".", "")
+  dashboard_name = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}", ".", "")
   dashboard_body = data.template_file.dashboard.rendered
 }

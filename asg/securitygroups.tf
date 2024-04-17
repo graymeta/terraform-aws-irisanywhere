@@ -4,13 +4,13 @@ data "aws_subnet" "subnet" {
 }
 
 resource "aws_security_group" "alb" {
-  name_prefix = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "")
-  description = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "")
+  name_prefix = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-alb", ".", "")
+  description = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-alb", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
     local.merged_tags, {
-    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "") }
+    "Name" = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-alb", ".", "") }
   )
 }
 
@@ -45,13 +45,13 @@ resource "aws_security_group_rule" "alb_port443" {
 }
 
 resource "aws_security_group" "iris" {
-  name_prefix = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "")
-  description = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "")
+  name_prefix = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-iris", ".", "")
+  description = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-iris", ".", "")
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(
     local.merged_tags, {
-    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-iris", ".", "") }
+    "Name" = replace("${var.hostname_prefix}-${var.instance_name != "1" ? var.instance_name : var.instance_type}-iris", ".", "") }
   )
 }
 
