@@ -1,6 +1,6 @@
 resource "aws_lb" "iris_alb" {
   count                      = var.haproxy ? 0 : 1
-  name_prefix                = substr(replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", ""), 0, 6)
+  name_prefix                = substr(replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-alb", ".", ""), 0, 6)
   internal                   = var.alb_internal
   security_groups            = [aws_security_group.alb.id]
   subnets                    = var.subnet_id
@@ -8,7 +8,7 @@ resource "aws_lb" "iris_alb" {
 
   tags = merge(
     local.merged_tags, {
-    "Name" = replace("${var.hostname_prefix}-${var.instance_type}-alb", ".", "") }
+    "Name" = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-alb", ".", "") }
   )
 }
 
@@ -45,7 +45,7 @@ resource "aws_lb_listener" "port443" {
 
 resource "aws_lb_target_group" "port443" {
   count       = var.haproxy ? 0 : 1
-  name_prefix = substr(replace("${var.hostname_prefix}-${var.instance_type}-ScaleIn", ".", ""), 0, 6)
+  name_prefix = substr(replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleIn", ".", ""), 0, 6)
   port        = var.ia_cert_key_arn != "" ? "443" : "8080"
   protocol    = var.ia_cert_key_arn != "" ? "HTTPS" : "HTTP"
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
