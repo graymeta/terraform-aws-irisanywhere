@@ -40,6 +40,12 @@ variable "asg_scaleout_cooldown" {
   default     = 600
 }
 
+variable "heartbeat_timeout" {
+  type        = number
+  description = "(Optional) Number of seconds to allow the deployed instances to run the init scripts. Should be 600 unless instance reuse multiscale warmpool is used. Default to `600`"
+  default     = 600
+}
+
 variable "asg_scaleout_evaluation" {
   type        = number
   description = "(Optional) Scale out evaluation periods. Default to `2`"
