@@ -15,6 +15,12 @@ variable "hostname_prefix" {
   description = "(Required) A unique name."
 }
 
+variable "deployment_name" {
+  type        = string
+  description = "(Optional) this will over write the instance type variable for naming"
+  default     = "1"
+}
+
 variable "instance_count" {
   type        = number
   description = "Number of EC2 instances to deploy."
