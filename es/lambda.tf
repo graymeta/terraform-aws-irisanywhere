@@ -44,8 +44,9 @@ resource "aws_iam_policy" "s3_indexer_policy" {
 }
 
 resource "aws_iam_role" "s3_indexer_role" {
-  name               = "s3_indexer_role-${var.domain}"
-  assume_role_policy = data.aws_iam_policy_document.policy.json
+  name                  = "s3_indexer_role-${var.domain}"
+  assume_role_policy    = data.aws_iam_policy_document.policy.json
+  max_session_duration  = 14400
 }
 
 resource "aws_iam_role_policy_attachment" "s3_indexer_policy_att" {
@@ -68,7 +69,9 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   function_name = "updateESindex-${var.domain}"
   role          = aws_iam_role.s3_indexer_role.arn
   handler       = "index.handler"
-  runtime       = "nodejs14.x"
+  //runtime       = "nodejs14.x"
+  runtime       = "nodejs20.x"
+  timeout       = 300
 
   vpc_config {
     subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
