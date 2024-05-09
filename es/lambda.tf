@@ -71,7 +71,7 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   handler       = "index.handler"
   //runtime       = "nodejs14.x"
   runtime       = "nodejs20.x"
-  timeout       = 300
+  timeout       = 30
 
   vpc_config {
     subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
