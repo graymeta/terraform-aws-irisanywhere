@@ -157,6 +157,8 @@ function processCreateEvent(event) {
               });
           } else {
             // If this _doc DOES exist, update it
+
+
             for (let searchHit of searchResponse.hits.hits) {
               var updateRequestBody = JSON.stringify({
                 doc: { lastmodified: Date.now() },
@@ -179,6 +181,8 @@ function processCreateEvent(event) {
                   return;
                 });
             }
+
+
           }
         })
         .catch((error) => {
@@ -300,6 +304,13 @@ function openSearchClient(httpMethod, path, requestBody) {
 /* Utility Functions */
 function isPresent(o) {
   return typeof o !== "undefined" && o != null ? true : false;
+}
+
+function isPrefix(s3EventKey) {
+  if(typeof s3EventKey !== 'undefined' && s3EventKey != null && s3EventKey != "" ) {
+    return (s3EventKey.length - 1 == s3EventKey.lastIndexOf("/")) ? true : false;
+  }
+  return false;
 }
 
 function formatMsg(unformattedJSONString) {
