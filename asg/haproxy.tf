@@ -29,6 +29,7 @@ data "template_file" "cloud_init_ha" {
     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
     hap_loglevel = var.hap_loglevel
+    user_init            = var.haproxy_user_init
   }
 }
 
@@ -40,7 +41,7 @@ resource "aws_instance" "ha" {
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.ha[0].id]
   subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(join("\n", [ data.template_file.cloud_init_ha.rendered, var.haproxy_user_init ]))
+  user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
   associate_public_ip_address = var.associate_public_ip
 
   disable_api_termination = var.instance_protection ? true : false
