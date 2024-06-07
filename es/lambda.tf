@@ -69,7 +69,6 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   function_name = "updateESindex-${var.domain}"
   role          = aws_iam_role.s3_indexer_role.arn
   handler       = "index.handler"
-  //runtime       = "nodejs14.x"
   runtime       = "nodejs20.x"
   timeout       = 30
 

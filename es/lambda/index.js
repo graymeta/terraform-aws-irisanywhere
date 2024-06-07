@@ -31,7 +31,7 @@ exports.handler = async (event) => {
             await processCreateEvents(record);
           } else if (record.eventName.startsWith(OBJ_DELETE)) {
             await processDeleteEvent(record);
-          }
+          } 
         }
       } else {
         if (ev.eventName.startsWith(OBJ_CREATE)) {
@@ -53,14 +53,12 @@ async function processCreateEvents(event) {
   if (isPresent(s3EventKey)) {
     var keysToIndex = s3EventKey.toString().split("/");
     var keysLen = keysToIndex.length;
-    //If event ONLY contains folders
-    var isFolder =
-      s3EventKey.length - 1 == s3EventKey.lastIndexOf("/") ? true : false;
 
     //This processes initial event with full key path
     //ONLY INSERT FULL KEY if it contains a file.  AVOID folder events here.
     try {
-      if (!isFolder) {
+      
+      if (!isPrefix(s3EventKey)) {
         await processCreateEvent(event).catch((error) => {
           console.error(
             "GM_ERROR_PROCESSCREATEEVENTS_CAUGHT_PROMISE_ON_FILE: " +
@@ -68,7 +66,7 @@ async function processCreateEvents(event) {
               ": " +
               s3EventKey
           );
-          return;
+          throw new Error("GM_ERROR_PROCESSCREATEEVENTS_FILE: " + error + ": " + s3EventKey);
         });
       }
       //Determine folder count in key.
@@ -89,14 +87,15 @@ async function processCreateEvents(event) {
                 ": " +
                 event.s3.object.key
             );
-            return;
+            throw new Error(
+              "GM_ERROR_PROCESSCREATEEVENTS_FOLDER: " + error + ": " + s3EventKey
+            );
           });
         }
       }
     } catch (error) {
       throw new Error(
-        "GM_ERROR_PROCESSCREATEEVENTS_GENERIC: " + error + ": " + s3EventKey
-      );
+        "GM_ERROR_PROCESSCREATEEVENTS_CATCH_ALL: " + error);
     }
   }
 }
@@ -119,14 +118,11 @@ function processCreateEvent(event) {
             keyExists =
               parseInt(searchResponse.hits.total.value, 10) > 0 ? true : false;
           } catch (err) {
-            return reject(
-              new Error(
-                "GM_ERROR_PROCESSCREATEEVENT_SEARCH_RESPONSE: " +
+            return reject("GM_ERROR_PROCESSCREATEEVENT_SEARCH_RESPONSE: " +
                   err +
                   ": " +
                   s3EventKey
-              )
-            );
+              );
           }
           // If this _doc DOES NOT exist, create it
           if (!keyExists) {
@@ -148,46 +144,43 @@ function processCreateEvent(event) {
                   logResult(insertResponse, s3EventKey);
                   resolve(insertResponse);
                 } else {
-                  reject(insertResponse);
+                    return reject("GM_ERROR_REJECT_INSERT_PROCESSCREATEEVENT" + insertResponse);
                 }
               })
               .catch((error) => {
-                console.error(error + ": " + s3EventKey);
-                return;
+                return reject("GM_ERROR_REJECT_INSERT: " + error + ": " + s3EventKey);
               });
           } else {
-            // If this _doc DOES exist, update it
-
-
-            for (let searchHit of searchResponse.hits.hits) {
-              var updateRequestBody = JSON.stringify({
-                doc: { lastmodified: Date.now() },
-              });
-              openSearchClient(
-                "POST",
-                event.s3.bucket.name + "/_update/" + searchHit._id,
-                updateRequestBody
-              )
-                .then((updateResponse) => {
-                  if ("updated" == updateResponse.result) {
-                    logResult(updateResponse, s3EventKey);
-                    resolve(updateResponse);
-                  } else {
-                    reject(updateResponse);
-                  }
-                })
-                .catch((error) => {
-                  console.error(error + ": " + s3EventKey);
-                  return;
-                });
+            // NOTE: ONLY update files, not folders (aka Prefix).
+            if(!isPrefix(s3EventKey)) {
+                for (let searchHit of searchResponse.hits.hits) {
+                    var updateRequestBody = JSON.stringify({
+                      doc: { lastmodified: Date.now() },
+                    });
+                    openSearchClient(
+                      "POST",
+                      event.s3.bucket.name + "/_update/" + searchHit._id,
+                      updateRequestBody
+                    )
+                      .then((updateResponse) => {
+                        if ("updated" == updateResponse.result) {
+                          logResult(updateResponse, s3EventKey);
+                          resolve(updateResponse);
+                        } else {
+                          reject(updateResponse);
+                        }
+                      })
+                      .catch((error) => {
+                        reject("GM_ERROR_REJECT_CATCH_UPDATE: " + error + ": " + s3EventKey);
+                      });
+                } 
+            } else {
+                resolve("GM_SUCCESS_SKIP_PREFIX_UPDATE");
             }
-
-
           }
         })
         .catch((error) => {
-          console.error(error + ": " + s3EventKey);
-          return;
+          reject("GM_ERROR_REJECT_QUERY: " + error + ": " + s3EventKey);
         });
     }
   });
@@ -307,11 +300,13 @@ function isPresent(o) {
 }
 
 function isPrefix(s3EventKey) {
+  
   if(typeof s3EventKey !== 'undefined' && s3EventKey != null && s3EventKey != "" ) {
-    return (s3EventKey.length - 1 == s3EventKey.lastIndexOf("/")) ? true : false;
+    return ( (s3EventKey.length - 1 == s3EventKey.lastIndexOf("/")) ? true : false);
   }
   return false;
 }
+
 
 function formatMsg(unformattedJSONString) {
   try {
