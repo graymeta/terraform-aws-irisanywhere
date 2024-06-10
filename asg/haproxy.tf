@@ -40,7 +40,7 @@ resource "aws_instance" "ha" {
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.ha[0].id]
   subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(join("\n", [ data.template_file.cloud_init_ha.rendered, var.haproxy_user_init ]))
+  user_data                   = base64encode(var.haproxy_user_init)
   associate_public_ip_address = var.associate_public_ip
 
   disable_api_termination = var.instance_protection ? true : false
