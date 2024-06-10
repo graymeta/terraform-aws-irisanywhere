@@ -29,6 +29,7 @@ data "template_file" "cloud_init_ha" {
     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
     hap_loglevel = var.hap_loglevel
+    haproxy_user_init = var.haproxy_user_init
   }
 }
 
