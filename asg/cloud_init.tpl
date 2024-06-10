@@ -7,4 +7,3 @@ runcmd:
 - sed -i 's/443 ssl check/${port} check /' /etc/haproxy/haproxy.cfg ; sed -i 's/local0 warning/local0 ${hap_loglevel}/' /etc/haproxy/haproxy.cfg
 - sed -i 's/sock/sock" "HAPPW=${statspw}/' /lib/systemd/system/haproxy.service 
 - aws secretsmanager get-secret-value --secret-id ${ssl_certificate_cert} --query SecretString --output text --region ${aws_region} > cert.pem ; mv cert.pem /etc/ssl/certs/ ; chmod 440 /etc/ssl/certs/cert.pem
-- reboot
