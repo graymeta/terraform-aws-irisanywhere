@@ -11,7 +11,8 @@ locals {
 
 data "archive_file" "update-es-index" {
   type        = "zip"
-  source_file = "${path.module}/lambda/index.js"
+  //source_file = "${path.module}/lambda/index.js"
+  source_dir = "${path.module}/lambda"
   output_path = local.update_es_index_lambda_zip
 }
 
