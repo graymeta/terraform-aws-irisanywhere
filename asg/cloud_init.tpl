@@ -8,9 +8,7 @@ runcmd:
 - sed -i 's/sock/sock" "HAPPW=${statspw}/' /lib/systemd/system/haproxy.service >> /var/log/user-data.log 2>&1
 - aws secretsmanager get-secret-value --secret-id ${ssl_certificate_cert} --query SecretString --output text --region ${aws_region} > cert.pem ; mv cert.pem /etc/ssl/certs/ ; chmod 440 /etc/ssl/certs/cert.pem >> /var/log/user-data.log 2>&1
 - |
-  cat << 'EOF' > /tmp/haproxy_user_init.sh
-  ${haproxy_user_init}
-  EOF
+  echo "${haproxy_user_init}" > /tmp/haproxy_user_init.sh
 - chmod +x /tmp/haproxy_user_init.sh >> /var/log/user-data.log 2>&1
 - /tmp/haproxy_user_init.sh >> /var/log/user-data.log 2>&1
 - reboot >> /var/log/user-data.log 2>&1
