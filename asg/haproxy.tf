@@ -75,7 +75,7 @@ resource "aws_instance" "ha" {
 resource "aws_eip" "eip_haproxy" {
   count    = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
   instance = aws_instance.ha[0].id
-  domain = "vpc"
+  domain   = "vpc"
 
   tags = {
     Name = "eip-${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}"
