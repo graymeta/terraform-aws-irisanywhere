@@ -21,7 +21,7 @@ data "template_file" "cloud_init_ha" {
   template = file("${path.module}/cloud_init.tpl")
 
   vars = {
-    hostname             = format("${var.hostname_prefix}")
+    hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
 
     aws_region   = data.aws_region.current.name
@@ -29,6 +29,7 @@ data "template_file" "cloud_init_ha" {
     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
     hap_loglevel = var.hap_loglevel
+    haproxy_user_init = var.haproxy_user_init
   }
 }
 
@@ -58,10 +59,10 @@ resource "aws_instance" "ha" {
     ]
   }
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-haproxy-%02d", count.index + 1) })
+  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1) })
 
   volume_tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-haproxy-%02d", count.index + 1) })
+  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1) })
 
   root_block_device {
     volume_type           = var.volume_type
@@ -77,7 +78,7 @@ resource "aws_eip" "eip_haproxy" {
   domain = "vpc"
 
   tags = {
-    Name = "eip-${var.hostname_prefix}"
+    Name = "eip-${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}"
   }
 
   lifecycle {
@@ -110,19 +111,19 @@ data "template_file" "ha_policy" {
 
 resource "aws_iam_role" "ha" {
   count              = var.haproxy ? 1 : 0
-  name               = replace("${var.hostname_prefix}-Role-ha", ".", "")
+  name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Role-ha", ".", "")
   assume_role_policy = data.template_file.ha_role.rendered
 }
 
 resource "aws_iam_instance_profile" "ha" {
   count = var.haproxy ? 1 : 0
-  name  = replace("${var.hostname_prefix}-Profile-ha", ".", "")
+  name  = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Profile-ha", ".", "")
   role  = aws_iam_role.ha[0].name
 }
 
 resource "aws_iam_policy" "ha" {
   count  = var.haproxy ? 1 : 0
-  name   = replace("${var.hostname_prefix}-Policy-ha", ".", "")
+  name   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Policy-ha", ".", "")
   policy = data.template_file.ha_policy.rendered
 }
 
@@ -139,7 +140,7 @@ resource "aws_security_group" "ha" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-ha") })
+  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-ha") })
 }
 
 # Allow all outbound traffic
