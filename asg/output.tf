@@ -122,3 +122,7 @@ output "ha_proxy_fqdn_private" {
 output "ha_proxy_fqdn_public" {
   value = var.haproxy == true && var.associate_public_ip == true ? aws_instance.ha[0].public_dns : null
 }
+
+output "ha_proxy_private_ip" {
+  value = var.haproxy == true ? aws_instance.ha[0].private_ip : null
+}
