@@ -61,6 +61,10 @@ resource "aws_elasticsearch_domain" "es" {
     ignore_changes = [advanced_options, tags]
   }
 
+  timeouts {
+    create = "60m"
+  }
+
   tags = {
     Domain = var.tag_domain
   }
