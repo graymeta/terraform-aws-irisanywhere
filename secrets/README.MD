@@ -66,28 +66,28 @@ module "iris-secrets" {
 }
 ```
 
-### Arguement Reference:
-Requirements for Iris Admin:
+### Argument Reference:
+#### Requirements for Iris Admin:
 * `secret_name` - (Required) A unique name for your secret
 * `admin_console_id` - (Required) Username for your Iris Admin console. Customers decide this value
 * `admin_console_pw` - (Required) Password for your Iris Admin console. Customers decide this value
 * `admin_customer_id` - (Required) Customer ID value for your Iris License. GrayMeta provides this during the licensing. 
 * `admin_db_id` - (Required) Username for your Iris Admin database. Customers value.
 * `admin_db_pw` - (Required) Password for your Iris Admin database.Customers value.
-Requirements for Iris Anywhere:
+#### Requirements for Iris Anywhere:
 * `admin_server` - (Required) FQDN of Iris Admin Server. Populated once server is created.
 * `iris_s3_lic_id` - (Required) S3 license ID for Iris Anywhere.
 * `iris_s3_lic_code` - (Required) S3 license code for Iris Anywhere.
 * `iris_s3_bucketname` - (Required) Name of S3 bucket that will be attached to Iris Anywhere. Multiple buckets require same access/secert keys and comma seperation "bucket1, bucket2". Used when s3_enterprise is not "true"
 * `iris_serviceacct` - (Optional) User account used for running Iris Anywhere.
-Requirements for enabling metabucket:
+#### Requirements for enabling metabucket:
 * `s3_meta_bucketname` - (Required) S3 bucket name for write access.
-Requirements for SSO SPA Integration - Leave empty if not enabled. 
+#### Requirements for SSO SPA Integration - Leave empty if not enabled. 
 * `okta_issuer` - (Optional) Okta Issuer value for SPA configuration. 
 * `okta_clientid` - (Optional) Okta Client ID value for SPA configuration. 
 * `okta_redirecturi` - (Optional) Okta redirect URI value for SPA configuration. 
 * `okta_scope` - (Optional) Okta scope value for SPA configuration. 
-Requirements for SAML Integration - Leave empty if not enabled Okta & Ping Identity supported at this time. 
+#### Requirements for SAML Integration - Leave empty if not enabled Okta & Ping Identity supported at this time. 
 Note: To enable SAML, 1.) requires creation of an AWS Secret with contents of IDP certificate. Place the ARN in the Iris Anywhere deployment config value for `saml_cert_secret_arn` value. 2.) `saml_enabled` = `true`
 * `saml_uniqueID` - (Optional) ID of IDP for SAML configuration (Either okta or ping-identity). 
 * `saml_displayName` - (Optional)  Display name of IDP for SAML configuration (Either Okta or Ping Identity). 
@@ -95,13 +95,12 @@ Note: To enable SAML, 1.) requires creation of an AWS Secret with contents of ID
 * `saml_samlissuer` - (Optional) - Identity Provider Issuer from SAML configuration (within SAML setup). 
 * `saml_acsUrlBasePath` - (Optional) - URL path to visit Iris Anywhere (iris-url.domain.com/irisanywhere). 
 * `saml_acsUrlRelativePath` - (Optional) ACS URL relative to Iris Anywhere server (eg. /auth/saml/idp/assertion-consumer-service) 
-
-Requirements for Enterprise Search - Leave empty if not enabled.
+#### Requirements for Enterprise Search - Leave empty if not enabled.
 * `os_region` - (Optional) Region OpenSearch node is deployed in. 
 * `os_endpoint` - (Optional) FQDN of OpenSearch endpoint.
 * `os_accessid` - (Optional) Access ID credential for signing OpenSearch requests. 
 * `os_secretkey` - (Optional) Secret Key credential for signing OpenSearch requests.
-Requirements for Enterprise S3 (SSE) - Leave empty if not enabled.
+#### Requirements for Enterprise S3 (SSE) - Leave empty if not enabled.
 * `s3_enterprise` - (Optional) Config map for enabling SSE for S3 buckets. See Example for key/value mapping. Used when "s3_enterprise = true" in Iris Anywhere deployments.
 
 * `tags` -  (Optional) A map of the additional tags.
