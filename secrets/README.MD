@@ -19,12 +19,14 @@ provider "aws" {
 module "iris-secrets" {    
     source = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.latest-tag-id"
     secret_name        = "yoursecretcredname"
+
     admin_console_id   = "null"
     admin_console_pw   = "null"
     admin_customer_id  = "null"
     admin_db_id        = "null"
     admin_db_pw        = "null"
     admin_server       = "null"
+
     iris_s3_bucketname = ""
     iris_s3_access_key = ""
     iris_s3_secret_key = ""
@@ -50,14 +52,10 @@ module "iris-secrets" {
     saml_displayName        = ""
     saml_entryPoint         = ""
     saml_samlissuer         = ""
-    saml_samlissuer         = ""
     saml_acsUrlBasePath     = ""
     saml_acsUrlRelativePath = ""
 
-
-    s3_enterprise      = jsonencode({buckets: [{"name":"bucket1","ssetype":"SSE-KMS","kmskey":"arnofkmskey","bucketkey":true, "metabucket":"dev-tb-meta", "enabled": true},
-                                              {"name":"bucket2","ssetype":"SSE-S3","kmskey":"arnofkmskey","bucketkey":true, "metabucket":"dev-tb-meta", "enabled": true}]})
-
+    s3_enterprise      = ""
 
     tags = {
     "env"        = "yourenv"
@@ -78,10 +76,10 @@ module "iris-secrets" {
 * `admin_server` - (Required) FQDN of Iris Admin Server. Populated once server is created.
 * `iris_s3_lic_id` - (Required) S3 license ID for Iris Anywhere.
 * `iris_s3_lic_code` - (Required) S3 license code for Iris Anywhere.
-* `iris_s3_bucketname` - (Required) Name of S3 bucket that will be attached to Iris Anywhere. Multiple buckets require same access/secert keys and comma seperation "bucket1, bucket2". Used when s3_enterprise is not "true"
+* `iris_s3_bucketname` - (Optional) This value should be left "" if using s3_enterprise (recommended). Name of S3 bucket that will be attached to Iris Anywhere. Multiple buckets require same access/secert keys and comma seperation "bucket1, bucket2". Used when s3_enterprise is not "true"
 * `iris_serviceacct` - (Optional) User account used for running Iris Anywhere.
 #### Requirements for enabling metabucket:
-* `s3_meta_bucketname` - (Required) S3 bucket name for write access.
+* `s3_meta_bucketname` - (Optional) This value should be left "" if using s3_enterprise (recommended).  S3 bucket name for write access.
 #### Requirements for SSO SPA Integration - Leave empty if not enabled. 
 * `okta_issuer` - (Optional) Okta Issuer value for SPA configuration. 
 * `okta_clientid` - (Optional) Okta Client ID value for SPA configuration. 
