@@ -35,13 +35,14 @@ data "aws_iam_policy_document" "policy" {
   }
 }
 
-data "template_file" "iris_s3_policy" {
-  template = file("${path.module}/s3-index-policy.json")
-}
+# data "template_file" "iris_s3_policy" {
+#   template = file("${path.module}/s3-index-policy.json")
+# }
 
 resource "aws_iam_policy" "s3_indexer_policy" {
   name   = "s3_indexer_policy-${var.domain}"
-  policy = data.template_file.iris_s3_policy.rendered
+  #policy = data.template_file.iris_s3_policy.rendered
+  policy = templatefile("${path.module}/s3-index-policy.json",{})
 }
 
 resource "aws_iam_role" "s3_indexer_role" {

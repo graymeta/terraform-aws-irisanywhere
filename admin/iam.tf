@@ -1,19 +1,20 @@
 
-data "template_file" "iris_adm_role" {
-  template = file("${path.module}/adm_role.json")
-}
+# data "template_file" "iris_adm_role" {
+#   template = file("${path.module}/adm_role.json")
+# }
 
-data "template_file" "iris_adm_policy" {
-  template = file("${path.module}/adm_policy.json")
+# data "template_file" "iris_adm_policy" {
+#   template = file("${path.module}/adm_policy.json")
 
-  vars = {
-    cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-  }
-}
+#   vars = {
+#     cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
+#   }
+# }
 
 resource "aws_iam_role" "iris_adm" {
   name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
-  assume_role_policy = data.template_file.iris_adm_role.rendered
+  #assume_role_policy = data.template_file.iris_adm_role.rendered
+  assume_role_policy = templatefile("${path.module}/adm_role.json",{})
 }
 
 resource "aws_iam_instance_profile" "iris_adm" {
@@ -23,7 +24,8 @@ resource "aws_iam_instance_profile" "iris_adm" {
 
 resource "aws_iam_policy" "iris_adm" {
   name   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Policy", ".", "")
-  policy = data.template_file.iris_adm_policy.rendered
+  #policy = data.template_file.iris_adm_policy.rendered
+  policy = templatefile("${path.module}/adm_policy.json", {cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")})
 }
 
 resource "aws_iam_role_policy_attachment" "iris_adm" {
