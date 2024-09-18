@@ -59,44 +59,72 @@ resource "aws_autoscaling_lifecycle_hook" "iris_init" {
 }
 
 
-data "template_file" "cloud_init" {
-  template = file("${path.module}/cloud_local.ps1")
+# data "template_file" "cloud_init" {
+#   template = file("${path.module}/cloud_local.ps1")
 
-  vars = {
-    name                     = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-    metric_check_interval    = var.asg_check_interval
-    health_check_interval    = var.lb_check_interval
-    unhealthy_threshold      = var.lb_unhealthy_threshold
-    cooldown                 = var.asg_scalein_cooldown
-    ia_cert_crt_arn          = var.ia_cert_crt_arn
-    ia_cert_key_arn          = var.ia_cert_key_arn
-    ia_max_sessions          = var.ia_max_sessions
-    ia_keepalivetimeout      = var.ia_keepalivetimeout
-    ia_secret_arn            = var.ia_secret_arn
-    ia_domain                = var.ia_domain
-    search_enabled           = var.search_enabled
-    s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
-    s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
-    s3_sse_cmk_arn           = var.s3_sse_cmk_arn
-    ia_video_bitrate         = var.ia_video_bitrate
-    ia_video_codec           = var.ia_video_codec
-    s3_progressive_retrieval = var.s3_progressive_retrieval
-    s3_reclaim_maxused       = var.s3_reclaim_maxused
-    s3_reclaim_minused       = var.s3_reclaim_minused
-    s3_reclaim_age           = var.s3_reclaim_age
-    s3_enterprise            = var.s3_enterprise
-    haproxy                  = var.haproxy
-    saml_enabled             = var.saml_enabled
-    saml_cert_secret_arn     = var.saml_cert_secret_arn
-  }
-}
+#   vars = {
+#     name                     = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
+#     metric_check_interval    = var.asg_check_interval
+#     health_check_interval    = var.lb_check_interval
+#     unhealthy_threshold      = var.lb_unhealthy_threshold
+#     cooldown                 = var.asg_scalein_cooldown
+#     ia_cert_crt_arn          = var.ia_cert_crt_arn
+#     ia_cert_key_arn          = var.ia_cert_key_arn
+#     ia_max_sessions          = var.ia_max_sessions
+#     ia_keepalivetimeout      = var.ia_keepalivetimeout
+#     ia_secret_arn            = var.ia_secret_arn
+#     ia_domain                = var.ia_domain
+#     search_enabled           = var.search_enabled
+#     s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
+#     s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
+#     s3_sse_cmk_arn           = var.s3_sse_cmk_arn
+#     ia_video_bitrate         = var.ia_video_bitrate
+#     ia_video_codec           = var.ia_video_codec
+#     s3_progressive_retrieval = var.s3_progressive_retrieval
+#     s3_reclaim_maxused       = var.s3_reclaim_maxused
+#     s3_reclaim_minused       = var.s3_reclaim_minused
+#     s3_reclaim_age           = var.s3_reclaim_age
+#     s3_enterprise            = var.s3_enterprise
+#     haproxy                  = var.haproxy
+#     saml_enabled             = var.saml_enabled
+#     saml_cert_secret_arn     = var.saml_cert_secret_arn
+#   }
+# }
 
 resource "aws_launch_template" "iris" {
   name_prefix                          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
   image_id                             = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type                        = var.instance_type
   key_name                             = var.key_name
-  user_data                            = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+  #user_data                            = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+  user_data                            = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_local.ps1", {
+                                            name                     = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
+                                            metric_check_interval    = var.asg_check_interval
+                                            health_check_interval    = var.lb_check_interval
+                                            unhealthy_threshold      = var.lb_unhealthy_threshold
+                                            cooldown                 = var.asg_scalein_cooldown
+                                            ia_cert_crt_arn          = var.ia_cert_crt_arn
+                                            ia_cert_key_arn          = var.ia_cert_key_arn
+                                            ia_max_sessions          = var.ia_max_sessions
+                                            ia_keepalivetimeout      = var.ia_keepalivetimeout
+                                            ia_secret_arn            = var.ia_secret_arn
+                                            ia_domain                = var.ia_domain
+                                            search_enabled           = var.search_enabled
+                                            s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
+                                            s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
+                                            s3_sse_cmk_arn           = var.s3_sse_cmk_arn
+                                            ia_video_bitrate         = var.ia_video_bitrate
+                                            ia_video_codec           = var.ia_video_codec
+                                            s3_progressive_retrieval = var.s3_progressive_retrieval
+                                            s3_reclaim_maxused       = var.s3_reclaim_maxused
+                                            s3_reclaim_minused       = var.s3_reclaim_minused
+                                            s3_reclaim_age           = var.s3_reclaim_age
+                                            s3_enterprise            = var.s3_enterprise
+                                            haproxy                  = var.haproxy
+                                            saml_enabled             = var.saml_enabled
+                                            saml_cert_secret_arn     = var.saml_cert_secret_arn
+  }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+
   update_default_version               = var.update_asg_lt
   ebs_optimized                        = true
   instance_initiated_shutdown_behavior = var.terminate_on_shutdown ? "terminate" : "stop"

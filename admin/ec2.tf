@@ -1,16 +1,16 @@
 
-data "template_file" "cloud_init" {
-  template = file("${path.module}/cloud_init.ps1")
+# data "template_file" "cloud_init" {
+#   template = file("${path.module}/cloud_init.ps1")
 
-  vars = {
-    ia_secret_arn      = var.ia_secret_arn
-    enterprise_ha      = var.enterprise_ha
-    dbserver           = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
-    https_console_port = var.https_console_port
-    http_console_port  = var.http_console_port
-  }
+#   vars = {
+#     ia_secret_arn      = var.ia_secret_arn
+#     enterprise_ha      = var.enterprise_ha
+#     dbserver           = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
+#     https_console_port = var.https_console_port
+#     http_console_port  = var.http_console_port
+#   }
 
-}
+# }
 
 resource "aws_instance" "iris_adm" {
   ami                         = coalesce(var.ami, data.aws_ami.GrayMeta-Iris-Admin.id)
@@ -20,7 +20,17 @@ resource "aws_instance" "iris_adm" {
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.iris_adm.id]
   subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "</powershell>"]))
+
+  user_data = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_init.ps1", {
+    ia_secret_arn = var.ia_secret_arn
+    enterprise_ha = var.enterprise_ha
+    dbserver           = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
+    https_console_port = var.https_console_port
+    http_console_port  = var.http_console_port
+  }),var.user_init, "\n", "</powershell>"]))
+
+
+  #46user_data                   = base64encode(join("\n", ["<powershell>", data.template_file.cloud_init.rendered, var.user_init, "\n", "</powershell>"]))
   associate_public_ip_address = var.associate_public_ip
 
   disable_api_termination = var.instance_protection ? true : false

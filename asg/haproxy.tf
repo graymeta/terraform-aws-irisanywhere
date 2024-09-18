@@ -17,21 +17,21 @@ data "aws_secretsmanager_secret_version" "os-secret" {
 }
 
 
-data "template_file" "cloud_init_ha" {
-  template = file("${path.module}/cloud_init.tpl")
+# data "template_file" "cloud_init_ha" {
+#   template = file("${path.module}/cloud_init.tpl")
 
-  vars = {
-    hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
-    ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
+#   vars = {
+#     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
+#     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
 
-    aws_region   = data.aws_region.current.name
-    asg_name     = aws_autoscaling_group.iris.name
-    statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
-    port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
-    hap_loglevel = var.hap_loglevel
-    haproxy_user_init = base64encode(var.haproxy_user_init)
-  }
-}
+#     aws_region   = data.aws_region.current.name
+#     asg_name     = aws_autoscaling_group.iris.name
+#     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
+#     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
+#     hap_loglevel = var.hap_loglevel
+#     haproxy_user_init = base64encode(var.haproxy_user_init)
+#   }
+# }
 
 resource "aws_instance" "ha" {
   ami                         = coalesce(var.ami, data.aws_ami.AmazonLinux.id)
@@ -41,9 +41,19 @@ resource "aws_instance" "ha" {
   key_name                    = var.key_name
   vpc_security_group_ids      = [aws_security_group.ha[0].id]
   subnet_id                   = element(var.subnet_id, count.index)
-  user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
-  associate_public_ip_address = var.associate_public_ip
+  #user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
+  user_data                   = base64encode(templatefile("${path.module}/cloud_init.tpl",{
+    hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
+    ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
+    aws_region   = data.aws_region.current.name
+    asg_name     = aws_autoscaling_group.iris.name
+    statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
+    port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
+    hap_loglevel = var.hap_loglevel
+    haproxy_user_init = base64encode(var.haproxy_user_init)
+  }))
 
+  associate_public_ip_address = var.associate_public_ip
   disable_api_termination = var.instance_protection ? true : false
 
   lifecycle {
@@ -97,22 +107,23 @@ output "ha_proxy_lb_fqdn" {
 }
 #IAM
 
-data "template_file" "ha_role" {
-  template = file("${path.module}/ha_role.json")
-}
+# data "template_file" "ha_role" {
+#   template = file("${path.module}/ha_role.json")
+# }
 
-data "template_file" "ha_policy" {
-  template = file("${path.module}/ha_policy.json")
+# data "template_file" "ha_policy" {
+#   template = file("${path.module}/ha_policy.json")
 
-  vars = {
-    cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-  }
-}
+#   vars = {
+#     cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
+#   }
+# }
 
 resource "aws_iam_role" "ha" {
   count              = var.haproxy ? 1 : 0
   name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Role-ha", ".", "")
-  assume_role_policy = data.template_file.ha_role.rendered
+  #assume_role_policy = data.template_file.ha_role.rendered
+  assume_role_policy = templatefile("${path.module}/ha_role.json", {})
 }
 
 resource "aws_iam_instance_profile" "ha" {
@@ -124,7 +135,8 @@ resource "aws_iam_instance_profile" "ha" {
 resource "aws_iam_policy" "ha" {
   count  = var.haproxy ? 1 : 0
   name   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Policy-ha", ".", "")
-  policy = data.template_file.ha_policy.rendered
+  #policy = data.template_file.ha_policy.rendered
+  policy = templatefile("${path.module}/ha_policy.json",{cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")})
 }
 
 resource "aws_iam_role_policy_attachment" "ha" {
