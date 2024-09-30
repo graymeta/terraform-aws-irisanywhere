@@ -53,8 +53,6 @@ data "aws_iam_policy_document" "combined" {
   source_policy_documents = [
     aws_iam_policy.iris_policy_base.policy,
     local.appended_text
-    #data.template_file.iris_policy_base.rendered,
-    #data.template_file.iris_policy_custom.rendered
   ]
 }
 
@@ -63,5 +61,5 @@ output "base_policy_text" {
 }
 
 output "local_policy_text" {
- value = local.appended_text #aws_iam_policy_document.combined.source_policy_documents
+ value = local.appended_text
 }
