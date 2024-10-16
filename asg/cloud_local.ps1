@@ -58,7 +58,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     }
 
 #Run init locally
-    C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1
+    C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
