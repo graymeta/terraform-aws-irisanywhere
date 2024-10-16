@@ -378,3 +378,9 @@ variable "disable_rdp" {
   description = "Disables RDP for Iris Anywhere instances. Default false"
   default     = false
 }
+
+variable "cache_content" {
+  type        = bool
+  description = "If true, Tiger Bridge will cache the content to local ebs volume, if false, rclone will stream file with minimal caching (if any)"
+  default     = true
+}

@@ -20,6 +20,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
+    $cache_content  = "${cache_content}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -58,7 +59,16 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     }
 
 #Run init locally
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
+
+if($cache_content -eq "false") { 
     C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1
+    
+} else {
+    C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1
+}
+
+
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
