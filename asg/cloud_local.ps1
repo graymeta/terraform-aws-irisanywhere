@@ -69,7 +69,6 @@ if($cache_content -eq "false") {
 }
 
 
-
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 
