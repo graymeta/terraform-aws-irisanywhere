@@ -128,6 +128,14 @@
                 "ec2messages:SendReply"
             ],
             "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "autoscaling:CompleteLifecycleAction",
+                "autoscaling:RecordLifecycleActionHeartbeat"
+            ],
+            "Resource": "*"
         }
     ]
 }
