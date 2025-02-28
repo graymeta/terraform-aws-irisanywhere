@@ -5,7 +5,7 @@ resource "aws_elasticsearch_domain" "es" {
   cluster_config {
     instance_count         = var.instance_count
     instance_type          = var.instance_type
-    zone_awareness_enabled = var.zone_awareness_enabled
+    zone_awareness_enabled = length(var.subnet_id) > 1 ? true : false
 
     dynamic "zone_awareness_config" {
       for_each = var.availability_zone_count > 1 ? [true] : []

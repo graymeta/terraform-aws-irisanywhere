@@ -20,6 +20,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
+    $disk_data_size = "${disk_data_size}"
     $cache_content  = "${cache_content}"
     #Retrieve and prepare Secrets
     try {

@@ -124,6 +124,7 @@ resource "aws_launch_template" "iris" {
                                             saml_enabled             = var.saml_enabled
                                             saml_cert_secret_arn     = var.saml_cert_secret_arn
                                             cache_content            = var.cache_content
+                                            disk_data_size           = var.disk_data_size
   }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
 
   update_default_version               = var.update_asg_lt
