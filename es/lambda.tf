@@ -35,13 +35,9 @@ data "aws_iam_policy_document" "policy" {
   }
 }
 
-# data "template_file" "iris_s3_policy" {
-#   template = file("${path.module}/s3-index-policy.json")
-# }
 
 resource "aws_iam_policy" "s3_indexer_policy" {
   name   = "s3_indexer_policy-${var.domain}"
-  #policy = data.template_file.iris_s3_policy.rendered
   policy = templatefile("${path.module}/s3-index-policy.json",{})
 }
 
@@ -75,7 +71,8 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   timeout       = 30
 
   vpc_config {
-    subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
+    #subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
+    subnet_ids         = length(var.subnet_id) > 1 ? [var.subnet_id[0], var.subnet_id[1]] : [var.subnet_id[0]]
     security_group_ids = [aws_security_group.es.id]
   }
 
