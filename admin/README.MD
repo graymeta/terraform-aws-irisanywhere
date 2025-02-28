@@ -57,6 +57,7 @@ module "irisadmin-ha" {
   ia_secret_arn         = "arn:aws:secretsmanager:region:your-secret-arn"
   enterprise_ha         = true
   https_console_port    = 443
+  enterprise_ha_lb_public = true  # NLB will be internet-facing
 }
 
     # To retreive the Server ID for instances, check the instance tags.
@@ -80,6 +81,8 @@ module "irisadmin-ha" {
 * `https_console_port` - (Optional) Configures port that Iris Admin web Console listens on with HTTPS. Default to `8021`.
 * `http_console_port` - (Optional) Configures port that Iris Admin web Console listens on HTTP. Default to `8020`.
 * `user_init` -  (Optional) Provides the ability for customers to input their own user-init scripts.
+* `enterprise_ha_lb_public` -  (Optional) Allows customer to specify whether the NLB will be internet-facing or internal-facing.  A value of `true` will be internet-facing. Defaults to false if not specified.
+
 
 ### Attributes Reference:
 In addition to all the arguments above the following attributes are exported:
