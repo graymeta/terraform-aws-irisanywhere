@@ -112,3 +112,9 @@ variable "user_init" {
   description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""
 }
+
+variable "enterprise_ha_lb_public" {
+  type        = bool
+  description = "If true the admin network load balancer will be public facing.  The scheme will show internet-facing.  Default to internal-facing"
+  default     = false
+}
