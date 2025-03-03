@@ -2,6 +2,7 @@ resource "aws_lb" "irisadmin" {
   count                      = var.enterprise_ha ? 1 : 0
   enable_deletion_protection = false
   load_balancer_type         = "network"
+  internal                   = var.enterprise_ha_lb_public ? false : true
   name_prefix                = "iadm-"
   subnets                    = var.subnet_id
 
