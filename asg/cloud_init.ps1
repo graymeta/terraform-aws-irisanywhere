@@ -44,14 +44,65 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
     }
+    $attach_ebs = "${attach_ebs}"
+
     try {
-        Initialize-Disk 1 -PartitionStyle GPT -Confirm:$false | Out-Null
-        New-Partition -DiskNumber 1 -UseMaximumSize -DriveLetter D | Out-Null
-        Format-Volume -DriveLetter D -FileSystem NTFS -Confirm:$false | Out-Null
-        New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null 
+        if ($attach_ebs -eq "true") {
+            # Attach and use Disk 1 normally
+            Initialize-Disk 1 -PartitionStyle GPT -Confirm:$false | Out-Null
+            New-Partition -DiskNumber 1 -UseMaximumSize -DriveLetter D | Out-Null
+            Format-Volume -DriveLetter D -FileSystem NTFS -Confirm:$false | Out-Null
+            New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null
         }
+        else {
+            # RAID0 across Disk 1 and Disk 2, mount as D:
+            $disk1 = Get-Disk -Number 1
+            $disk2 = Get-Disk -Number 2
+
+            if ($disk1.PartitionStyle -eq "RAW") {
+                Initialize-Disk -Number 1 -PartitionStyle GPT
+            }
+
+            if ($disk2.PartitionStyle -eq "RAW") {
+                Initialize-Disk -Number 2 -PartitionStyle GPT
+            }
+
+            Start-Sleep -Seconds 2
+
+            $diskpartScript = @"
+SELECT DISK 1
+CONVERT DYNAMIC
+SELECT DISK 2
+CONVERT DYNAMIC
+CREATE VOLUME STRIPE DISK=1,2
+ASSIGN LETTER=D
+FORMAT FS=NTFS LABEL="RAID0Disk" QUICK
+EXIT
+"@
+
+            $tempPath = "C:\temp"
+            if (!(Test-Path $tempPath)) {
+                New-Item -ItemType Directory -Path $tempPath | Out-Null
+            }
+
+            $scriptPath = "$tempPath\raid0_script.txt"
+            $diskpartScript | Out-File -FilePath $scriptPath -Encoding ASCII
+
+            Write-Host "Running DiskPart script..." -ForegroundColor Cyan
+            $process = Start-Process -FilePath "diskpart.exe" -ArgumentList "/s $scriptPath" -PassThru -Wait -NoNewWindow
+
+            if ($process.ExitCode -eq 0) {
+                Write-Host "RAID 0 Striped Volume Created Successfully Using Disks 1 and 2 (Drive D:)" -ForegroundColor Green
+            } else {
+                Write-Host "Error: DiskPart failed. Please check the script output." -ForegroundColor Red
+            }
+
+            # Create app folder on D:
+            New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null
+        }
+    }
     catch {
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error staging EBS"
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error staging volume(s) for IrisAnywhere"
     }
 
     # Set Leaf Certs 

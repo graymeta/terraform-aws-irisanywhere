@@ -121,6 +121,7 @@ resource "aws_launch_template" "iris" {
                                             s3_reclaim_age           = var.s3_reclaim_age
                                             s3_enterprise            = var.s3_enterprise
                                             haproxy                  = var.haproxy
+                                            attach_ebs               = var.attach_ebs
                                             saml_enabled             = var.saml_enabled
                                             saml_cert_secret_arn     = var.saml_cert_secret_arn
                                             cache_content            = var.cache_content
@@ -147,7 +148,10 @@ resource "aws_launch_template" "iris" {
     }
   }
 
-  block_device_mappings {
+  dynamic "block_device_mappings" {
+  for_each = var.attach_ebs ? [1] : []
+
+  content {
     device_name = "/dev/sda2"
 
     ebs {
@@ -158,6 +162,7 @@ resource "aws_launch_template" "iris" {
       delete_on_termination = "true"
     }
   }
+}
 
   network_interfaces {
     associate_public_ip_address = var.associate_public_ip
