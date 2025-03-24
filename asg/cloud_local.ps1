@@ -67,7 +67,7 @@ if ("$attach_ebs" -eq "false") {
     & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
 }
 elseif ("$cache_content" -eq "false") {
-    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
+    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
 }
 else {
     & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1"
