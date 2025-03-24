@@ -19,6 +19,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_enterprise = "${s3_enterprise}"
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
+    $attach_ebs = "${attach_ebs}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     $disk_data_size = "${disk_data_size}"
     $cache_content  = "${cache_content}"
@@ -62,11 +63,14 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 #Run init locally
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
 
-if($cache_content -eq "false") { 
-    C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1
-    
-} else {
-    C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1
+if ($attach_ebs -eq "false") {
+    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
+}
+elseif ($cache_content -eq "false") {
+    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
+}
+else {
+    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1"
 }
 
 
