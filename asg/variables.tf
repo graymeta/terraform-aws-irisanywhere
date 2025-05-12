@@ -82,6 +82,12 @@ variable "asg_size_min" {
   default     = 1
 }
 
+variable "attach_ebs" {
+  description = "Whether to attach an additional EBS data volume (/dev/sda2)"
+  type        = bool
+  default     = true
+}
+
 variable "base_ami" {
   type        = string
   description = "(Optional) The AMI from which to launch the instance.  Default to latest released AMI"

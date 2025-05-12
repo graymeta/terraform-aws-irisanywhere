@@ -130,3 +130,7 @@ output "ha_proxy_private_ip" {
 output "ia_domain" {
   value = var.ia_domain
 }
+
+output "haproxy" {
+  value = var.haproxy
+}
