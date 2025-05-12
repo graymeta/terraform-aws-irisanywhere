@@ -133,7 +133,8 @@
             "Effect": "Allow",
             "Action": [
                 "autoscaling:CompleteLifecycleAction",
-                "autoscaling:RecordLifecycleActionHeartbeat"
+                "autoscaling:RecordLifecycleActionHeartbeat",
+                "ec2:DescribeInstances"
             ],
             "Resource": "*"
         }

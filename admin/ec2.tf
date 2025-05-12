@@ -49,7 +49,11 @@ resource "aws_instance" "iris_adm" {
   }
 
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-%02d", count.index + 1) })
+  "Name" = format(
+  "${var.hostname_prefix}-%s-iris-admin-%02d",
+  var.deployment_name != "1" ? var.deployment_name : var.instance_type,
+  count.index + 1
+) })
 
   volume_tags = merge(local.merged_tags, {
   "Name" = format("${var.hostname_prefix}-%02d", count.index + 1) })
