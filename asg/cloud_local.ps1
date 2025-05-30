@@ -78,15 +78,36 @@ else {
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 
 #Update Instance
-    $webclient = new-object net.webclient
-    $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
+    # $webclient = new-object net.webclient
+    # $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
+    # [System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
+    # [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::Machine)
+    # Import-Module -name AWSPowerShell
+    # $tag = New-Object Amazon.EC2.Model.Tag
+    # $tag.Key = "Name"
+    # $tag.Value = "${name}-"+$instanceid
+    # New-EC2Tag -Resource $instanceid -Tag $tag
+
+    # Step 1: Request a token from IMDSv2
+    $tokenUri = "http://169.254.169.254/latest/api/token"
+    $headers = @{ "X-aws-ec2-metadata-token-ttl-seconds" = "120" }  #2 mins
+    $token = Invoke-RestMethod -Method Put -Uri $tokenUri -Headers $headers
+
+    # Step 2: Use the token to access instance metadata
+    $metadataUri = "http://169.254.169.254/latest/meta-data/instance-id"
+    $instanceid = Invoke-RestMethod -Uri $metadataUri -Headers @{ "X-aws-ec2-metadata-token" = $token }
+
+    # Step 3: Set environment variables
     [System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
-    [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::Machine)
-    Import-Module -name AWSPowerShell
+    [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-$instanceid", [System.EnvironmentVariableTarget]::Machine)
+
+    # Step 4: Apply EC2 tag using AWSPowerShell
+    Import-Module -Name AWSPowerShell
     $tag = New-Object Amazon.EC2.Model.Tag
     $tag.Key = "Name"
-    $tag.Value = "${name}-"+$instanceid
+    $tag.Value = "${name}-$instanceid"
     New-EC2Tag -Resource $instanceid -Tag $tag
+    
 
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
     Rename-Computer -NewName $instanceid -force
