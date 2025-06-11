@@ -63,10 +63,10 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 #Run init locally
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
 
-if ("$attach_ebs" -eq "false") {
-    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
-}
-elseif ("$cache_content" -eq "false") {
+#if ("$attach_ebs" -eq "false") {
+#    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
+#}
+if (-not $cache_content -Or "$cache_content" -eq "false") {
     & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
 }
 else {
