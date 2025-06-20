@@ -87,7 +87,6 @@ resource "aws_launch_template" "iris" {
     s3_reclaim_age           = var.s3_reclaim_age
     s3_enterprise            = var.s3_enterprise
     haproxy                  = var.haproxy
-    attach_ebs               = var.attach_ebs
     saml_enabled             = var.saml_enabled
     saml_cert_secret_arn     = var.saml_cert_secret_arn
     cache_content            = var.cache_content
@@ -120,20 +119,24 @@ resource "aws_launch_template" "iris" {
   }
 
   dynamic "block_device_mappings" {
-    for_each = var.attach_ebs ? [1] : []
+  for_each = (
+    contains(["i3", "i3en", "i4i", "c5d", "c6id", "c6gd", "c7gd", "m5d", "m6id", "m6gd", "r5d", "r6id", "r6gd", "d2", "h1", "z1d", "im4gn", "is4gen"], regex("^([a-z0-9]+)", var.instance_type)[0])
+    ? false
+    : true
+  ) ? [1] : []
 
-    content {
-      device_name = "/dev/sda2"
+  content {
+    device_name = "/dev/sda2"
 
-      ebs {
-        volume_type           = var.disk_data_type
-        volume_size           = var.disk_data_size
-        iops                  = var.disk_data_iops
-        encrypted             = true
-        delete_on_termination = "true"
-      }
+    ebs {
+      volume_type           = var.disk_data_type
+      volume_size           = var.disk_data_size
+      iops                  = var.disk_data_iops
+      encrypted             = true
+      delete_on_termination = true
     }
   }
+}
 
   network_interfaces {
     associate_public_ip_address = var.associate_public_ip
