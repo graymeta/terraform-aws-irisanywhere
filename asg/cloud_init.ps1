@@ -11,7 +11,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
     $ia_video_bitrate = "${ia_video_bitrate}"
     $ia_video_codec = "${ia_video_codec}"
-    $attach_ebs = "${attach_ebs}"
     $s3_progressive_retrieval = "${s3_progressive_retrieval}"
     $s3_reclaim_maxused = "${s3_reclaim_maxused}"
     $s3_reclaim_minused = "${s3_reclaim_minused}"
