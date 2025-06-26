@@ -19,7 +19,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_enterprise = "${s3_enterprise}"
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
-    $attach_ebs = "${attach_ebs}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     $disk_data_size = "${disk_data_size}"
     $cache_content  = "${cache_content}"
@@ -63,10 +62,10 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 #Run init locally
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
 
-if ("$attach_ebs" -eq "false") {
-    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
-}
-elseif ("$cache_content" -eq "false") {
+#if ("$attach_ebs" -eq "false") {
+#    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
+#}
+if (-not $cache_content -Or "$cache_content" -eq "false") {
     & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
 }
 else {
@@ -78,15 +77,16 @@ else {
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 
 #Update Instance
-    $webclient = new-object net.webclient
-    $instanceid = $webclient.Downloadstring('http://169.254.169.254/latest/meta-data/instance-id')
+    $instanceid = Get-MetaData -MetaDataType "instanceId"
+
     [System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
-    [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-"+$instanceid, [System.EnvironmentVariableTarget]::Machine)
-    Import-Module -name AWSPowerShell
+    [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-$instanceid", [System.EnvironmentVariableTarget]::Machine)
+
+    Import-Module -Name AWSPowerShell
     $tag = New-Object Amazon.EC2.Model.Tag
     $tag.Key = "Name"
-    $tag.Value = "${name}-"+$instanceid
+    $tag.Value = "${name}-$instanceid"
     New-EC2Tag -Resource $instanceid -Tag $tag
-
+    
     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
     Rename-Computer -NewName $instanceid -force
