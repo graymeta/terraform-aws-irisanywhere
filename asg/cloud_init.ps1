@@ -11,7 +11,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
     $ia_video_bitrate = "${ia_video_bitrate}"
     $ia_video_codec = "${ia_video_codec}"
-    $attach_ebs = "${attach_ebs}"
     $s3_progressive_retrieval = "${s3_progressive_retrieval}"
     $s3_reclaim_maxused = "${s3_reclaim_maxused}"
     $s3_reclaim_minused = "${s3_reclaim_minused}"
@@ -25,8 +24,8 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $admin_db_pw        = $secretdata.admin_db_pw
         $admin_server       = $secretdata.admin_server
         $iris_s3_bucketname = $secretdata.iris_s3_bucketname
-        $iris_s3_access_key = $secretdata.iris_s3_access_key
-        $iris_s3_secret_key = $secretdata.iris_s3_secret_key
+        #$iris_s3_access_key = $secretdata.iris_s3_access_key
+        #$iris_s3_secret_key = $secretdata.iris_s3_secret_key
         $iris_s3_lic_code   = $secretdata.iris_s3_lic_code
         $iris_s3_lic_id     = $secretdata.iris_s3_lic_id
         $iris_serviceacct   = $secretdata.iris_serviceacct
@@ -45,15 +44,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
     }
-    # try {
-    #     Initialize-Disk 1 -PartitionStyle GPT -Confirm:$false | Out-Null
-    #     New-Partition -DiskNumber 1 -UseMaximumSize -DriveLetter D | Out-Null
-    #     Format-Volume -DriveLetter D -FileSystem NTFS -Confirm:$false | Out-Null
-    #     New-Item D:\IrisAnywhere -ItemType Directory -Force | Out-Null 
-    #     }
-    # catch {
-    #     Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Error staging EBS"
-    # }
 
     # Set Leaf Certs 
     try {
