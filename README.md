@@ -17,13 +17,13 @@ module "iris-secrets" {
   admin_console_pw   = "null"
   admin_db_id        = "null"
   admin_db_pw        = "null"
-  iris_s3_access_key = ""
-  iris_s3_secret_key = ""
 
   # Fill these in AFTER Admin is licensed
   admin_server       = "null"
   admin_customer_id  = "null"
   s3_enterprise      = ""
+  iris_s3_access_key = ""
+  iris_s3_secret_key = ""
 }
 ```
 
