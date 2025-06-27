@@ -320,7 +320,7 @@ variable "alb_cookie_duration" {
 variable "s3_enterprise" {
   type        = bool
   description = "(Optional) Uses Config Map for S3 buckets configured with SSE"
-  default     = false
+  default     = true
 }
 
 variable "associate_public_ip" {
@@ -388,7 +388,7 @@ variable "disable_rdp" {
 variable "cache_content" {
   type        = bool
   description = "If true, Tiger Bridge will cache the content to local ebs volume, if false, rclone will stream file with minimal caching (if any)"
-  default     = true
+  default     = false
 }
 
 variable "wasabi" {
