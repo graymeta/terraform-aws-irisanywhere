@@ -390,3 +390,9 @@ variable "cache_content" {
   description = "If true, Tiger Bridge will cache the content to local ebs volume, if false, rclone will stream file with minimal caching (if any)"
   default     = true
 }
+
+variable "wasabi" {
+  type        = bool
+  description = "(Optional) Uses wasabi storage instead of s3 for rclone"
+  default     = false
+}

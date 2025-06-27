@@ -52,6 +52,7 @@ resource "aws_db_instance" "default" {
 
 ### Network ###
 resource "aws_db_subnet_group" "default" {
+  count      = var.enterprise_ha ? 1 : 0
   subnet_ids = var.subnet_id
 
   tags = merge(
