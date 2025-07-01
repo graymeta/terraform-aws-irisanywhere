@@ -14,7 +14,7 @@ resource "aws_db_instance" "default" {
   auto_minor_version_upgrade = "false"
   backup_retention_period    = var.db_backup_retention
   backup_window              = var.db_backup_window
-  db_subnet_group_name       = aws_db_subnet_group.default.id
+  db_subnet_group_name       = var.enterprise_ha ? aws_db_subnet_group.default[0].id : null
   engine                     = "postgres"
   engine_version             = var.db_version
   final_snapshot_identifier  = "GrayMeta-IrisAdmin-${var.hostname_prefix}-${formatdate("YYYYMMDDhhmmss", timestamp())}-final"
