@@ -8,7 +8,6 @@ The following contains instructions/criteria for deploying Iris Anywhere into an
 * AWS account access
 * EC2 Windows Server 2022
 * Registered domain name (optional)
-* Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
 * Certificates created or imported in AWS Certificate Manager.
 * Install Terraform executable 1.8.x or compatible [Terraform binaries](https://releases.hashicorp.com/terraform/).
 * `version` - Current Iris Anywhere terraform module version is `v2.2.1`. Note module version requires Iris Anywhere AMI access.
