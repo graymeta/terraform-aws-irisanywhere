@@ -57,7 +57,7 @@ New customers can expect and initial deployment duration of 2 hours.  There are 
 ## Resulting AWS Services and Architecture Diagram
 ![Iris Anywhere FTR](https://user-images.githubusercontent.com/13397511/191809033-b4e93fe0-42c7-4edb-baaa-132d439abcfc.jpg)
 
-
+---
 # Simple Deployment Guide for GrayMeta Iris Anywhere (Terraform)
 
 ### Step 1: Launch Iris Admin
