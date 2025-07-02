@@ -56,7 +56,7 @@ New customers can expect and initial deployment duration of 2 hours.  There are 
 
 ***
 ## Iris Anywhere Admin Server
-Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
+Deploy an Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
 
 The below example will allow the customer to deploy the Iris Admin Server. After the deployment is complete navigate to the instance's https://{IPv4 DNS}:8021 to log in to the Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license the product as well as retrieve the necessary variables to deploy the Iris Anywhere Autoscaling Groups.
 
