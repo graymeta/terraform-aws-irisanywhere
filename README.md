@@ -9,11 +9,9 @@ The following contains instructions/criteria for deploying Iris Anywhere into an
 * EC2 Windows Server 2022
 * Registered domain name (optional)
 * Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
-* Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
-* Iris Anywhere license provided by Graymeta - Contact support@graymeta.com.
 * Certificates created or imported in AWS Certificate Manager.
 * Install Terraform executable 1.8.x or compatible [Terraform binaries](https://releases.hashicorp.com/terraform/).
-* `version` - Current Iris Anywhere terraform module version is `v0.0.32`. Note moddule version requires Iris Anywhere AMI access.
+* `version` - Current Iris Anywhere terraform module version is `v2.2.1`. Note module version requires Iris Anywhere AMI access.
 * No AWS Root user security context should be used in the deployment of any/all Iris Anywhere services.  Please follow the policy of least privilege for all access granted as part of the deployment. 
 ***
 
