@@ -28,7 +28,7 @@ module "irisadmin" {
 
   access_cidr      = ["0.0.0.0/0"]
   hostname_prefix  = "iris-admin"
-  instance_type    = "t3.large"
+  instance_type    = "t3.medium"
   subnet_id        = ["subnet-foo1"]
   key_name         = "your-key-name"
   ami              = "ami-id"
