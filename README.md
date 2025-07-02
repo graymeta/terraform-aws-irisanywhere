@@ -141,9 +141,9 @@ module "irisanywhere1" {
 
 ### You can now launch and destroy Iris Anywhere as needed. 
 # Checkout the below readme's for more options.
-*Authentication options(saml,okta,active directory): [https://github.com/graymeta/terraform-aws-irisanywhere/tree/master/secrets](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/secrets/README.MD)
-*Iris Anywhere auto scaling options: [https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD)
-*Open Search options: https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/admin/README.MD
+* Authentication options(saml,okta,active directory): [https://github.com/graymeta/terraform-aws-irisanywhere/tree/master/secrets](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/secrets/README.MD)
+* Iris Anywhere auto scaling options: [https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD)
+* Open Search options: https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/admin/README.MD
 
 
 For support: **[support@graymeta.com](mailto:support@graymeta.com)**
