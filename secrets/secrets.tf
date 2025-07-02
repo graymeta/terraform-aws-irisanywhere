@@ -14,10 +14,15 @@ resource "aws_secretsmanager_secret_version" "iris_config" {
   "admin_console_pw":   "${var.admin_console_pw}",
   "admin_db_id":        "${var.admin_db_id}",
   "admin_db_pw":        "${var.admin_db_pw}",
-  "iris_s3_access_key": "${var.iris_s3_access_key}",
-  "iris_s3_secret_key": "${var.iris_s3_secret_key}",
-  "admin_server":       "${var.admin_server}",
-  "admin_customer_id":  "${var.admin_customer_id}"
+  "admin_server":       "",
+  "admin_customer_id":  "",
+  "s3_enterprise":      s3_enterprise = jsonencode(<<EOT
+		{ "buckets": [
+			{"name": "name1","enabled": true},
+			{"name": "name2","enabled": true}
+		]}
+		EOT
+	)
 }
 EOF
 }
