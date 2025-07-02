@@ -98,7 +98,7 @@ module "irisadmin" {
 * Once deployed, go to `https://<admin-ip>:8021`
 * Login using the `admin_console_id` and `admin_console_pw` from Secrets
 * Email the ServerID to [support@graymeta.com](mailto:support@graymeta.com) to get licensed
-* After licensing, update Secrets Manager with:
+* After licensing, update Secrets Manager in the aws console for the values below:
 
   * `admin_customer_id`
   * `admin_server`
