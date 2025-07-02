@@ -45,7 +45,7 @@ resource "aws_instance" "ha" {
   user_data                   = base64encode(templatefile("${path.module}/cloud_init.tpl",{
     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
-    aws_region   = data.aws_region.current.name
+    aws_region   = data.aws_region.current.id
     asg_name     = aws_autoscaling_group.iris.name
     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
