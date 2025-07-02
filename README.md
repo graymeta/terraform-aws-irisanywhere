@@ -19,7 +19,7 @@ The following contains instructions/criteria for deploying Iris Anywhere into an
 * Iris Anywhere provides multiple configurable options relating to infrastructure sizing, such as instance types, disk size, and autoscaling group size.  Each customer will have unique needs which will determine their sizing configuration.  Graymeta will work with the customer to determine the best sizing plan.
 
 ### Deployment Duration
-New customers can expect and initial deployment duration of 3-4 hours.  There are multiple components, some of which are optional, to an Iris Anywhere deployment.  The duration may vary based on specific customer needs and/or unique customer environments.
+New customers can expect and initial deployment duration of 2 hours.  There are multiple components, some of which are optional, to an Iris Anywhere deployment.  The duration may vary based on specific customer needs and/or unique customer environments.
 
 ### Specialized Knowledge
 * Infrastruction As Code (IAC)
