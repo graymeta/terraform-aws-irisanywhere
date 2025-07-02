@@ -22,6 +22,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     $disk_data_size = "${disk_data_size}"
     $cache_content  = "${cache_content}"
+    $wasabi = "${wasabi}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -54,6 +55,11 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_samlissuer        = $secretdata.saml_samlissuer
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
         $saml_acsUrlRelativePath= $secretdata.saml_acsUrlRelativePath
+        $wasabi_access_key       = $secretdata.wasabi_access_key
+        $wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
+        $wasabi_endpoint         = $secretdata.wasabi_endpoint
+        $wasabi_region            = $secretdata.wasabi_region
+        $wasabi_buckets          = $secretdata.wasabi_buckets
     }
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
