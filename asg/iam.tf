@@ -46,12 +46,12 @@ data "aws_secretsmanager_secret_version" "s3" {
 }
 
 locals {
-  decoded_secret    = jsondecode(data.aws_secretsmanager_secret_version.s3.secret_string)
-  s3_buckets        = try(local.decoded_secret.s3_enterprise.buckets, [])
-  s3_bucket_names   = [for b in local.s3_buckets : b.name]
-
-  s3_bucket_arns    = [for name in local.s3_bucket_names : "arn:aws:s3:::${name}"]
-  s3_object_arns    = [for name in local.s3_bucket_names : "arn:aws:s3:::${name}/*"]
+  decoded_secret         = jsondecode(data.aws_secretsmanager_secret_version.s3.secret_string)
+  decoded_s3_enterprise  = jsondecode(local.decoded_secret.s3_enterprise)
+  s3_buckets             = try(local.decoded_s3_enterprise.buckets, [])
+  s3_bucket_names        = [for b in local.s3_buckets : b.name]
+  s3_bucket_arns         = [for name in local.s3_bucket_names : "arn:aws:s3:::${name}"]
+  s3_object_arns         = [for name in local.s3_bucket_names : "arn:aws:s3:::${name}/*"]
 }
 
 data "aws_iam_policy_document" "s3_custom" {
