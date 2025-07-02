@@ -21,7 +21,7 @@ module "iris-secrets" {
   # Fill these in AFTER Admin is licensed
   admin_server       = "null"
   admin_customer_id  = "null"
-  s3_enterprise      = ""
+  s3_enterprise      = jsonencode("{\"buckets\": [{\"name\":\"bucket1\"}]}")
 }
 ```
 
