@@ -1,6 +1,7 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
 The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin Server deployed first. 
 
+
 ### Iris Anywhere and AWS
 * Iris Anywhere requires AWS core services which are supported in all AWS Regions
   
