@@ -13,7 +13,7 @@ provider "aws" {
 }
 
 module "iris-secrets" {    
-  source            = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v0.0.latest-tag-id"
+  source            = "github.com/graymeta/terraform-aws-irisanywhere//secrets?ref=v2.2.1"
   secret_name       = "yoursecretcredname"
 
   # Fill these in BEFORE launching Admin
@@ -24,7 +24,7 @@ module "iris-secrets" {
 }
 
 module "irisadmin" {
-  source           = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=latest-tag-id"
+  source           = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v2.2.1"
 
   access_cidr      = ["0.0.0.0/0"]
   hostname_prefix  = "iris-admin"
@@ -51,7 +51,7 @@ module "irisadmin" {
 
 ```hcl
 module "irisanywhere1" {
-  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=latest"
+  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.2.1"
 
   hostname_prefix        = "iris"
   instance_type          = "c6id.8xlarge"
