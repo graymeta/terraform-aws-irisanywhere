@@ -13,14 +13,14 @@ module "iris-secrets" {
   secret_name       = "yoursecretcredname"
 
   # Fill these in BEFORE launching Admin
-  admin_console_id   = "null"
-  admin_console_pw   = "null"
-  admin_db_id        = "null"
-  admin_db_pw        = "null"
+  admin_console_id   = ""
+  admin_console_pw   = ""
+  admin_db_id        = ""
+  admin_db_pw        = ""
 
   # Fill these in AFTER Admin is licensed
-  admin_server       = "null"
-  admin_customer_id  = "null"
+  admin_server       = ""
+  admin_customer_id  = ""
   s3_enterprise      = jsonencode("{\"buckets\": [{\"name\":\"bucket1\"}]}")
 }
 ```
