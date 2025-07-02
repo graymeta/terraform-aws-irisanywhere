@@ -123,7 +123,6 @@ module "irisanywhere1" {
   ia_cert_crt_arn        = ""
   ia_cert_key_arn        = ""
   rdp_access_cidr        = ["cidr1", "cidr2"]
-  s3_policy              = file("custom_policy_meta.json")
   iam_policy_enabled     = true
   base_ami               = "ami-0282e3837a18fd822"
   iam_role_name          = "iris-role"
