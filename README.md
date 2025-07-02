@@ -62,6 +62,7 @@ New customers can expect and initial deployment duration of 2 hours.  There are 
 
 ### Step 1: Launch Iris Admin
 
+* If you want to use a high availability admin (2 servers) with an rds database: Contact [support@graymeta.com](mailto:support@graymeta.com) before launching.
 * Contact [support@graymeta.com](mailto:support@graymeta.com) to get the required AMI ID
 * Fill in the 4 secret values below with your vaules
 * Launch this once; future upgrades are done manually via RDP
@@ -138,7 +139,12 @@ module "irisanywhere1" {
 
 ---
 
-You’re now ready to launch Iris Anywhere!
+### You can now launch and destroy Iris Anywhere as needed. 
+#Checkout the below readme's for more options.
+*Authentication options(saml,okta,active directory): [https://github.com/graymeta/terraform-aws-irisanywhere/tree/master/secrets](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/secrets/README.MD)
+*Iris Anywhere auto scaling options: [https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD](https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/asg/README.MD)
+*Open Search options: https://github.com/graymeta/terraform-aws-irisanywhere/blob/master/admin/README.MD
+
 
 For support: **[support@graymeta.com](mailto:support@graymeta.com)**
 
