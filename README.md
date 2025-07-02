@@ -1,11 +1,15 @@
 # Simple Deployment Guide for GrayMeta Iris Anywhere (Terraform)
 
-### Step 1: Launch Iris Secrets (recommend creating blank, then editing values manually in AWS Secrets Manager)
+### Step 1: Launch Iris Admin
+
+* Contact [support@graymeta.com](mailto:support@graymeta.com) to get the required AMI ID
+* Fill in the 4 secret values below with your vaules
+* Launch this once; future upgrades are done manually via RDP
 
 ```hcl
 provider "aws" {
   region  = "region-id"
-  profile = "my-aws-profile"
+  profile = "desired-aws-profile"
 }
 
 module "iris-secrets" {    
@@ -17,25 +21,6 @@ module "iris-secrets" {
   admin_console_pw   = ""
   admin_db_id        = ""
   admin_db_pw        = ""
-
-  # Fill these in AFTER Admin is licensed
-  admin_server       = ""
-  admin_customer_id  = ""
-  s3_enterprise      = jsonencode("{\"buckets\": [{\"name\":\"bucket1\"}]}")
-}
-```
-
----
-
-### Step 2: Launch Iris Admin
-
-* Contact [support@graymeta.com](mailto:support@graymeta.com) to get the required AMI ID
-* Launch this once; future upgrades are done manually via RDP
-
-```hcl
-provider "aws" {
-  region  = "region-id"
-  profile = "desired-aws-profile"
 }
 
 module "irisadmin" {
@@ -47,7 +32,7 @@ module "irisadmin" {
   subnet_id        = ["subnet-foo1"]
   key_name         = "your-key-name"
   ami              = "ami-id"
-  ia_secret_arn    = "arn:aws:secretsmanager:region:your-secret-arn"
+  ia_secret_arn    = module.iris-secrets.secret_arn
 }
 ```
 
@@ -62,7 +47,7 @@ module "irisadmin" {
 
 ---
 
-### Step 3: Launch Iris Anywhere (Autoscaling Group)
+### Step 2: Launch Iris Anywhere (Autoscaling Group)
 
 ```hcl
 module "irisanywhere1" {
