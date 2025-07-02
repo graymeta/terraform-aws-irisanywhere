@@ -71,18 +71,6 @@ variable "iris_s3_secret_key" {
   default     = ""
 }
 
-variable "iris_s3_lic_code" {
-  type        = string
-  description = "S3 license code - provided by GrayMeta"
-  sensitive   = true
-}
-
-variable "iris_s3_lic_id" {
-  type        = string
-  description = "S3 license ID - provided by GrayMeta"
-  sensitive   = true
-}
-
 variable "iris_serviceacct" {
   type        = string
   description = "account name for application"

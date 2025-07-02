@@ -16,8 +16,6 @@ resource "aws_secretsmanager_secret_version" "iris_config" {
   "admin_db_pw":        "${var.admin_db_pw}",
   "iris_s3_access_key": "${var.iris_s3_access_key}",
   "iris_s3_secret_key": "${var.iris_s3_secret_key}",
-  "iris_s3_lic_id":     "${var.iris_s3_lic_id}",
-  "iris_s3_lic_code":   "${var.iris_s3_lic_code}",
   "admin_server":       "${var.admin_server}",
   "admin_customer_id":  "${var.admin_customer_id}"
 }
