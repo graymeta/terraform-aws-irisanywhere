@@ -7,15 +7,8 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $iasecretarn = "${ia_secret_arn}"
     $iadomain = "${ia_domain}"
     $search_enabled = "${search_enabled}"
-    $s3_sse_bucketkey_enabled = "${s3_sse_bucketkey_enabled}"
-    $s3_sse_cmk_enabled = "${s3_sse_cmk_enabled}"
-    $s3_sse_cmk_arn = "${s3_sse_cmk_arn}"
     $ia_video_bitrate = "${ia_video_bitrate}"
     $ia_video_codec = "${ia_video_codec}"
-    $s3_progressive_retrieval = "${s3_progressive_retrieval}"
-    $s3_reclaim_maxused = "${s3_reclaim_maxused}"
-    $s3_reclaim_minused = "${s3_reclaim_minused}"
-    $s3_reclaim_age = "${s3_reclaim_age}"
     $s3_enterprise = "${s3_enterprise}"
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
@@ -31,24 +24,14 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $admin_db_id            = $secretdata.admin_db_id
         $admin_db_pw            = $secretdata.admin_db_pw
         $admin_server           = $secretdata.admin_server
-        $iris_s3_bucketname     = $secretdata.iris_s3_bucketname
-        $iris_s3_access_key     = $secretdata.iris_s3_access_key
-        $iris_s3_secret_key     = $secretdata.iris_s3_secret_key
-        $iris_s3_lic_code       = $secretdata.iris_s3_lic_code
-        $iris_s3_lic_id         = $secretdata.iris_s3_lic_id
-        $iris_serviceacct       = $secretdata.iris_serviceacct
         $okta_issuer            = $secretdata.okta_issuer
         $okta_clientid	        = $secretdata.okta_clientid
         $okta_redirecturi       = $secretdata.okta_redirecturi
         $okta_scope             = $secretdata.okta_scope
-        $s3_meta_bucketname     = $secretdata.s3_meta_bucketname
-        $s3_meta_access_key     = $secretdata.s3_meta_access_key
-        $s3_meta_secret_key     = $secretdata.s3_meta_secret_key
         $os_endpoint            = $secretdata.os_endpoint
         $os_region              = $secretdata.os_region
         $os_accessid            = $secretdata.os_accessid
         $os_secretkey           = $secretdata.os_secretkey
-
         $saml_uniqueid          = $secretdata.saml_uniqueid
         $saml_displayname       = $secretdata.saml_displayname
         $saml_entryPoint        = $secretdata.saml_entryPoint
@@ -68,16 +51,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 #Run init locally
 Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
 
-#if ("$attach_ebs" -eq "false") {
-#    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone_withinstancestore.ps1"
-#}
-if (-not $cache_content -Or "$cache_content" -eq "false") {
-    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
-}
-else {
-    & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise.ps1"
-}
-
+& "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
