@@ -22,8 +22,6 @@ module "iris-secrets" {
   admin_server       = "null"
   admin_customer_id  = "null"
   s3_enterprise      = ""
-  iris_s3_access_key = ""
-  iris_s3_secret_key = ""
 }
 ```
 
