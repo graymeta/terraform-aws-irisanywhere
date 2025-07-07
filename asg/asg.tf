@@ -76,20 +76,12 @@ resource "aws_launch_template" "iris" {
     ia_secret_arn            = var.ia_secret_arn
     ia_domain                = var.ia_domain
     search_enabled           = var.search_enabled
-    s3_sse_bucketkey_enabled = var.s3_sse_bucketkey_enabled
-    s3_sse_cmk_enabled       = var.s3_sse_cmk_enabled
-    s3_sse_cmk_arn           = var.s3_sse_cmk_arn
     ia_video_bitrate         = var.ia_video_bitrate
     ia_video_codec           = var.ia_video_codec
-    s3_progressive_retrieval = var.s3_progressive_retrieval
-    s3_reclaim_maxused       = var.s3_reclaim_maxused
-    s3_reclaim_minused       = var.s3_reclaim_minused
-    s3_reclaim_age           = var.s3_reclaim_age
     s3_enterprise            = var.s3_enterprise
     haproxy                  = var.haproxy
     saml_enabled             = var.saml_enabled
     saml_cert_secret_arn     = var.saml_cert_secret_arn
-    cache_content            = var.cache_content
     disk_data_size           = var.disk_data_size
     wasabi                   = var.wasabi
   }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
