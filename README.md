@@ -93,7 +93,7 @@ module "irisadmin" {
   subnet_id        = ["subnet-foo1"]
   key_name         = "your-key-name"
   ami              = "ami-id"
-  ia_secret_arn    = module.iris-secrets.secret_arn
+  ia_secret_arn    = module.iris-secrets.arn
 }
 ```
 
