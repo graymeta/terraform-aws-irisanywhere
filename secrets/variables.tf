@@ -18,6 +18,7 @@ variable "recovery_window_in_days" {
 variable "admin_customer_id" {
   type        = string
   description = "Customer ID for Iris Admin - provided by Graymeta"
+  default     = "" 
 }
 
 variable "admin_db_id" {
@@ -48,6 +49,7 @@ variable "admin_console_pw" {
 variable "admin_server" {
   type        = string
   description = "FQDN of Iris Admin Server"
+  default     = ""
   sensitive   = true
 }
 
@@ -151,6 +153,7 @@ variable "os_secretkey" {
 variable "s3_enterprise" {
   type        = string
   description = "List of S3 buckets and configs for SSE - requires keypair values"
+  default     = "{}"  
 }
 
 variable "saml_uniqueID" {
