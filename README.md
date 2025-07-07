@@ -87,13 +87,14 @@ module "iris-secrets" {
 module "irisadmin" {
   source           = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v2.2.1"
 
-  access_cidr      = ["0.0.0.0/0"]
-  hostname_prefix  = "iris-admin"
-  instance_type    = "t3.medium"
-  subnet_id        = ["subnet-foo1"]
-  key_name         = "your-key-name"
-  ami              = "ami-id"
-  ia_secret_arn    = module.iris-secrets.arn
+  access_cidr           = ["0.0.0.0/0"]
+  hostname_prefix       = "iris-admin"
+  instance_type         = "t3.medium"
+  subnet_id             = ["subnet-foo1"]
+  associate_public_ip   = true
+  key_name              = "your-key-name"
+  ami                   = "ami-id"
+  ia_secret_arn         = module.iris-secrets.arn
 }
 ```
 
