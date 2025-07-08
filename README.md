@@ -87,7 +87,7 @@ module "iris-secrets" {
 module "irisadmin" {
   source           = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v2.2.1"
 
-  access_cidr           = ["0.0.0.0/0"]
+  //access_cidr           = ["0.0.0.0/0"]
   hostname_prefix       = "iris-admin"
   instance_type         = "t3.medium"
   subnet_id             = ["subnet-foo1"]
@@ -118,12 +118,12 @@ module "irisanywhere1" {
   hostname_prefix        = "iris"
   instance_type          = "c6id.8xlarge"
   key_name               = "your-key-name"
-  ssl_certificate_arn    = ""
   subnet_id              = ["subnet-1", "subnet-2"]
   ia_secret_arn          = "arn:aws:secretsmanager:region:your-secret-arn"
-  ia_cert_crt_arn        = ""
-  ia_cert_key_arn        = ""
-  rdp_access_cidr        = ["cidr1", "cidr2"]
+  ssl_certificate_arn    = ""
+  //ia_cert_crt_arn        = ""
+  //ia_cert_key_arn        = ""
+  //rdp_access_cidr        = ["cidr1", "cidr2"]
   iam_policy_enabled     = true
   base_ami               = "ami-0282e3837a18fd822"
   iam_role_name          = "iris-role"
@@ -132,7 +132,7 @@ module "irisanywhere1" {
   # Required by HAProxy
   haproxy                = true
   instance_type_ha       = "t3.small"
-  mgmt_cidr              = ["cidr1", "cidr2"]
+  //mgmt_cidr              = ["cidr1", "cidr2"]
   ssl_certificate_cert   = ""
 }
 ```
