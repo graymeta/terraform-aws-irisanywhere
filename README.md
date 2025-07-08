@@ -120,7 +120,7 @@ module "irisanywhere1" {
   key_name               = "your-key-name"
   subnet_id              = ["subnet-1", "subnet-2"]
   ia_secret_arn          = "arn:aws:secretsmanager:region:your-secret-arn"
-  ssl_certificate_arn    = ""
+  //ssl_certificate_arn    = ""
   //ia_cert_crt_arn        = ""
   //ia_cert_key_arn        = ""
   //rdp_access_cidr        = ["cidr1", "cidr2"]
