@@ -21,9 +21,9 @@ resource "aws_instance" "iris_adm" {
   vpc_security_group_ids      = [aws_security_group.iris_adm.id]
   subnet_id                   = element(var.subnet_id, count.index)
 
-  user_data = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_init.ps1", {
-    ia_secret_arn = var.ia_secret_arn
-    enterprise_ha = var.enterprise_ha
+  user_data_base64  = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_init.ps1", {
+    ia_secret_arn   = var.ia_secret_arn
+    enterprise_ha   = var.enterprise_ha
     dbserver           = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
     https_console_port = var.https_console_port
     http_console_port  = var.http_console_port
