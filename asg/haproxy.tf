@@ -42,7 +42,7 @@ resource "aws_instance" "ha" {
   vpc_security_group_ids      = [aws_security_group.ha[0].id]
   subnet_id                   = element(var.subnet_id, count.index)
   #user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
-  user_data                   = base64encode(templatefile("${path.module}/cloud_init.tpl",{
+  user_data_base64            = base64encode(templatefile("${path.module}/cloud_init.tpl",{
     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
     aws_region   = data.aws_region.current.id
