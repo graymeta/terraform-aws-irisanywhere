@@ -16,8 +16,8 @@
 # }
 
 resource "aws_iam_role" "iris" {
-  name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
-  #assume_role_policy = data.template_file.iris_role.rendered
+  name = var.iam_role_name != "" ? var.iam_role_name : replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
+  #name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
   assume_role_policy = templatefile("${path.module}/role.json",{})
 }
 
