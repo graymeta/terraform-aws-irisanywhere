@@ -81,15 +81,22 @@ resource "aws_elasticsearch_domain_policy" "iris_s3" {
                     "es:*"
                 ],
                 "Principal": {
-                    "AWS": "*"
+                    "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
                 },
                 "Effect": "Allow",
-                "Resource": "${aws_elasticsearch_domain.es.arn}/*"
+                "Resource": "${aws_elasticsearch_domain.es.arn}/*",
+                "Condition": {
+                  "StringEquals": {
+                    "aws:PrincipalType": "AssumedRole"
+                  }
+                }
             }
         ]
     }
 CONFIG
 }
+
+data "aws_caller_identity" "current" {}
 
 data "aws_subnet" "subnet" {
   count = length(var.subnet_id)

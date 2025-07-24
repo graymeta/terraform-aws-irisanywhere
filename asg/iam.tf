@@ -69,7 +69,17 @@ data "aws_iam_policy_document" "s3_custom" {
     ]
     resources = local.s3_object_arns
   }
+
+  statement {
+      effect  = "Allow"
+      actions  = ["es:*"]
+      resources = ["arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/*/*"]
+  }
 }
+
+data "aws_region" "now" {}
+
+data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "combined" {
   source_policy_documents = [
