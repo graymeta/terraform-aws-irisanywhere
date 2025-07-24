@@ -70,22 +70,47 @@ data "aws_iam_policy_document" "s3_custom" {
     resources = local.s3_object_arns
   }
 
+  # statement {
+  #     effect  = "Allow"
+  #     actions  = ["es:*"]
+  #     resources = ["arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/*/*"]
+  # }
+}
+
+data "aws_iam_policy_document" "es_statement" {
+  count = var.search_enabled ? 1 : 0
+
   statement {
-      effect  = "Allow"
-      actions  = ["es:*"]
-      resources = ["arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/*/*"]
+    effect    = "Allow"
+    actions   = ["es:*"]
+    resources = [
+      "arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/${var.es_domain_name}/*"
+    ]
   }
+}
+
+data "aws_iam_policy_document" "combined" {
+  source_policy_documents = compact([
+    aws_iam_policy.iris_policy_base.policy,
+    data.aws_iam_policy_document.s3_custom.json,
+    try(data.aws_iam_policy_document.es_statement[0].json, null)
+  ])
 }
 
 data "aws_region" "now" {}
 
 data "aws_caller_identity" "current" {}
 
-data "aws_iam_policy_document" "combined" {
-  source_policy_documents = [
-    aws_iam_policy.iris_policy_base.policy,
-    data.aws_iam_policy_document.s3_custom.json
-  ]
+locals {
+  invalid_es_domain_name = var.search_enabled && (var.es_domain_name == null || var.es_domain_name == "")
+}
+
+# Cause a failure if the condition is not met
+resource "null_resource" "validate_es_domain_name" {
+  count = local.invalid_es_domain_name ? 1 : 0
+  provisioner "local-exec" {
+    command = "echo 'Error: es_domain_name must be set when search_enabled = true' && exit 1"
+  }
 }
 
 output "base_policy_text" {
