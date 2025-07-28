@@ -109,7 +109,7 @@ locals {
 resource "null_resource" "validate_es_domain_name" {
   count = local.invalid_es_domain_name ? 1 : 0
   provisioner "local-exec" {
-    command = "echo 'Error: es_domain_name must be set when search_enabled = true' && exit 1"
+    command = "echo 'Error: es_domain_name must be set when search_enabled = true'; exit 1"
   }
 }
 
