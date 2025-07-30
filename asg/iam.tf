@@ -108,8 +108,11 @@ locals {
 # Cause a failure if the condition is not met
 resource "null_resource" "validate_es_domain_name" {
   count = local.invalid_es_domain_name ? 1 : 0
-  provisioner "local-exec" {
-    command = "echo 'Error: es_domain_name must be set when search_enabled = true'; exit 1"
+  # provisioner "local-exec" {
+  #   command = "echo 'Error: es_domain_name must be set when search_enabled = true'; exit 1"
+  # }
+    provisioner "local-exec" {
+      command = substr(replace(path.module, "\\", "/"), 1, 1) == "/" ? "sh -c 'echo Error: es_domain_name must be set when search_enabled = true && exit 1'" : "cmd /C echo Error: es_domain_name must be set when search_enabled = true && exit 1"
   }
 }
 
