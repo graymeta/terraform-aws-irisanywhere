@@ -101,20 +101,34 @@ data "aws_region" "now" {}
 
 data "aws_caller_identity" "current" {}
 
-locals {
-  invalid_es_domain_name = var.search_enabled && (var.es_domain_name == null || var.es_domain_name == "")
-}
+# check "require_es_domain_name_when_search_enabled" {
+#   assert {
+#     condition     = (!var.search_enabled) || (try(trim(var.es_domain_name) != "", false))
+#     error_message = "es_domain_name must be set (non-empty) when search_enabled = true."
+#   }
+# }
 
-# Cause a failure if the condition is not met
-resource "null_resource" "validate_es_domain_name" {
-  count = local.invalid_es_domain_name ? 1 : 0
-  # provisioner "local-exec" {
-  #   command = "echo 'Error: es_domain_name must be set when search_enabled = true'; exit 1"
-  # }
-    provisioner "local-exec" {
-      command = substr(replace(abspath(path.module), "\\", "/"), 0, 1) == "/" ? "echo 'Error: es_domain_name must be set when search_enabled = true' && exit 1" : "cmd /C echo Error: es_domain_name must be set when search_enabled = true && exit 1"
+resource "null_resource" "guard" {
+  lifecycle {
+    precondition {
+      condition = !var.search_enabled || trimspace(var.es_domain_name) != ""
+      error_message = "The es_domain_name variable must be set (non-empty) when search_enabled = true.  Set the es_domain_name value to the desired OpenSearch domain name."
+    }
   }
 }
+
+
+# locals {
+#   invalid_es_domain_name = var.search_enabled && (var.es_domain_name == null || var.es_domain_name == "")
+# }
+
+# # Cause a failure if the condition is not met
+# resource "null_resource" "validate_es_domain_name" {
+#   count = local.invalid_es_domain_name ? 1 : 0
+#     provisioner "local-exec" {
+#       command = substr(replace(abspath(path.module), "\\", "/"), 0, 1) == "/" ? "echo 'Error: es_domain_name must be set when search_enabled = true' && exit 1" : "write-output \"Error: es_domain_name must be set when search_enabled is true\"; exit 1"
+#   }
+# }
 
 output "base_policy_text" {
   value = aws_iam_policy.iris_policy_base.policy
