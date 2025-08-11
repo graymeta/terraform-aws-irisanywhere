@@ -112,7 +112,7 @@ resource "null_resource" "validate_es_domain_name" {
   #   command = "echo 'Error: es_domain_name must be set when search_enabled = true'; exit 1"
   # }
     provisioner "local-exec" {
-      command = substr(replace(path.module, "\\", "/"), 1, 1) == "/" ? "sh -c 'echo Error: es_domain_name must be set when search_enabled = true && exit 1'" : "cmd /C echo Error: es_domain_name must be set when search_enabled = true && exit 1"
+      command = substr(replace(abspath(path.module), "\\", "/"), 0, 1) == "/" ? "echo 'Error: es_domain_name must be set when search_enabled = true' && exit 1" : "cmd /C echo Error: es_domain_name must be set when search_enabled = true && exit 1"
   }
 }
 
