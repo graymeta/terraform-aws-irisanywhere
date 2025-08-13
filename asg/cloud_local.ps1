@@ -29,8 +29,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $okta_scope             = $secretdata.okta_scope
         $os_endpoint            = $secretdata.os_endpoint
         $os_region              = $secretdata.os_region
-        $os_accessid            = $secretdata.os_accessid
-        $os_secretkey           = $secretdata.os_secretkey
         $saml_uniqueid          = $secretdata.saml_uniqueid
         $saml_displayname       = $secretdata.saml_displayname
         $saml_entryPoint        = $secretdata.saml_entryPoint

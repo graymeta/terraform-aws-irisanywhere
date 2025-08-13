@@ -239,6 +239,11 @@ variable "search_enabled" {
   default     = false
 }
 
+variable "es_domain_name" {
+  type        = string
+  description = "Required for strict OpenSearch role permissions if search_enabled = true."
+  default     = ""  
+}
 
 variable "ia_video_codec" {
   type        = string

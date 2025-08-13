@@ -1,23 +1,5 @@
-# data "template_file" "iris_role" {
-#   template = file("${path.module}/role.json")
-# }
-
-# data "template_file" "iris_policy_base" {
-#   template = file("${path.module}/policy.json")
-
-#   vars = {
-#     cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-#   }
-# }
-
-# data "template_file" "iris_policy_custom" {
-#   #template =  var.s3_policy
-#   template = var.iam_policy_enabled == true ? var.s3_policy : "{}"
-# }
-
 resource "aws_iam_role" "iris" {
-  name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
-  #assume_role_policy = data.template_file.iris_role.rendered
+  name = var.iam_role_name != "" ? var.iam_role_name : replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-Role", ".", "")
   assume_role_policy = templatefile("${path.module}/role.json",{})
 }
 
@@ -39,6 +21,15 @@ resource "aws_iam_role_policy_attachment" "iris" {
 resource "aws_iam_policy" "iris_combined" {
   name   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-IAM-Policy", ".", "")
   policy = data.aws_iam_policy_document.combined.json
+}
+
+resource "null_resource" "guard" {
+  lifecycle {
+    precondition {
+      condition = !var.search_enabled || trimspace(var.es_domain_name) != ""
+      error_message = "The es_domain_name variable must be set (non-empty) when search_enabled = true.  Set the es_domain_name value to the desired OpenSearch domain name."
+    }
+  }
 }
 
 data "aws_secretsmanager_secret_version" "s3" {
@@ -89,12 +80,29 @@ data "aws_iam_policy_document" "s3_custom" {
   }
 }
 
-data "aws_iam_policy_document" "combined" {
-  source_policy_documents = [
-    aws_iam_policy.iris_policy_base.policy,
-    data.aws_iam_policy_document.s3_custom.json
-  ]
+data "aws_iam_policy_document" "es_statement" {
+  count = var.search_enabled ? 1 : 0
+
+  statement {
+    effect    = "Allow"
+    actions   = ["es:*"]
+    resources = [
+      "arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/${var.es_domain_name}/*"
+    ]
+  }
 }
+
+data "aws_iam_policy_document" "combined" {
+  source_policy_documents = compact([
+    aws_iam_policy.iris_policy_base.policy,
+    data.aws_iam_policy_document.s3_custom.json,
+    try(data.aws_iam_policy_document.es_statement[0].json, null)
+  ])
+}
+
+data "aws_region" "now" {}
+
+data "aws_caller_identity" "current" {}
 
 output "base_policy_text" {
   value = aws_iam_policy.iris_policy_base.policy
