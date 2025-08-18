@@ -260,7 +260,7 @@ variable "ssl_certificate_cert" {
 variable "instance_protection" {
   type        = bool
   description = "Enables instance protection"
-  default     = true
+  default     = false
 }
 
 variable "additional_tags" {
