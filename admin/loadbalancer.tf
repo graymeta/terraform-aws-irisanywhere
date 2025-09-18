@@ -5,7 +5,8 @@ resource "aws_lb" "irisadmin" {
   internal                   = var.enterprise_ha_lb_public ? false : true
   name_prefix                = "iadm-"
   subnets                    = var.subnet_id
-
+  enable_cross_zone_load_balancing = true
+  
   tags = {
     Name            = "IrisAdmin-LB"
     ApplicationName = "IrisAdmin"
