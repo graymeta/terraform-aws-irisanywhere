@@ -3,7 +3,7 @@ data "aws_ami" "GrayMeta-Iris-Anywhere" {
 
   filter {
     name   = "name"
-    values = ["GrayMeta-Iris-Anywhere-*"]
+    values = ["*GrayMeta-Iris-Anywhere-*"]
   }
 
   filter {
