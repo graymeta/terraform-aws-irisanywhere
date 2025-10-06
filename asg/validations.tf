@@ -20,7 +20,7 @@ resource "null_resource" "assert_vpc_dns" {
   lifecycle {
     precondition {
       condition     = data.aws_vpc.target.enable_dns_support
-      error_message = "VPC ${data.aws_vpc.target.id}: enableDnsSupport is FALSE. Enable it to use the VPC resolver (169.254.169.253)."
+      error_message = "VPC ${data.aws_vpc.target.id}: enableDnsSupport is FALSE. Enable it to use the VPC resolver. Please ensure your VPC is able to create DNS hostnames and resolve them.  This can be configured in VPC settings via the AWS console."
     }
     precondition {
       condition     = data.aws_vpc.target.enable_dns_hostnames
