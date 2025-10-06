@@ -142,7 +142,7 @@ The following arguments are supported:
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
 * `s3_policy` - (Required) Provides customers the ability to supply their own IAM policy for instance profile to access S3 buckets - file("custom_policy.json")
-* `ssl_alb_acm_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
+* `ssl_alb_acm_arn` - (Required if using ALB) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
 * `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to `disabled`
