@@ -31,8 +31,8 @@ resource "aws_lb_listener" "port80" {
 
 locals {
   acm_cert_effective = var.haproxy ? null : (
-    length(trimspace(coalesce(var.alb_acm_arn, ""))) > 0 ? trimspace(var.alb_acm_arn) :
-    length(trimspace(coalesce(var.ssl_certificate_arn, ""))) > 0 ? trimspace(var.ssl_certificate_arn) :
+    length(trimspace(var.alb_acm_arn != null ? var.alb_acm_arn : "")) > 0 ? trimspace(var.alb_acm_arn) :
+    length(trimspace(var.ssl_certificate_arn != null ? var.ssl_certificate_arn : "")) > 0 ? trimspace(var.ssl_certificate_arn) :
     null
   )
 }
