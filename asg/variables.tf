@@ -179,10 +179,10 @@ variable "s3_policy" {
 variable "ssl_certificate_arn" {
   type        = string
   default     = null
-  description = "DEPRECATED: use alb_acm_arn. Legacy ACM cert ARN."
+  description = "DEPRECATED: use ssl_alb_acm_arn. Legacy ACM cert ARN."
 }
 
-variable "alb_acm_arn" {
+variable "ssl_alb_acm_arn" {
   type        = string
   default     = null
   description = "(Required) The ARN of the acm SSL server certificate for the alb"

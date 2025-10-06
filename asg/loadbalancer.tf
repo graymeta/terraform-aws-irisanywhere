@@ -31,7 +31,7 @@ resource "aws_lb_listener" "port80" {
 
 locals {
   acm_cert_effective = var.haproxy ? null : (
-    length(trimspace(var.alb_acm_arn != null ? var.alb_acm_arn : "")) > 0 ? trimspace(var.alb_acm_arn) :
+    length(trimspace(var.ssl_alb_acm_arn != null ? var.ssl_alb_acm_arn : "")) > 0 ? trimspace(var.ssl_alb_acm_arn) :
     length(trimspace(var.ssl_certificate_arn != null ? var.ssl_certificate_arn : "")) > 0 ? trimspace(var.ssl_certificate_arn) :
     null
   )
@@ -53,7 +53,7 @@ resource "aws_lb_listener" "port443" {
   lifecycle {
     precondition {
       condition     = var.haproxy || (local.acm_cert_effective != null)
-      error_message = "Provide alb_acm_arn (or legacy ssl_certificate_arn) when haproxy = false."
+      error_message = "Provide ssl_alb_acm_arn (or legacy ssl_certificate_arn) when haproxy = false."
     }
   }
 }
