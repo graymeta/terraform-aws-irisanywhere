@@ -13,3 +13,8 @@ output "secret_payload" {
   value       = aws_secretsmanager_secret_version.iris_config.secret_string
   sensitive   = true
 }
+
+output "haproxy_certificate_secret_arn" {
+  description = "The ARN of the PEM certificate secret in AWS Secrets Manager"
+  value       = "COPY this ARN and place in your iris anywhere root module as the value for variable 'ssl_haproxy_cert_secret_arn':  ${aws_secretsmanager_secret.cert_secret.arn}"
+}

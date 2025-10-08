@@ -53,6 +53,14 @@ variable "admin_server" {
   sensitive   = true
 }
 
+
+variable "secret_name_haproxy_ssl_cert" {
+  type        = string
+  description = "PEM encoded certificate for HAProxy"
+  default     = "haproxy_ssl_cert"
+}
+
+
 variable "iris_s3_bucketname" {
   type        = string
   description = "Name of S3 Bucket"
