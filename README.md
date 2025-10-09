@@ -117,7 +117,7 @@ provider "aws" {
 }
 
 module "irisanywhere1" {
-  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.2.1"
+  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.3.3"
 
   hostname_prefix        = "iris"
   instance_type          = "c6id.8xlarge"
