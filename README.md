@@ -111,6 +111,11 @@ Deploys Application Load Balancer and Autoscaling group.  Graymeta recommends th
 
 ## Example Usage
 ```
+provider "aws" {
+  region  = "us-west-2"
+  profile = "my-aws-profile"
+}
+
 module "irisanywhere1" {
   source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.2.1"
 
