@@ -116,52 +116,30 @@ provider "aws" {
   profile = "my-aws-profile"
 }
 
-locals {
-  # Calculates scale in/out threshold based on session count.
-  ia_max_sessions        = 3
-  asg_scaleout_threshold = local.ia_max_sessions - 1
-  asg_scalein_threshold = local.ia_max_sessions + 1
-}
-
 module "irisanywhere1" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v0.0.32"
-  access_cidr = ["0.0.0.0/0"]
-  alb_internal = false
-  lb_check_interval       = 30
-  lb_unhealthy_threshold  = 2
-  asg_check_interval      = 60
-  asg_scalein_cooldown    = 420
-  asg_scalein_evaluation  = 2
-  asg_scalein_threshold   = local.asg_scalein_threshold
-  asg_scaleout_cooldown   = 420
-  asg_scaleout_evaluation = 2
-  asg_scaleout_threshold  = local.asg_scaleout_threshold
-  asg_size_desired        = 1
-  asg_size_max            = 3
-  asg_size_min            = 1
-  disk_data_iops          = 3000
-  disk_data_size          = 700
-  disk_data_type          = "io2"
-  disk_os_size            = 300
-  disk_os_type            = "gp2"
-  hostname_prefix         = "iris1"
-  instance_type           = "c5n.9xlarge"
-  key_name                = "my_key"
+  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.3.3"
 
-  ssl_certificate_arn     = "<cert_arn>"
-  subnet_id               = ["subnet-foo1", "subnet-foo2"]
+  hostname_prefix        = "iris"
+  instance_type          = "c6id.8xlarge"
+  key_name               = "your-key-name"
+  subnet_id              = ["subnet-1", "subnet-2"]
+  ia_secret_arn          = "arn:aws:secretsmanager:region:your-secret-arn"
+  //rdp_access_cidr        = ["cidr1", "cidr2"]
+  iam_policy_enabled     = true
+  base_ami               = "ami-0282e3837a18fd822"
+  iam_role_name          = "iris-role"
+  warm_pool               = { enabled = true }
+  asg_warm_pool_min       = 0
+  asg_size_min            = 0
+  asg_size_max            = 1
+  ia_max_sessions         = 2
+ 
 
-  tags                    = {
-    "my_tag1" = "my_value1",
-    "my_tag2" = "my_value2"
-  }
-
-  # Entries for IrisAnywhere
-  ia_max_sessions          = local.ia_max_sessions
-  ia_secret_arn            = "arn:aws:secretsmanager:secret:1234567913397769129"
-  s3_policy                = file("custom_policy.json")
-  iam_policy_enabled       = true
-  search_enabled           = true
+  # Required by HAProxy
+  haproxy                = true
+  instance_type_ha       = "t3.small"
+  //mgmt_cidr            = ["cidr1", "cidr2"]
+  ssl_haproxy_cert_secret_arn   = ""
 }
   
 ```

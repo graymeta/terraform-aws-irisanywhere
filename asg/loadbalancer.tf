@@ -29,19 +29,35 @@ resource "aws_lb_listener" "port80" {
   }
 }
 
+locals {
+  acm_cert_effective = var.haproxy ? null : (
+    length(trimspace(var.ssl_alb_acm_arn != null ? var.ssl_alb_acm_arn : "")) > 0 ? trimspace(var.ssl_alb_acm_arn) :
+    length(trimspace(var.ssl_certificate_arn != null ? var.ssl_certificate_arn : "")) > 0 ? trimspace(var.ssl_certificate_arn) :
+    null
+  )
+}
+
 resource "aws_lb_listener" "port443" {
   count             = var.haproxy ? 0 : 1
   load_balancer_arn = aws_lb.iris_alb[0].arn
-  port              = "443"
+  port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2015-05"
-  certificate_arn   = var.ssl_certificate_arn
+  certificate_arn   = local.acm_cert_effective
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.port443[0].arn
   }
+
+  lifecycle {
+    precondition {
+      condition     = var.haproxy || (local.acm_cert_effective != null)
+      error_message = "Provide ssl_alb_acm_arn (or legacy ssl_certificate_arn) when haproxy = false."
+    }
+  }
 }
+  
 
 resource "aws_lb_target_group" "port443" {
   count       = var.haproxy ? 0 : 1

@@ -44,7 +44,7 @@ resource "aws_instance" "ha" {
   #user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
   user_data_base64            = base64encode(templatefile("${path.module}/cloud_init.tpl",{
     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
-    ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
+    ssl_certificate_cert = var.haproxy ? (local.ssl_haproxy_cert_secret_arn_effective != null ? local.ssl_haproxy_cert_secret_arn_effective : "") : ""
     aws_region   = data.aws_region.current.id
     asg_name     = aws_autoscaling_group.iris.name
     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
@@ -251,10 +251,24 @@ variable "instance_count" {
   type        = number
 }
 
+variable "ssl_haproxy_cert_secret_arn" {
+  type        = string
+  default     = null
+  description = "HAProxy SSL cert bundle (preferred)."
+}
+
 variable "ssl_certificate_cert" {
   type        = string
-  description = "(Required) The SSL certificate package for HAProxy."
-  default     = ""
+  default     = null
+  description = "DEPRECATED: use ssl_haproxy_cert_secret_arn. Legacy HAProxy SSL cert bundle."
+}
+
+locals {
+  ssl_haproxy_cert_secret_arn_effective = (
+    var.ssl_haproxy_cert_secret_arn != null && var.ssl_haproxy_cert_secret_arn != "" ? var.ssl_haproxy_cert_secret_arn :
+    var.ssl_certificate_cert != null && var.ssl_certificate_cert != "" ? var.ssl_certificate_cert :
+    null
+  )
 }
 
 variable "instance_protection" {
