@@ -41,6 +41,13 @@ resource "aws_autoscaling_group" "iris" {
     "GroupTerminatingInstances",
     "GroupTotalCapacity",
     "GroupTotalInstances",
+    "GroupAndWarmPoolDesiredCapacity",
+    "GroupAndWarmPoolTotalCapacity",
+    "WarmPoolDesiredCapacity",
+    "WarmPoolPendingCapacity",
+    "WarmPoolTerminatingCapacity",
+    "WarmPoolTotalCapacity",
+    "WarmPoolWarmedCapacity",
   ]
 
   lifecycle {

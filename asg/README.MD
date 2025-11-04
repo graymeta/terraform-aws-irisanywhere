@@ -42,7 +42,7 @@ module "irisanywhere1" {
     hostname_prefix             = "iris-cluster-1"
     instance_type               = "c5n.9xlarge"
     key_name                    = "my_key"
-    ssl_certificate_arn         = "<cert_arn>"
+    ssl_alb_acm_arn             = "<cert_arn>"
     subnet_id                   = ["subnet-foo1", "subnet-foo2"]
     ia_secret_arn               = "arn:aws:secretsmanager:secret:1234567913397769129"
     iam_role_name               = "ia-role-prod"
@@ -86,7 +86,7 @@ module "irisanywhere1" {
     hostname_prefix             = "iris-cluster-1"
     instance_type               = "c5n.9xlarge"
     key_name                    = "my_key"
-    ssl_certificate_arn         = "<cert_arn>"
+    ssl_alb_acm_arn             = "<cert_arn>"
     subnet_id                   = ["subnet-foo1", "subnet-foo2"]
     ia_secret_arn               = "arn:aws:secretsmanager:secret:1234567913397769129"
     iam_role_name               = "ia-role-prod"
@@ -106,7 +106,7 @@ module "irisanywhere1" {
 
 #Required by HAproxy
     haproxy                     = true
-    ssl_certificate_cert        = "arn of secrets manager for cert in complete chain format (key, cert, intermediate, root)"
+    ssl_haproxy_cert_secret_arn = "arn of secrets manager for cert in complete chain format (key, cert, intermediate, root)"
 
     
 ```
@@ -142,7 +142,7 @@ The following arguments are supported:
 * `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
 * `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
 * `s3_policy` - (Required) Provides customers the ability to supply their own IAM policy for instance profile to access S3 buckets - file("custom_policy.json")
-* `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
+* `ssl_alb_acm_arn` - (Required if using ALB) The ARN from ACM of the SSL server certificate for Load Balancer.
 * `subnet_id` - (Required) A list of subnet IDs to launch resources in.
 * `tags` - (Optional) A map of the additional tags.
 * `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to `disabled`
@@ -168,7 +168,7 @@ The following arguments are supported:
 * `s3_enterprise` (Optional) "Uses Config Map for S3 buckets configured with SSE - Contact GrayMeta for key/value info. Default set to `false`"
 * `haproxy` (Optional) "When set to enable, used haproxy as a load balancer instead of AWS ALB. Default set to `false` "
 * `mgmt_cidr` (Optional) "Subnet used to allow access to stats and ssh to HAProxy. Default is `["0.0.0.0/32"]`"
-* `ssl_certificate_cert` (Optional) "When HAProxy is enabled this certificate is used to terminate SSL on the load balancer. Cert with full chain (key, cert, intermediates) required" Place contents of cert in Secrets Manager and reference the arn of the secret to configure the LB.
+* `ssl_haproxy_cert_secret_arn` (Optional) "When HAProxy is enabled this certificate is used to terminate SSL on the load balancer. Cert with full chain (key, cert, intermediates) required" Place contents of cert in Secrets Manager and reference the arn of the secret to configure the LB.
 * `hap_loglevel` (Optional) "Logging level for Haproxy. May use info, debug, notice, error. Default is `warning`."
 * `saml_enabled` (Optional) ". Enables SAML in iris anywhere deployments. Requires populating secrets manager with configuration items. See secrets for more information. Default is `false`."
 * `saml_cert_secret_arn` (Optional) "Secret ARN containing SAML IDP certificate. Default is `null`. See Secrets for more info"

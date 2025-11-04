@@ -26,3 +26,38 @@ resource "aws_secretsmanager_secret_version" "iris_config" {
     })
   })
 }
+
+### Haproxy cert secret ###
+# ----------------------------------------------------------------------
+# Variables
+# ----------------------------------------------------------------------
+variable "certificate_path" {
+  description = "Path to the PEM certificate file"
+  type        = string
+  default     = "haproxy-temp-cert.pem"
+}
+
+# ----------------------------------------------------------------------
+# Locals
+# ----------------------------------------------------------------------
+locals {
+  certificate_pem = file("${path.module}/${var.certificate_path}")
+}
+
+
+# ----------------------------------------------------------------------
+# AWS Secrets Manager Secret
+# ----------------------------------------------------------------------
+resource "aws_secretsmanager_secret" "cert_secret" {
+  name        = var.secret_name_haproxy_ssl_cert
+  description = "Stores the PEM-formatted certificate"
+}
+
+# ----------------------------------------------------------------------
+# Secret Value (version)
+# ----------------------------------------------------------------------
+resource "aws_secretsmanager_secret_version" "cert_secret_value" {
+  secret_id     = aws_secretsmanager_secret.cert_secret.id
+  secret_string = local.certificate_pem
+}
+
