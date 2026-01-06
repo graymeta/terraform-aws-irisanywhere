@@ -82,16 +82,10 @@ resource "aws_instance" "ha" {
 
 }
 
-# ----------------------------
-# OPTIONAL: customer-owned EIP
-# If var.haproxy_eip_allocation_id is set -> use it
-# Else -> keep existing behavior (create + associate our own EIP)
-# ----------------------------
-
 locals {
   use_customer_haproxy_eip = (
     var.haproxy_eip_allocation_id != null &&
-    trim(var.haproxy_eip_allocation_id) != ""
+    trimspace(var.haproxy_eip_allocation_id) != ""
   )
 }
 
