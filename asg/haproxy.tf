@@ -282,7 +282,6 @@ variable "instance_count" {
   type        = number
 }
 
-# NEW (optional): customer-owned EIP allocation id (eipalloc-xxxx)
 variable "haproxy_eip_allocation_id" {
   type        = string
   default     = null
