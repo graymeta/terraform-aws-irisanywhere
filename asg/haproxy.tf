@@ -96,6 +96,11 @@ resource "aws_eip" "eip_haproxy" {
   }
 }
 
+# data "aws_eip" "desired_eip" {
+#   public_ip = "52.40.67.109"
+# }
+
+
 resource "aws_eip_association" "eip_assoc_ha" {
   count         = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
   instance_id   = aws_instance.ha[0].id

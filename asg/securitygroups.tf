@@ -75,15 +75,15 @@ resource "aws_security_group_rule" "iris_rdp" {
   cidr_blocks       = var.rdp_access_cidr
 }
 
-resource "aws_security_group_rule" "iris_health" {
-  security_group_id        = aws_security_group.iris.id
-  description              = "iris_port9000"
-  type                     = "ingress"
-  from_port                = 9000
-  to_port                  = 9000
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id
-}
+# resource "aws_security_group_rule" "iris_health" {
+#   security_group_id        = aws_security_group.iris.id
+#   description              = "iris_port9000"
+#   type                     = "ingress"
+#   from_port                = 9000
+#   to_port                  = 9000
+#   protocol                 = "tcp"
+#   source_security_group_id = aws_security_group.alb.id
+# }
 
 resource "aws_security_group_rule" "iris_8080" {
   count                    = var.ia_cert_key_arn != "" ? 0 : 1
