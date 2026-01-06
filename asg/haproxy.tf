@@ -19,11 +19,11 @@ data "aws_secretsmanager_secret_version" "os-secret" {
 
 # data "template_file" "cloud_init_ha" {
 #   template = file("${path.module}/cloud_init.tpl")
-
+#
 #   vars = {
 #     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
 #     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
-
+#
 #     aws_region   = data.aws_region.current.name
 #     asg_name     = aws_autoscaling_group.iris.name
 #     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
@@ -82,9 +82,27 @@ resource "aws_instance" "ha" {
 
 }
 
+# ----------------------------
+# OPTIONAL: customer-owned EIP
+# If var.haproxy_eip_allocation_id is set -> use it
+# Else -> keep existing behavior (create + associate our own EIP)
+# ----------------------------
+
+locals {
+  use_customer_haproxy_eip = (
+    var.haproxy_eip_allocation_id != null &&
+    trim(var.haproxy_eip_allocation_id) != ""
+  )
+}
+
+data "aws_eip" "customer_haproxy" {
+  count = local.use_customer_haproxy_eip ? 1 : 0
+  id    = var.haproxy_eip_allocation_id
+}
+
 resource "aws_eip" "eip_haproxy" {
-  count    = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
-  instance = aws_instance.ha[0].id
+  # Only create our own EIP if customer did NOT provide one
+  count  = var.haproxy == true && var.associate_public_ip == true && local.use_customer_haproxy_eip == false ? 1 : 0
   domain = "vpc"
 
   tags = {
@@ -96,19 +114,27 @@ resource "aws_eip" "eip_haproxy" {
   }
 }
 
-# data "aws_eip" "desired_eip" {
-#   public_ip = "52.40.67.109"
-# }
-
-
 resource "aws_eip_association" "eip_assoc_ha" {
-  count         = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
-  instance_id   = aws_instance.ha[0].id
-  allocation_id = aws_eip.eip_haproxy[0].id
+  count       = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
+  instance_id = aws_instance.ha[0].id
+
+  allocation_id = local.use_customer_haproxy_eip ? var.haproxy_eip_allocation_id : aws_eip.eip_haproxy[0].id
 }
 
 output "ha_proxy_lb_fqdn" {
-  value = var.haproxy == true && var.associate_public_ip == true ? aws_eip.eip_haproxy[0].public_dns : null
+  value = var.haproxy == true && var.associate_public_ip == true ? (
+    local.use_customer_haproxy_eip
+      ? data.aws_eip.customer_haproxy[0].public_dns
+      : aws_eip.eip_haproxy[0].public_dns
+  ) : null
+}
+
+output "ha_proxy_public_ip" {
+  value = var.haproxy == true && var.associate_public_ip == true ? (
+    local.use_customer_haproxy_eip
+      ? data.aws_eip.customer_haproxy[0].public_ip
+      : aws_eip.eip_haproxy[0].public_ip
+  ) : null
 }
 #IAM
 
@@ -118,7 +144,7 @@ output "ha_proxy_lb_fqdn" {
 
 # data "template_file" "ha_policy" {
 #   template = file("${path.module}/ha_policy.json")
-
+#
 #   vars = {
 #     cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
 #   }
@@ -256,6 +282,13 @@ variable "instance_count" {
   type        = number
 }
 
+# NEW (optional): customer-owned EIP allocation id (eipalloc-xxxx)
+variable "haproxy_eip_allocation_id" {
+  type        = string
+  default     = null
+  description = "Optional: Existing customer-owned Elastic IP allocation ID (e.g. eipalloc-xxxx). If set, HAProxy will be associated to this EIP instead of creating a new EIP."
+}
+
 variable "ssl_haproxy_cert_secret_arn" {
   type        = string
   default     = null
@@ -299,5 +332,3 @@ variable "haproxy_user_init" {
   description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""
 }
-
-
