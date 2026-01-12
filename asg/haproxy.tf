@@ -54,11 +54,20 @@ resource "aws_instance" "ha" {
   }
 
   tags = merge(local.merged_tags, {
-    "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1)
+    "Name" =    format(
+                  "%s%s-haproxy-%02d",
+                  var.hostname_prefix,
+                  var.deployment_name != "1" ? "-${var.deployment_name}" : "",
+                  count.index + 1
+                )
   })
 
   volume_tags = merge(local.merged_tags, {
-    "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1)
+    "Name" =    format(
+                  "%s%s-haproxy-%02d",
+                  var.hostname_prefix,
+                  var.deployment_name != "1" ? "-${var.deployment_name}" : "",
+                  count.index + 1)
   })
 
   root_block_device {
