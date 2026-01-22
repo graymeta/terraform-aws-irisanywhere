@@ -78,10 +78,10 @@ resource "aws_instance" "ha" {
 }
 
 locals {
-  use_existing_haproxy_eip = (
-    var.haproxy_eip_allocation_id != null &&
-    trimspace(var.haproxy_eip_allocation_id) != ""
-  )
+  use_existing_haproxy_eip = try(
+    trimspace(var.haproxy_eip_allocation_id),
+    ""
+  ) != ""
 }
 
 data "aws_eip" "existing_haproxy" {
