@@ -1,4 +1,4 @@
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 6009 -message "TIMING: Cloud_init start at $(Get-Date)"
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Initiate Cloud Init..."
 #Retrieve and prepare Secrets 
     $MaxSessions = "${ia_max_sessions}"
     $keepalivetimeout = "${ia_keepalivetimeout}"
@@ -7,8 +7,8 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $iasecretarn = "${ia_secret_arn}"
     $iadomain = "${ia_domain}"
     $search_enabled = "${search_enabled}"
-    #$ia_video_bitrate = "${ia_video_bitrate}"
-    #$ia_video_codec = "${ia_video_codec}"
+    $ia_video_bitrate = "${ia_video_bitrate}"
+    $ia_video_codec = "${ia_video_codec}"
     $s3_enterprise = "${s3_enterprise}"
     $haproxy = "${haproxy}"
     $saml_enabled = "${saml_enabled}"
@@ -47,7 +47,9 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
 
 
     try {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Initiate local_init... "
         & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Completed local_init"
     } catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType `
         Error -eventid 1002 -message "Exception executing local_init_enterprise_rclone.ps1: $_"
@@ -68,5 +70,5 @@ $tag.Key = "Name"
 $tag.Value = "${name}-$instanceid"
 New-EC2Tag -Resource $instanceid -Tag $tag
 
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
 Rename-Computer -NewName $instanceid -force
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Cloud Init Complete - Restarting EC2 Instance"
