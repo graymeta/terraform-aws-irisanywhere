@@ -120,7 +120,7 @@ resource "aws_launch_template" "iris" {
 
   dynamic "block_device_mappings" {
   for_each = (
-    contains(["i3", "i3en", "i4i", "c5d", "c6id", "c6gd", "c7gd", "m5d", "m6id", "m6gd", "r5d", "r6id", "r6gd", "d2", "h1", "z1d", "im4gn", "is4gen"], regex("^([a-z0-9]+)", var.instance_type)[0])
+    contains(["i3", "i3en", "i4i", "i7i", "c5d", "c6id", "c6gd", "c7gd", "m5d", "m6id", "m6gd", "r5d", "r6id", "r6gd", "d2", "h1", "z1d", "im4gn", "is4gen", "x2iedn"], regex("^([a-z0-9]+)", var.instance_type)[0])
     ? false
     : true
   ) ? [1] : []
@@ -202,7 +202,8 @@ resource "aws_cloudwatch_metric_alarm" "in" {
   period              = var.asg_check_interval
   statistic           = "Sum"
   threshold           = var.asg_scalein_threshold
-
+  //treat_missing_data  = "breaching"
+  
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.iris.name
   }

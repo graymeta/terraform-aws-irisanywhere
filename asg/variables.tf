@@ -260,7 +260,7 @@ variable "ia_video_codec" {
 
 variable "ia_video_bitrate" {
   type        = number
-  description = "(Optional) Sets video bitrate for Iris Anywhere streams. Default is 10000 bits/sec."
+  description = "(Optional) Sets video bitrate for Iris Anywhere streams. Default is 10000 Kbps"
   default     = 10000
 }
 

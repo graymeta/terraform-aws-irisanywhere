@@ -82,7 +82,7 @@ resource "aws_security_group_rule" "iris_health" {
   from_port                = 9000
   to_port                  = 9000
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id
+  source_security_group_id = var.haproxy == true ? aws_security_group.ha[0].id : aws_security_group.alb.id
 }
 
 resource "aws_security_group_rule" "iris_8080" {

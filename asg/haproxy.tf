@@ -7,54 +7,38 @@ data "aws_ami" "AmazonLinux" {
     values = ["amzn2-ami-hvm-*-x86_64-ebs"]
   }
 }
-#ec2
 
+#ec2
 data "aws_secretsmanager_secret" "secret-arn" {
   arn = var.ia_secret_arn
 }
+
 data "aws_secretsmanager_secret_version" "os-secret" {
   secret_id = data.aws_secretsmanager_secret.secret-arn.id
 }
 
-
-# data "template_file" "cloud_init_ha" {
-#   template = file("${path.module}/cloud_init.tpl")
-
-#   vars = {
-#     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
-#     ssl_certificate_cert = var.haproxy == true ? var.ssl_certificate_cert : ""
-
-#     aws_region   = data.aws_region.current.name
-#     asg_name     = aws_autoscaling_group.iris.name
-#     statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
-#     port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
-#     hap_loglevel = var.hap_loglevel
-#     haproxy_user_init = base64encode(var.haproxy_user_init)
-#   }
-# }
-
 resource "aws_instance" "ha" {
-  ami                         = coalesce(var.ami, data.aws_ami.AmazonLinux.id)
-  count                       = var.haproxy == true ? 1 : 0
-  iam_instance_profile        = aws_iam_instance_profile.ha[0].name
-  instance_type               = var.instance_type_ha
-  key_name                    = var.key_name
-  vpc_security_group_ids      = [aws_security_group.ha[0].id]
-  subnet_id                   = element(var.subnet_id, count.index)
-  #user_data                   = base64encode(data.template_file.cloud_init_ha.rendered)
-  user_data_base64            = base64encode(templatefile("${path.module}/cloud_init.tpl",{
+  ami                    = coalesce(var.ami, data.aws_ami.AmazonLinux.id)
+  count                  = var.haproxy == true ? 1 : 0
+  iam_instance_profile   = aws_iam_instance_profile.ha[0].name
+  instance_type          = var.instance_type_ha
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.ha[0].id]
+  subnet_id              = element(var.subnet_id, count.index)
+
+  user_data_base64 = base64encode(templatefile("${path.module}/cloud_init.tpl", {
     hostname             = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}")
     ssl_certificate_cert = var.haproxy ? (local.ssl_haproxy_cert_secret_arn_effective != null ? local.ssl_haproxy_cert_secret_arn_effective : "") : ""
-    aws_region   = data.aws_region.current.id
-    asg_name     = aws_autoscaling_group.iris.name
-    statspw      = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
-    port         = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
-    hap_loglevel = var.hap_loglevel
-    haproxy_user_init = base64encode(var.haproxy_user_init)
+    aws_region           = data.aws_region.current.id
+    asg_name             = aws_autoscaling_group.iris.name
+    statspw              = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["admin_console_pw"]
+    port                 = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
+    hap_loglevel         = var.hap_loglevel
+    haproxy_user_init    = base64encode(var.haproxy_user_init)
   }))
 
   associate_public_ip_address = var.associate_public_ip
-  disable_api_termination = var.instance_protection ? true : false
+  disable_api_termination     = var.instance_protection ? true : false
 
   lifecycle {
     create_before_destroy = true
@@ -68,23 +52,46 @@ resource "aws_instance" "ha" {
       user_data
     ]
   }
+
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1) })
+    "Name" =    format(
+                  "%s%s-haproxy-%02d",
+                  var.hostname_prefix,
+                  var.deployment_name != "1" ? "-${var.deployment_name}" : "",
+                  count.index + 1
+                )
+  })
 
   volume_tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-haproxy-%02d", count.index + 1) })
+    "Name" =    format(
+                  "%s%s-haproxy-%02d",
+                  var.hostname_prefix,
+                  var.deployment_name != "1" ? "-${var.deployment_name}" : "",
+                  count.index + 1)
+  })
 
   root_block_device {
     volume_type           = var.volume_type
     volume_size           = var.volume_size
     delete_on_termination = "true"
   }
+}
 
+locals {
+  use_existing_haproxy_eip = try(
+    trimspace(var.haproxy_eip_allocation_id),
+    ""
+  ) != ""
+}
+
+data "aws_eip" "existing_haproxy" {
+  count = local.use_existing_haproxy_eip ? 1 : 0
+  id    = var.haproxy_eip_allocation_id
 }
 
 resource "aws_eip" "eip_haproxy" {
-  count    = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
-  instance = aws_instance.ha[0].id
+  # Only create our own EIP if customer did NOT provide one
+  count  = var.haproxy == true && var.associate_public_ip == true && local.use_existing_haproxy_eip == false ? 1 : 0
   domain = "vpc"
 
   tags = {
@@ -97,32 +104,32 @@ resource "aws_eip" "eip_haproxy" {
 }
 
 resource "aws_eip_association" "eip_assoc_ha" {
-  count         = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
-  instance_id   = aws_instance.ha[0].id
-  allocation_id = aws_eip.eip_haproxy[0].id
+  count       = var.haproxy == true && var.associate_public_ip == true ? 1 : 0
+  instance_id = aws_instance.ha[0].id
+
+  allocation_id = local.use_existing_haproxy_eip ? var.haproxy_eip_allocation_id : aws_eip.eip_haproxy[0].id
 }
 
 output "ha_proxy_lb_fqdn" {
-  value = var.haproxy == true && var.associate_public_ip == true ? aws_eip.eip_haproxy[0].public_dns : null
+  value = var.haproxy == true && var.associate_public_ip == true ? (
+    local.use_existing_haproxy_eip
+      ? data.aws_eip.existing_haproxy[0].public_dns
+      : aws_eip.eip_haproxy[0].public_dns
+  ) : null
 }
+
+output "ha_proxy_public_ip" {
+  value = var.haproxy == true && var.associate_public_ip == true ? (
+    local.use_existing_haproxy_eip
+      ? data.aws_eip.existing_haproxy[0].public_ip
+      : aws_eip.eip_haproxy[0].public_ip
+  ) : null
+}
+
 #IAM
-
-# data "template_file" "ha_role" {
-#   template = file("${path.module}/ha_role.json")
-# }
-
-# data "template_file" "ha_policy" {
-#   template = file("${path.module}/ha_policy.json")
-
-#   vars = {
-#     cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-#   }
-# }
-
 resource "aws_iam_role" "ha" {
   count              = var.haproxy ? 1 : 0
   name               = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Role-ha", ".", "")
-  #assume_role_policy = data.template_file.ha_role.rendered
   assume_role_policy = templatefile("${path.module}/ha_role.json", {})
 }
 
@@ -135,8 +142,7 @@ resource "aws_iam_instance_profile" "ha" {
 resource "aws_iam_policy" "ha" {
   count  = var.haproxy ? 1 : 0
   name   = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-Policy-ha", ".", "")
-  #policy = data.template_file.ha_policy.rendered
-  policy = templatefile("${path.module}/ha_policy.json",{cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")})
+  policy = templatefile("${path.module}/ha_policy.json", { cluster = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "") })
 }
 
 resource "aws_iam_role_policy_attachment" "ha" {
@@ -144,6 +150,7 @@ resource "aws_iam_role_policy_attachment" "ha" {
   policy_arn = aws_iam_policy.ha[0].arn
   role       = aws_iam_role.ha[0].name
 }
+
 #sec groups
 resource "aws_security_group" "ha" {
   count       = var.haproxy ? 1 : 0
@@ -152,7 +159,8 @@ resource "aws_security_group" "ha" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-ha") })
+    "Name" = format("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : ""}-ha")
+  })
 }
 
 # Allow all outbound traffic
@@ -203,7 +211,7 @@ resource "aws_security_group_rule" "allow_haproxystats" {
   cidr_blocks       = var.mgmt_cidr
 }
 
-# Allow HA API inbound traffic
+# Allow SSH inbound traffic
 resource "aws_security_group_rule" "allow_ssh" {
   count             = var.haproxy ? 1 : 0
   security_group_id = aws_security_group.ha[0].id
@@ -214,6 +222,7 @@ resource "aws_security_group_rule" "allow_ssh" {
   protocol          = "tcp"
   cidr_blocks       = var.mgmt_cidr
 }
+
 #variables
 variable "mgmt_cidr" {
   type        = list(string)
@@ -249,6 +258,12 @@ variable "instance_count" {
   default     = 1
   description = "Number of HA Proxy Instances"
   type        = number
+}
+
+variable "haproxy_eip_allocation_id" {
+  type        = string
+  default     = null
+  description = "Optional: Existing customer-owned Elastic IP allocation ID (e.g. eipalloc-xxxx). If set, HAProxy will be associated to this EIP instead of creating a new EIP."
 }
 
 variable "ssl_haproxy_cert_secret_arn" {
@@ -294,5 +309,3 @@ variable "haproxy_user_init" {
   description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
   default     = ""
 }
-
-

@@ -1,4 +1,4 @@
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 6009 -message "TIMING: Cloud_init start at $(Get-Date)"
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Initiate Cloud Init..."
 #Retrieve and prepare Secrets 
     $MaxSessions = "${ia_max_sessions}"
     $keepalivetimeout = "${ia_keepalivetimeout}"
@@ -14,7 +14,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $saml_enabled = "${saml_enabled}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     $disk_data_size = "${disk_data_size}"
-    $wasabi = "${wasabi}"
+    #$wasabi = "${wasabi}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -35,35 +35,44 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_samlissuer        = $secretdata.saml_samlissuer
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
         $saml_acsUrlRelativePath= $secretdata.saml_acsUrlRelativePath
-        $wasabi_access_key       = $secretdata.wasabi_access_key
-        $wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
-        $wasabi_endpoint         = $secretdata.wasabi_endpoint
-        $wasabi_region            = $secretdata.wasabi_region
-        $wasabi_buckets          = $secretdata.wasabi_buckets
+        #$wasabi_access_key       = $secretdata.wasabi_access_key
+        #$wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
+        #$wasabi_endpoint         = $secretdata.wasabi_endpoint
+        #$wasabi_region            = $secretdata.wasabi_region
+        #$wasabi_buckets          = $secretdata.wasabi_buckets
     }
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
     }
 
-#Run init locally
-Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "cache_content is: $cache_content"
 
-& "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
+    try {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Initiate local_init... "
+        & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Completed local_init"
+    } catch {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType `
+        Error -eventid 1002 -message "Exception executing local_init_enterprise_rclone.ps1: $_"
+    }
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 
 #Update Instance
-    $instanceid = Get-MetaData -MetaDataType "instanceId"
+$instanceid = Get-MetaData -MetaDataType "instanceId"
 
-    [System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
-    [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-$instanceid", [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-$instanceid", [System.EnvironmentVariableTarget]::Machine)
 
-    Import-Module -Name AWSPowerShell
-    $tag = New-Object Amazon.EC2.Model.Tag
-    $tag.Key = "Name"
-    $tag.Value = "${name}-$instanceid"
-    New-EC2Tag -Resource $instanceid -Tag $tag
-    
-    Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Init Complete - Restarting"
-    Rename-Computer -NewName $instanceid -force
+#Import-Module -Name AWSPowerShell #deprecated
+Import-Module AWS.Tools.S3  -ErrorAction Stop
+Import-Module AWS.Tools.EC2 -ErrorAction Stop
+
+
+$tag = New-Object Amazon.EC2.Model.Tag
+$tag.Key = "Name"
+$tag.Value = "${name}-$instanceid"
+New-EC2Tag -Resource $instanceid -Tag $tag
+
+Rename-Computer -NewName $instanceid -force
+Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Cloud Init Complete - Restarting EC2 Instance"
