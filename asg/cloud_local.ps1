@@ -64,9 +64,9 @@ $instanceid = Get-MetaData -MetaDataType "instanceId"
 [System.Environment]::SetEnvironmentVariable('INSTANCE_ID', $instanceid, [System.EnvironmentVariableTarget]::Machine)
 [System.Environment]::SetEnvironmentVariable('INSTANCE_NAME', "${name}-$instanceid", [System.EnvironmentVariableTarget]::Machine)
 
-#Import-Module -Name AWSPowerShell #deprecated
-Import-Module AWS.Tools.S3  -ErrorAction Stop
-Import-Module AWS.Tools.EC2 -ErrorAction Stop
+Import-Module -Name AWSPowerShell #deprecated
+#Import-Module AWS.Tools.S3  -ErrorAction Stop
+#Import-Module AWS.Tools.EC2 -ErrorAction Stop
 
 
 $tag = New-Object Amazon.EC2.Model.Tag
