@@ -118,8 +118,8 @@ variable "domain_endpoint_options_enforce_https" {
 
 variable "domain_endpoint_options_tls_security_policy" {
   type        = string
-  default     = "Policy-Min-TLS-1-0-2019-07"
-  description = "TLS policy for the endpoint"
+  default     = "Policy-Min-TLS-1-2-PFS-2023-10"
+  description = "TLS 1.2/1.3 policy for the endpoint"
 }
 
 variable "base_sg" {
