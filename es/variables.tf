@@ -22,7 +22,7 @@ variable "tag_domain" {
 }
 variable "volume_type" {
   type        = string
-  default     = "gp2"
+  default     = "gp3"
   description = "Storage type of EBS volumes"
 }
 

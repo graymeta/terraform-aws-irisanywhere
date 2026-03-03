@@ -25,7 +25,7 @@ resource "aws_db_instance" "default" {
   db_name                    = "postgres"
   password                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_pw"]
   storage_encrypted          = var.db_storage_encrypted
-  storage_type               = "gp2"
+  storage_type               = "gp3"
   username                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_id"]
   vpc_security_group_ids     = ["${aws_security_group.rds.id}"]
 
