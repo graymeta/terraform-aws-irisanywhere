@@ -44,7 +44,7 @@ Name of Domain
 * `custom_endpoint_certificate_arn` - (Required) ARN of certificate for configurating Iris Anywhere.
 * `encrypt_at_rest_kms_key_id` - (Required) ARN of ES key in Key Management Service to support encryption at rest.
 * `tags` -  (Optional) A map of the additional tags.
-* `volume_type` - (Optional) EBS volume type. Default to `gp2`.
+* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
 * `volume_size` - (Optional) EBS volume size. Default to `10`.
 
 The following secret keys must be set for OpenSearch to work properly.

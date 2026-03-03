@@ -50,7 +50,7 @@ variable "tags" {
 
 variable "volume_type" {
   type        = string
-  description = "EBS volume type.  Default to `gp2`"
+  description = "EBS volume type.  Default to `gp3`"
   default     = "gp3"
 }
 
