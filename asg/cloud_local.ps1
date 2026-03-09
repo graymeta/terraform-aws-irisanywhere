@@ -35,6 +35,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_samlissuer        = $secretdata.saml_samlissuer
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
         $saml_acsUrlRelativePath= $secretdata.saml_acsUrlRelativePath
+        $rfm_filters             = $secretdata.rfm_filters
         #$wasabi_access_key       = $secretdata.wasabi_access_key
         #$wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
         #$wasabi_endpoint         = $secretdata.wasabi_endpoint
