@@ -19,7 +19,7 @@ variable "asg_check_interval" {
 variable "asg_scalein_cooldown" {
   type        = number
   description = "(Optional) Scale in cooldown period.  Default to `1800`"
-  default     = 1800
+  default     = 61
 }
 
 variable "asg_scalein_evaluation" {
@@ -37,7 +37,7 @@ variable "asg_scalein_threshold" {
 variable "asg_scaleout_cooldown" {
   type        = number
   description = "(Optional) Scale out cooldown period.  Default to `600`"
-  default     = 600
+  default     = 61
 }
 
 variable "heartbeat_timeout" {
