@@ -38,8 +38,9 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $wasabi_access_key       = $secretdata.wasabi_access_key
         $wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
         $wasabi_endpoint         = $secretdata.wasabi_endpoint
-        $wasabi_region            = $secretdata.wasabi_region
+        $wasabi_region           = $secretdata.wasabi_region
         $wasabi_buckets          = $secretdata.wasabi_buckets
+        $rfm_filters             = $secretdata.rfm_filters
     }
     catch {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1001 -message "Exception accessing secret $iasecretarn"
