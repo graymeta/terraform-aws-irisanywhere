@@ -37,6 +37,11 @@ resource "aws_instance" "ha" {
     haproxy_user_init    = base64encode(var.haproxy_user_init)
   }))
 
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+  
   associate_public_ip_address = var.associate_public_ip
   disable_api_termination     = var.instance_protection ? true : false
 
