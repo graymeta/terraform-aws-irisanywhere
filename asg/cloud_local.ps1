@@ -34,7 +34,8 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_entryPoint        = $secretdata.saml_entryPoint
         $saml_samlissuer        = $secretdata.saml_samlissuer
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
-        $saml_acsUrlRelativePath= $secretdata.saml_acsUrlRelativePath
+        $saml_acsUrlRelativePath = $secretdata.saml_acsUrlRelativePath
+        $otel_agent_gateway_endpoint = $secretdata.otel_agent_gateway_endpoint
         #$wasabi_access_key       = $secretdata.wasabi_access_key
         #$wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
         #$wasabi_endpoint         = $secretdata.wasabi_endpoint
