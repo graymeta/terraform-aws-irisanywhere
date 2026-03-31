@@ -355,3 +355,16 @@ variable "wasabi" {
   description = "(Optional) Uses wasabi storage instead of s3 for rclone"
   default     = false
 }
+
+variable "otlp_enabled" {
+  type        = bool
+  description = "(Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`"
+  default     = false
+}
+
+#OTLP destination for OpenTelemetry
+variable "otlp_exporter_destination" {
+  type        = string
+  description = "(Optional) Provides customer ability to specify an OTLP destination for IA logs/metrics"
+  default     = ""
+}
