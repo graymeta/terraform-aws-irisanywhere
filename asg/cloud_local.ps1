@@ -14,7 +14,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $saml_enabled = "${saml_enabled}"
     $saml_cert_secret_arn = "${saml_cert_secret_arn}"
     $disk_data_size = "${disk_data_size}"
-    $otlp_enabled = $otlp_enabled
+    $otlp_enabled = "${otlp_enabled}"
     #$wasabi = "${wasabi}"
     #Retrieve and prepare Secrets
     try {
