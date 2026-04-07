@@ -19,7 +19,7 @@ variable "asg_check_interval" {
 variable "asg_scalein_cooldown" {
   type        = number
   description = "(Optional) Scale in cooldown period.  Default to `1800`"
-  default     = 1800
+  default     = 70
 }
 
 variable "asg_scalein_evaluation" {
@@ -37,7 +37,7 @@ variable "asg_scalein_threshold" {
 variable "asg_scaleout_cooldown" {
   type        = number
   description = "(Optional) Scale out cooldown period.  Default to `600`"
-  default     = 600
+  default     = 70
 }
 
 variable "heartbeat_timeout" {
@@ -354,4 +354,17 @@ variable "wasabi" {
   type        = bool
   description = "(Optional) Uses wasabi storage instead of s3 for rclone"
   default     = false
+}
+
+variable "otlp_enabled" {
+  type        = bool
+  description = "(Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`"
+  default     = false
+}
+
+#OTLP destination for OpenTelemetry
+variable "otlp_exporter_destination" {
+  type        = string
+  description = "(Optional) Provides customer ability to specify an OTLP destination for IA logs/metrics"
+  default     = ""
 }
