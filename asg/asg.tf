@@ -91,6 +91,7 @@ resource "aws_launch_template" "iris" {
     saml_cert_secret_arn     = var.saml_cert_secret_arn
     disk_data_size           = var.disk_data_size
     otlp_enabled             = var.otlp_enabled
+    otlp_exporter_destination = var.otlp_exporter_destination
     wasabi                   = var.wasabi
   }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
 

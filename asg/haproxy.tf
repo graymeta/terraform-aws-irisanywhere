@@ -35,8 +35,8 @@ resource "aws_instance" "ha" {
     port                 = var.ia_cert_key_arn != "" ? "443 ssl" : "8080"
     hap_loglevel         = var.hap_loglevel
     haproxy_user_init    = base64encode(var.haproxy_user_init)
-    otlp_exporter_destination = var.otlp_exporter_destination != "" ? var.otlp_exporter_destination : ""
-    otlp_enabled         = var.otlp_enabled
+    #otlp_exporter_destination = var.otlp_exporter_destination != "" ? var.otlp_exporter_destination : ""
+    #otlp_enabled         = var.otlp_enabled
   }))
 
   associate_public_ip_address = var.associate_public_ip
@@ -226,16 +226,16 @@ resource "aws_security_group_rule" "allow_ssh" {
 }
 
 # Allow OTLP inbound traffic
-resource "aws_security_group_rule" "allow_otlp" {
-  count             = var.otlp_enabled ? 1 : 0
-  security_group_id = aws_security_group.ha[0].id
-  description       = "Allow OTLP"
-  type              = "ingress"
-  from_port         = 4317
-  to_port           = 4317
-  protocol          = "tcp"
-  source_security_group_id = aws_security_group.iris.id
-}
+# resource "aws_security_group_rule" "allow_otlp" {
+#   count             = var.otlp_enabled ? 1 : 0
+#   security_group_id = aws_security_group.ha[0].id
+#   description       = "Allow OTLP"
+#   type              = "ingress"
+#   from_port         = 4317
+#   to_port           = 4317
+#   protocol          = "tcp"
+#   source_security_group_id = aws_security_group.iris.id
+# }
 
 #variables
 variable "mgmt_cidr" {
