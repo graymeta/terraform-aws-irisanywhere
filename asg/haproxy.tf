@@ -1,10 +1,20 @@
 #AMI
+# data "aws_ami" "AmazonLinux" {
+#   owners      = ["amazon"]
+#   most_recent = true
+#   filter {
+#     name   = "name"
+#     values = ["amzn2-ami-hvm-*-x86_64-ebs"]
+#   }
+# }
+
 data "aws_ami" "AmazonLinux" {
   owners      = ["amazon"]
   most_recent = true
+
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-ebs"]
+    values = ["al2023-ami-2023.*-x86_64"]
   }
 }
 
