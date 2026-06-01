@@ -356,6 +356,12 @@ variable "wasabi" {
   default     = false
 }
 
+variable "enable_scale_from_zero" {
+  type        = bool
+  description = "(Optional) Enables ALB traffic detection to scale ASG from 0 to 1. Requires a warm pool for fast startup. Default false"
+  default     = false
+}
+
 variable "otlp_enabled" {
   type        = bool
   description = "(Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`"
