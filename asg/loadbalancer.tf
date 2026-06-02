@@ -89,25 +89,6 @@ resource "aws_lb_target_group" "port443" {
   tags = local.merged_tags
 }
 
-resource "aws_cloudwatch_metric_alarm" "scale_from_zero" {
-  count               = !var.haproxy ? 1 : 0
-  alarm_name          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero", ".", "")
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "HTTPCode_ELB_503_Count"
-  namespace           = "AWS/ApplicationELB"
-  period              = 60
-  statistic           = "Sum"
-  threshold           = 0
-  treat_missing_data  = "notBreaching"
-  alarm_description   = "Traffic detected with no healthy targets — triggers scale from 0 to 1"
-  alarm_actions       = [aws_sns_topic.scale_from_zero[0].arn]
-
-  dimensions = {
-    LoadBalancer = aws_lb.iris_alb[0].arn_suffix
-  }
-}
-
 resource "aws_lb_listener_rule" "port443" {
   count        = var.haproxy ? 0 : 1
   listener_arn = aws_lb_listener.port443[0].arn
@@ -120,7 +101,11 @@ resource "aws_lb_listener_rule" "port443" {
 
   condition {
     path_pattern {
-      values = ["/"]
+      values = ["/*"]
     }
+  }
+
+  lifecycle {
+    ignore_changes = [action]
   }
 }
