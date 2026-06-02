@@ -76,7 +76,12 @@ def handler(event, context):
     )['AutoScalingGroups'][0]
 
     if asg['DesiredCapacity'] == 0:
-        print("ASG at 0 — scaling to 1")
+        print("ASG at 0 — setting fast health check and scaling to 1")
+        elbv2.modify_target_group(
+            TargetGroupArn=ec2_tg_arn,
+            HealthCheckIntervalSeconds=5,
+            HealthCheckTimeoutSeconds=3
+        )
         autoscaling.update_auto_scaling_group(
             AutoScalingGroupName=asg_name,
             DesiredCapacity=1
@@ -164,6 +169,12 @@ def handler(event, context):
             if healthy:
                 print(f"EC2 healthy after {(i + 1) * 5}s — switching ALB rule to EC2 TG")
                 switch_rule(rule_arn, ec2_tg_arn)
+                elbv2.modify_target_group(
+                    TargetGroupArn=ec2_tg_arn,
+                    HealthCheckIntervalSeconds=30,
+                    HealthCheckTimeoutSeconds=5
+                )
+                print("Health check interval restored to 30s")
                 return
         print("Timed out waiting for healthy EC2 target")
 
@@ -301,7 +312,8 @@ resource "aws_iam_role_policy" "scale_from_zero" {
         Action   = [
           "elasticloadbalancing:DescribeRules",
           "elasticloadbalancing:ModifyRule",
-          "elasticloadbalancing:DescribeTargetHealth"
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:ModifyTargetGroup"
         ]
         Resource = "*"
       },
