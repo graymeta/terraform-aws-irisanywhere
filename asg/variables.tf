@@ -358,8 +358,8 @@ variable "wasabi" {
 
 variable "deregistration_delay" {
   type        = number
-  description = "(Optional) Time in seconds to wait for in-flight requests before deregistering an instance. Default 30"
-  default     = 30
+  description = "(Optional) Time in seconds to wait for in-flight requests before deregistering an instance. Default 0"
+  default     = 0
 }
 
 variable "otlp_enabled" {
