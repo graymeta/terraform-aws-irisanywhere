@@ -160,8 +160,8 @@ variable "lb_algorithm_type" {
 
 variable "lb_check_interval" {
   type        = number
-  description = "(Optional) Loadbalancer health check interval. Default to `30`"
-  default     = 30
+  description = "(Optional) Loadbalancer health check interval. Default to `10`"
+  default     = 10
 }
 
 variable "lb_unhealthy_threshold" {

@@ -76,7 +76,7 @@ resource "aws_lb_target_group" "port443" {
     timeout             = 5
     protocol            = "HTTP"
     matcher             = "200,429"
-    healthy_threshold   = 2
+    healthy_threshold   = 1
     unhealthy_threshold = var.lb_unhealthy_threshold
   }
 

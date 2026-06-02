@@ -13,7 +13,7 @@ STARTING_UP_HTML = """<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="15">
+  <meta http-equiv="refresh" content="5">
   <title>Service Starting...</title>
   <style>
     body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
@@ -25,8 +25,9 @@ STARTING_UP_HTML = """<!DOCTYPE html>
 <body>
   <div class="box">
     <div class="spinner"></div>
-    <h2>Service Starting</h2>
-    <p>This page will refresh automatically in 15 seconds.</p>
+    <h2>Iris Anywhere server is starting.</h2>
+    <p>It will take a few minutes to start. You will be redirected once it loads.</p>
+    <p>If it has been longer than 10 minutes, contact your Iris Administrator.</p>
   </div>
 </body>
 </html>"""
