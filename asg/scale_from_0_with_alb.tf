@@ -102,10 +102,17 @@ def handler(event, context):
     ec2_tg_arn      = os.environ['EC2_TARGET_GROUP_ARN']
     lambda_tg_arn   = os.environ['LAMBDA_TARGET_GROUP_ARN']
 
-    # SNS trigger: ASG hit 0 — switch rule to Lambda TG so next user gets the starting page
+    # ASG termination notification — only switch to Lambda TG if desired is now 0
     if 'Records' in event:
-        print("ASG hit 0 — switching ALB rule to Lambda TG")
-        switch_rule(rule_arn, lambda_tg_arn)
+        asg = boto3.client('autoscaling').describe_auto_scaling_groups(
+            AutoScalingGroupNames=[os.environ['ASG_NAME']]
+        )['AutoScalingGroups'][0]
+        in_service = sum(1 for i in asg['Instances'] if i['LifecycleState'] == 'InService')
+        if asg['DesiredCapacity'] == 0 and in_service == 0:
+            print("ASG at 0 — switching ALB rule to Lambda TG")
+            switch_rule(rule_arn, lambda_tg_arn)
+        else:
+            print(f"Instance terminated but ASG still running (desired={asg['DesiredCapacity']}, in_service={in_service}) — no action")
         return
 
     action = event.get('action')
@@ -147,8 +154,9 @@ resource "aws_lambda_function" "scale_from_zero_worker" {
 
   environment {
     variables = {
-      LISTENER_RULE_ARN     = aws_lb_listener_rule.port443[0].arn
-      EC2_TARGET_GROUP_ARN  = aws_lb_target_group.port443[0].arn
+      ASG_NAME                = aws_autoscaling_group.iris.name
+      LISTENER_RULE_ARN       = aws_lb_listener_rule.port443[0].arn
+      EC2_TARGET_GROUP_ARN    = aws_lb_target_group.port443[0].arn
       LAMBDA_TARGET_GROUP_ARN = aws_lb_target_group.scale_from_zero_lambda[0].arn
     }
   }
@@ -205,23 +213,14 @@ resource "aws_lambda_permission" "scale_from_zero_sns" {
   source_arn    = aws_sns_topic.scale_from_zero[0].arn
 }
 
-resource "aws_cloudwatch_metric_alarm" "scale_from_zero" {
-  count               = !var.haproxy ? 1 : 0
-  alarm_name          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero", ".", "")
-  comparison_operator = "LessThanOrEqualToThreshold"
-  evaluation_periods  = 1
-  metric_name         = "GroupInServiceInstances"
-  namespace           = "AWS/AutoScaling"
-  period              = 60
-  statistic           = "Sum"
-  threshold           = 0
-  treat_missing_data  = "notBreaching"
-  alarm_description   = "ASG hit 0 in-service instances — switch ALB rule to Lambda TG"
-  alarm_actions       = [aws_sns_topic.scale_from_zero[0].arn]
+resource "aws_autoscaling_notification" "scale_from_zero" {
+  count       = !var.haproxy ? 1 : 0
+  group_names = [aws_autoscaling_group.iris.name]
+  topic_arn   = aws_sns_topic.scale_from_zero[0].arn
 
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.iris.name
-  }
+  notifications = [
+    "autoscaling:EC2_INSTANCE_TERMINATE",
+  ]
 }
 
 # ---- IAM (shared role for both Lambdas) ----
