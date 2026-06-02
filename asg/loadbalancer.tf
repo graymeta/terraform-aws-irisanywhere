@@ -67,6 +67,7 @@ resource "aws_lb_target_group" "port443" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   load_balancing_algorithm_type = var.lb_algorithm_type
+  deregistration_delay          = var.deregistration_delay
 
   health_check {
     path                = "/"
