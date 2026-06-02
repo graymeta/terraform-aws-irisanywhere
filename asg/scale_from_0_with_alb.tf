@@ -31,11 +31,45 @@ STARTING_UP_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
-def handler(event, context):
-    asg_name   = os.environ['ASG_NAME']
-    worker_arn = os.environ['WORKER_LAMBDA_ARN']
+READY_HTML = """<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="2">
+  <title>Ready</title>
+  <style>
+    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
+  </style>
+</head>
+<body><p>Service ready, connecting...</p></body>
+</html>"""
 
+def handler(event, context):
+    asg_name        = os.environ['ASG_NAME']
+    worker_arn      = os.environ['WORKER_LAMBDA_ARN']
+    rule_arn        = os.environ['LISTENER_RULE_ARN']
+    ec2_tg_arn      = os.environ['EC2_TARGET_GROUP_ARN']
+
+    elbv2       = boto3.client('elbv2')
     autoscaling = boto3.client('autoscaling')
+
+    # If EC2 is already healthy, switch the rule immediately and send user through
+    health = elbv2.describe_target_health(TargetGroupArn=ec2_tg_arn)
+    healthy = [t for t in health['TargetHealthDescriptions'] if t['TargetHealth']['State'] == 'healthy']
+    if healthy:
+        print("EC2 already healthy — switching rule to EC2 TG immediately")
+        elbv2.modify_rule(
+            RuleArn=rule_arn,
+            Actions=[{'Type': 'forward', 'TargetGroupArn': ec2_tg_arn}]
+        )
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'text/html'},
+            'body': READY_HTML,
+            'isBase64Encoded': False
+        }
+
+    # No healthy EC2 targets — scale up if needed and fire worker once
     asg = autoscaling.describe_auto_scaling_groups(
         AutoScalingGroupNames=[asg_name]
     )['AutoScalingGroups'][0]
@@ -46,13 +80,13 @@ def handler(event, context):
             AutoScalingGroupName=asg_name,
             DesiredCapacity=1
         )
-
-    # Fire-and-forget: worker polls for healthy EC2 target then switches ALB rule back
-    boto3.client('lambda').invoke(
-        FunctionName=worker_arn,
-        InvocationType='Event',
-        Payload=json.dumps({'action': 'wait_and_switch_to_ec2'})
-    )
+        boto3.client('lambda').invoke(
+            FunctionName=worker_arn,
+            InvocationType='Event',
+            Payload=json.dumps({'action': 'wait_and_switch_to_ec2'})
+        )
+    else:
+        print(f"ASG desired={asg['DesiredCapacity']} but no healthy targets yet — worker already running")
 
     return {
         'statusCode': 200,
@@ -78,8 +112,10 @@ resource "aws_lambda_function" "scale_from_zero_handler" {
 
   environment {
     variables = {
-      ASG_NAME          = aws_autoscaling_group.iris.name
-      WORKER_LAMBDA_ARN = aws_lambda_function.scale_from_zero_worker[0].arn
+      ASG_NAME            = aws_autoscaling_group.iris.name
+      WORKER_LAMBDA_ARN   = aws_lambda_function.scale_from_zero_worker[0].arn
+      LISTENER_RULE_ARN   = aws_lb_listener_rule.port443[0].arn
+      EC2_TARGET_GROUP_ARN = aws_lb_target_group.port443[0].arn
     }
   }
 
