@@ -90,7 +90,7 @@ resource "aws_lb_target_group" "port443" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "scale_from_zero" {
-  count               = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count               = !var.haproxy ? 1 : 0
   alarm_name          = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero", ".", "")
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1

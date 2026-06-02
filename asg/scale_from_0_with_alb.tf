@@ -1,11 +1,11 @@
 resource "aws_sns_topic" "scale_from_zero" {
-  count = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count = !var.haproxy ? 1 : 0
   name  = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero", ".", "")
   tags  = local.merged_tags
 }
 
 data "archive_file" "scale_from_zero_zip" {
-  count       = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count       = !var.haproxy ? 1 : 0
   type        = "zip"
   output_path = "${path.module}/scale_from_zero.zip"
 
@@ -107,7 +107,7 @@ EOF
 }
 
 resource "aws_lambda_function" "scale_from_zero" {
-  count         = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count         = !var.haproxy ? 1 : 0
   filename      = data.archive_file.scale_from_zero_zip[0].output_path
   function_name = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero", ".", "")
   role          = aws_iam_role.scale_from_zero[0].arn
@@ -130,7 +130,7 @@ resource "aws_lambda_function" "scale_from_zero" {
 }
 
 resource "aws_lambda_permission" "scale_from_zero_sns" {
-  count         = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count         = !var.haproxy ? 1 : 0
   statement_id  = "AllowSNSInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.scale_from_zero[0].function_name
@@ -139,14 +139,14 @@ resource "aws_lambda_permission" "scale_from_zero_sns" {
 }
 
 resource "aws_sns_topic_subscription" "scale_from_zero" {
-  count     = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count     = !var.haproxy ? 1 : 0
   topic_arn = aws_sns_topic.scale_from_zero[0].arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.scale_from_zero[0].arn
 }
 
 resource "aws_iam_role" "scale_from_zero" {
-  count = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count = !var.haproxy ? 1 : 0
   name  = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero-role", ".", "")
 
   assume_role_policy = jsonencode({
@@ -162,7 +162,7 @@ resource "aws_iam_role" "scale_from_zero" {
 }
 
 resource "aws_iam_role_policy" "scale_from_zero" {
-  count = var.enable_scale_from_zero && !var.haproxy ? 1 : 0
+  count = !var.haproxy ? 1 : 0
   name  = "scale-from-zero-policy"
   role  = aws_iam_role.scale_from_zero[0].id
 
