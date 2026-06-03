@@ -356,6 +356,12 @@ variable "wasabi" {
   default     = false
 }
 
+variable "deregistration_delay" {
+  type        = number
+  description = "(Optional) Time in seconds to wait for in-flight requests before deregistering an instance. Default 0"
+  default     = 0
+}
+
 variable "otlp_enabled" {
   type        = bool
   description = "(Optional) sets the application load balancer for Iris Anywhere to internal mode.  Default to `false`"

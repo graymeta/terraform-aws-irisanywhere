@@ -17,7 +17,7 @@ resource "aws_autoscaling_group" "iris" {
       min_size                    = var.asg_warm_pool_min
       max_group_prepared_capacity = var.asg_warm_pool_max
       instance_reuse_policy {
-        reuse_on_scale_in = true
+        reuse_on_scale_in = false
       }
     }
   }

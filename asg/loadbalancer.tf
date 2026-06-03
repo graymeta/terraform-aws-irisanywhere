@@ -67,6 +67,7 @@ resource "aws_lb_target_group" "port443" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   load_balancing_algorithm_type = var.lb_algorithm_type
+  deregistration_delay          = var.deregistration_delay
 
   health_check {
     path                = "/"
@@ -101,7 +102,11 @@ resource "aws_lb_listener_rule" "port443" {
 
   condition {
     path_pattern {
-      values = ["/"]
+      values = ["/*"]
     }
+  }
+
+  lifecycle {
+    ignore_changes = [action]
   }
 }
