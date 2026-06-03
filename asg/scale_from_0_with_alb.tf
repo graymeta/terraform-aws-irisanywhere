@@ -26,7 +26,7 @@ STARTING_UP_HTML = """<!DOCTYPE html>
   <div class="box">
     <div class="spinner"></div>
     <h2>Iris Anywhere server is starting.</h2>
-    <p>It will take a few minutes to start. You will be redirected once it loads.</p>
+    <p>It will take around 2 minutes to start. You will be redirected once it loads.</p>
     <p>If it has been longer than 10 minutes, contact your Iris Administrator.</p>
   </div>
 </body>
