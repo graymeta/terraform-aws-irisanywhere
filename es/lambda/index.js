@@ -144,11 +144,21 @@ function processCreateEvent(event) {
                   logResult(insertResponse, s3EventKey);
                   resolve(insertResponse);
                 } else {
-                    return reject("GM_ERROR_REJECT_INSERT_PROCESSCREATEEVENT" + insertResponse);
+                    return reject(
+                      "GM_ERROR_REJECT_INSERT_PROCESSCREATEEVENT: " +
+                        s3EventKey +
+                        ": " +
+                        safeStringify(insertResponse)
+                    );
                 }
               })
               .catch((error) => {
-                return reject("GM_ERROR_REJECT_INSERT: " + error + ": " + s3EventKey);
+                return reject(
+                  "GM_ERROR_REJECT_INSERT: " +
+                    safeStringify(error) +
+                    ": " +
+                    s3EventKey
+                );
               });
           } else {
             // NOTE: ONLY update files, not folders (aka Prefix).
@@ -167,11 +177,21 @@ function processCreateEvent(event) {
                           logResult(updateResponse, s3EventKey);
                           resolve(updateResponse);
                         } else {
-                          reject(updateResponse);
+                          reject(
+                            "GM_ERROR_REJECT_UPDATE_PROCESSCREATEEVENT: " +
+                              s3EventKey +
+                              ": " +
+                              safeStringify(updateResponse)
+                          );
                         }
                       })
                       .catch((error) => {
-                        reject("GM_ERROR_REJECT_CATCH_UPDATE: " + error + ": " + s3EventKey);
+                        reject(
+                          "GM_ERROR_REJECT_CATCH_UPDATE: " +
+                            safeStringify(error) +
+                            ": " +
+                            s3EventKey
+                        );
                       });
                 } 
             } else {
@@ -180,7 +200,12 @@ function processCreateEvent(event) {
           }
         })
         .catch((error) => {
-          reject("GM_ERROR_REJECT_QUERY: " + error + ": " + s3EventKey);
+          reject(
+            "GM_ERROR_REJECT_QUERY: " +
+              safeStringify(error) +
+              ": " +
+              s3EventKey
+          );
         });
     }
   });
@@ -215,12 +240,27 @@ function processDeleteEvent(event) {
                         console.log("GM_SUCCESS_DELETED_ITEM: ", s3EventKey);
                         resolve(deleteResponse);
                       } else {
-                        console.error("GM_ERROR_DELETE: ", s3EventKey);
-                        reject(deleteResponse);
+                        console.error(
+                          "GM_ERROR_DELETE: " +
+                            s3EventKey +
+                            ": " +
+                            safeStringify(deleteResponse)
+                        );
+                        reject(
+                          "GM_ERROR_REJECT_DELETE: " +
+                            s3EventKey +
+                            ": " +
+                            safeStringify(deleteResponse)
+                        );
                       }
                     })
                     .catch((error) => {
-                      console.error(error + ": " + s3EventKey);
+                      console.error(
+                        "GM_ERROR_DELETE_CATCH: " +
+                          safeStringify(error) +
+                          ": " +
+                          s3EventKey
+                      );
                       return;
                     });
                 }
@@ -297,6 +337,25 @@ function openSearchClient(httpMethod, path, requestBody) {
 /* Utility Functions */
 function isPresent(o) {
   return typeof o !== "undefined" && o != null ? true : false;
+}
+
+// Best-effort serializer so error/response objects log readably (avoids "[object Object]").
+function safeStringify(value) {
+  if (value === undefined) return "undefined";
+  if (value === null) return "null";
+  if (typeof value === "string") return value;
+  if (value instanceof Error) {
+    return value.stack || (value.name + ": " + value.message);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch (err) {
+    try {
+      return String(value);
+    } catch (e) {
+      return "[unserializable: " + err.message + "]";
+    }
+  }
 }
 
 function isPrefix(s3EventKey) {

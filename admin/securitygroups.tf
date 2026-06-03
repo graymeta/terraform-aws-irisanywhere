@@ -32,7 +32,7 @@ resource "aws_security_group_rule" "allow_rdp" {
   from_port         = "3389"
   to_port           = "3389"
   protocol          = "tcp"
-  cidr_blocks       = var.access_cidr
+  cidr_blocks       = var.rdp_access_cidr
 }
 
 # Allow Postgres inbound traffic
@@ -43,7 +43,7 @@ resource "aws_security_group_rule" "allow_postgresql" {
   from_port         = "5432"
   to_port           = "5432"
   protocol          = "tcp"
-  cidr_blocks       = var.access_cidr
+  cidr_blocks       = var.api_console_access_cidr
 }
 
 
@@ -55,5 +55,5 @@ resource "aws_security_group_rule" "allow_https" {
   from_port         = var.https_console_port
   to_port           = var.https_console_port
   protocol          = "tcp"
-  cidr_blocks       = var.access_cidr
+  cidr_blocks       = var.api_console_access_cidr
 }

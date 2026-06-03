@@ -4,6 +4,18 @@ variable "access_cidr" {
   default     = ["0.0.0.0/0"]
 }
 
+variable "api_console_access_cidr" {
+  type        = list(string)
+  description = "(Optional) List of network cidr that have access to the API and Admi UI console.  Default to `[\"0.0.0.0/0\"]`"
+  default     = ["0.0.0.0/0"]
+}
+
+variable "rdp_access_cidr" {
+  type        = list(string)
+  description = "(Optional) List of network cidr that have access to RDP.  Default to `[\"0.0.0.0/0\"]`"
+  default     = ["0.0.0.0/0"]
+}
+
 variable "ami" {
   type        = string
   description = "The AMI from which to launch the instance."
