@@ -87,7 +87,7 @@ data "aws_iam_policy_document" "es_statement" {
     effect    = "Allow"
     actions   = ["es:*"]
     resources = [
-      "arn:aws:es:${data.aws_region.now.id}:${data.aws_caller_identity.current.account_id}:domain/${var.es_domain_name}/*"
+      "arn:aws:es:${data.aws_region.now.region}:${data.aws_caller_identity.current.account_id}:domain/${var.es_domain_name}/*"
     ]
   }
 }

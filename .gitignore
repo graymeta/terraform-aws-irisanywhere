@@ -1,7 +1,7 @@
 # Local .terraform directories
 **/.terraform/*
 .terraform.lock.hcl
-
+*.zip
 .DS_Store
 
 # .tfstate files
