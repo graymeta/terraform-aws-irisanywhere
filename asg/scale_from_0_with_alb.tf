@@ -275,7 +275,7 @@ resource "aws_autoscaling_notification" "scale_from_zero" {
 
 resource "aws_iam_role" "scale_from_zero" {
   count = !var.haproxy ? 1 : 0
-  name  = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-scale-from-zero-role", ".", "")
+  name  = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-${data.aws_region.current.region}-scale-from-zero-role", ".", "")
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

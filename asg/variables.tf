@@ -18,25 +18,25 @@ variable "asg_check_interval" {
 
 variable "asg_scalein_cooldown" {
   type        = number
-  description = "(Optional) Scale in cooldown period.  Default to `1800`"
+  description = "(Optional) Scale in cooldown period.  Default to `70`"
   default     = 70
 }
 
 variable "asg_scalein_evaluation" {
   type        = number
-  description = "(Optional) Scale in evaluation periods.  Default to `30`"
+  description = "(Optional) Scale in evaluation periods.  Default to `30` periods"
   default     = 30
 }
 
 variable "asg_scalein_threshold" {
   type        = number
-  description = "(Optional) Scale in if the number of sessions drop below.  Set to max sessions value plus 1"
+  description = "(Optional) Scale in if the number of available sessions drop below.  Set to max sessions value plus 1"
   default     = 3
 }
 
 variable "asg_scaleout_cooldown" {
   type        = number
-  description = "(Optional) Scale out cooldown period.  Default to `600`"
+  description = "(Optional) Scale out cooldown period.  Default to `70`"
   default     = 70
 }
 
@@ -60,7 +60,7 @@ variable "asg_scaleout_adjustment" {
 
 variable "asg_scaleout_threshold" {
   type        = number
-  description = "(Optional) Scale out if the number of sessions drop below.  Default set to 1"
+  description = "(Optional) Scale out if the number of available sessions drop below.  Default set to 1"
   default     = "1"
 }
 
@@ -310,7 +310,7 @@ variable "warm_pool" {
   type = object({
     enabled = bool
   })
-  description = "If this block is configured, add a Warm Pool to the specified Auto Scaling group. See [warm_pool](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/autoscaling_group#warm_pool)."
+  description = "DEPRECATED: this input is ignored. Warm pools are now controlled by asg_warm_pool_max (> 0 enables warm pools) and asg_warm_pool_min."
   default     = null
 }
 

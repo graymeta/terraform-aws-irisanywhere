@@ -11,7 +11,7 @@ resource "aws_autoscaling_group" "iris" {
 
 
   dynamic "warm_pool" {
-    for_each = var.warm_pool != null ? [var.warm_pool] : []
+    for_each = var.asg_warm_pool_max > 0 ? [1] : []
     content {
       pool_state                  = "Stopped"
       min_size                    = var.asg_warm_pool_min

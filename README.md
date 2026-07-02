@@ -1,286 +1,188 @@
 # Deploying GrayMeta Iris Anywhere with Terraform
-The following contains instructions/criteria for deploying Iris Anywhere into an AWS environment.  Iris Anywhere is comprised of two key components, the Iris Admin Server that manages Users, permissions and Licenses and the Iris Anywhere Autoscaling Group that deploy the instances for usage. Iris Anywhere Autoscaling Group will not properly function without a dedicated Iris Admin Server deployed first. 
 
-### Iris Anywhere and AWS
-* Iris Anywhere requires AWS core services which are supported in all AWS Regions
-  
-### Prerequisites
-* AWS account access
-* EC2 Windows Server 2022
-* Registered domain name (optional)
-* Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying.
-* Access to GrayMeta Iris Admin and Iris Anywhere AMI's - Contact support@graymeta.com.
-* Iris Anywhere license provided by Graymeta - Contact support@graymeta.com.
-* Certificates created or imported in AWS Certificate Manager.
-* Install Terraform executable 1.8.x or compatible [Terraform binaries](https://releases.hashicorp.com/terraform/).
-* `version` - Current Iris Anywhere terraform module version is `v0.0.32`. Note moddule version requires Iris Anywhere AMI access.
-* No AWS Root user security context should be used in the deployment of any/all Iris Anywhere services.  Please follow the policy of least privilege for all access granted as part of the deployment. 
-***
+This repository contains Terraform modules used to deploy GrayMeta Iris Admin and Iris Anywhere into AWS. Iris Admin manages users, permissions, and licensing. Iris Anywhere deploys the autoscaled application tier. In normal deployments, Iris Admin should be deployed, licensed, and configured before Iris Anywhere.
 
-### Sizing of Infrastructure
-* Iris Anywhere provides multiple configurable options relating to infrastructure sizing, such as instance types, disk size, and autoscaling group size.  Each customer will have unique needs which will determine their sizing configuration.  Graymeta will work with the customer to determine the best sizing plan.
+## Prerequisites
 
-### Deployment Duration
-New customers can expect and initial deployment duration of 3-4 hours.  There are multiple components, some of which are optional, to an Iris Anywhere deployment.  The duration may vary based on specific customer needs and/or unique customer environments.
+* AWS account access with least-privilege permissions for the services you plan to deploy.
+* Terraform 1.8.x or compatible.
+* Certificates imported into AWS Certificate Manager when using TLS termination on a load balancer.
+* Required application secrets stored in AWS Secrets Manager before deployment.
+* Access to the GrayMeta Iris Admin and Iris Anywhere AMIs. Contact support@graymeta.com.
+* An Iris license from GrayMeta. Contact support@graymeta.com.
 
-### Specialized Knowledge
-* Infrastruction As Code (IAC)
-  * Terraform - specifically versions 1.8.x
-* Powershell scripting knowledge is beneficial
-* AWS Services familiarity with...
-  * IAM (Free Service)
-    * Create necessary profile(s)
-    * Create keys
-    * Policy creation
-  * Route53 (Billable Service)
-  * EC2 (Billable Service)
-    * Specific compute needs  
-  * RDS (Billable Service)
-  * OpenSearch/ElasticSearch (Billable Service)
-  * S3 (Billable Service)
-  * ACM (Free Service)
-  * VPC/Networking (Free Service with optional Billable VPC services)
-  * NAT Gateway (Billable Service)
-  * SQS (optional) (Billable Service)
+## Modules
 
+* `admin` deploys Iris Admin, either standalone or with enterprise HA.
+* `asg` deploys the Iris Anywhere application tier, including the ALB-based path and the optional HAProxy-based path.
+* `secrets` creates the required Secrets Manager payloads.
+* `es` provisions the search domain used by Iris Anywhere; `opensearch` contains helper workflows related to search integration.
+* `sqs` supports optional queue-based integrations.
 
-### Publicly Accessible Services
-* In most cases, ONLY the ALB or the HAProxy Load Balancer are publicly accessible resources.
+## Choosing a Deployment Pattern
 
-### Data Security
-* EC2 key/pair creation is utilized for the secure Iris Admin and Iris Anywhere instance access.  This key_name will be utilized in the terraform modules mentioned below.
-* Access/Secret Access Key - Will be created as part of the terraform execution to allow Iris Anywhere access to the S3 media content.
-* AWS Secrets Manager holds sensitive configuration data for Iris Anywhere. This data contains encrypted key values.
-* S3 contains encrypted media content that is pulled to an instance where the content is again encrypted on the block storage (EBS).
-* As the media content is streamed to the Iris Anywhere player, it is AES encrypted. 
-* The networking is configured by utilizing the Graymeta irisanywhere version best suited for the customer needs. All networking components will be created for when running the Graymeta terraform below.
+Use this decision matrix to choose the closest starting point before you begin changing variables.
 
+| Need | Recommended pattern | Why | Starter example |
+| --- | --- | --- | --- |
+| One Admin node with simple public access | Standalone Admin | Lowest operational overhead, fastest initial deployment | [examples/admin-standalone/main.tf](examples/admin-standalone/main.tf) |
+| Admin tier with load balancer and RDS | HA Admin | Use when you need Admin redundancy and managed database backing | [examples/admin-ha/main.tf](examples/admin-ha/main.tf) |
+| Iris Anywhere behind an AWS ALB | Anywhere with ALB | Best default when AWS-native load balancing is acceptable | [examples/anywhere-alb/main.tf](examples/anywhere-alb/main.tf) |
+| Iris Anywhere behind HAProxy | Anywhere with HAProxy | Use when HAProxy-specific TLS or traffic handling is required | [examples/anywhere-haproxy/main.tf](examples/anywhere-haproxy/main.tf) |
 
-***
-## Iris Anywhere Admin Server
-Deploys Iris Admin management server. This application provides comprehensive administrative capabilities, API and development support.  An Iris Admin Server must be deployed, licensed and configured prior to the deployment of the Autoscaling Groups as there are dependent variables ascertained during the process.  
+Quick guidance:
 
-The below example will allow the customer to deploy the Iris Admin Server. After the deployment is complete navigate to the instance's https://{IPv4 DNS}:8021 to log in to the Iris Admin Server.  Once successfully logged in, contact support@graymeta.com to license the product as well as retrieve the necessary variables to deploy the Iris Anywhere Autoscaling Groups.
+* Choose ALB unless you specifically need HAProxy behavior.
+* Choose standalone Admin for smaller or initial deployments.
+* Choose HA Admin when Admin uptime and managed database HA are requirements.
+* Add the `es` module only when Iris Anywhere search is enabled.
+
+## Example Root Modules
+
+Starter customer root modules are available under [examples/README.md](examples/README.md). These examples are intentionally small and opinionated so customers can start from a pattern instead of assembling module calls from scratch.
+
+Note: IAM resources are account-scoped. If you deploy the same shared IAM role or policy names from multiple regional root modules, manage their lifecycle from a single state or use region-specific names to avoid cross-region destroy conflicts.
+
+## Deployment Order
+
+Use this sequence for a typical customer deployment:
+
+1. Create the required Secrets Manager entries, either with the `secrets` module or manually.
+2. Deploy `admin` and complete product licensing and basic validation.
+3. Deploy `es` only if search is required for the environment.
+4. Update the application secret with any search-specific values if `es` was deployed.
+5. Deploy `asg` for the Iris Anywhere application tier.
+6. Create DNS records after the infrastructure apply succeeds.
+
+Quick rule of thumb:
+
+* `admin` comes before `asg` in normal deployments.
+* `es` is optional and only needed when search is enabled.
+* `secrets` is optional as Terraform, but the secret values themselves must exist before `admin` or `asg` can be configured successfully.
 
 ## Resulting AWS Services and Architecture Diagram
+
 ![Iris Anywhere FTR](https://user-images.githubusercontent.com/13397511/191809033-b4e93fe0-42c7-4edb-baaa-132d439abcfc.jpg)
 
+## Iris Admin Example
 
-## Example Usage
-
-```
+```hcl
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
 module "irisadmin" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=v0.0.32"
-    
-  access_cidr     = ["0.0.0.0/0"]
-  hostname_prefix = "iadm"
-  instance_count  = 1
-  instance_type   = "t3.xlarge"
-  subnet_id       = ["subnet-foo1"]
-  key_name        = "my_key"
-  ia_secret_arn   = "arn:aws:secretsmanager:secret:1234567913397769129"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=<tag>"
+
+  hostname_prefix     = "iadm"
+  instance_type       = "t3.xlarge"
+  subnet_id           = ["subnet-foo1"]
+  key_name            = "my-key"
+  ia_secret_arn       = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
   associate_public_ip = true
 }
 ```
-### Argument Reference:
-* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `hostname_prefix` - (Required) A unique name.
-* `instance_count` - (Required) Number of Instances to deploy.
-* `instance_type` - (Required) The type of the EC2 instance.
-* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
-* `key_name` - (Required) The key name to use for the instances.
-* `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
-* `tags` -  (Optional) A map of the additional tags.
-* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
-* `volume_size` - (Optional) EBS volume size. Default to `60`.
 
-### Attributes Reference:
-In addition to all the arguments above the following attributes are exported:
-* `security_group` - The Security Group of the Admin instance(s).
-* `private_dns` - The Private IPv4 DNS of the Admin instance(s).
-* `private_ip` - The Private IPv4 address of the Admin instance(s).
+Common inputs:
 
-***
-## Iris Anywhere Autoscaling Groups
-Deploys Application Load Balancer and Autoscaling group.  Graymeta recommends the customer does not deploy Autoscaling Groups until the Iris Admin Server has been licensed with GrayMeta (support@graymeta.com).
+* `hostname_prefix`
+* `instance_type`
+* `subnet_id`
+* `key_name`
+* `ia_secret_arn`
+* `associate_public_ip`
+* `enterprise_ha`
 
-## Example Usage
-```
+See [admin/README.MD](admin/README.MD) for the full Admin input and output reference.
+
+## Iris Anywhere Example
+
+```hcl
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
 module "irisanywhere1" {
-  source                 = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=v2.3.3"
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=<tag>"
 
-  hostname_prefix        = "iris"
-  instance_type          = "c6id.8xlarge"
-  key_name               = "your-key-name"
-  subnet_id              = ["subnet-1", "subnet-2"]
-  ia_secret_arn          = "arn:aws:secretsmanager:region:your-secret-arn"
-  //rdp_access_cidr        = ["cidr1", "cidr2"]
-  iam_policy_enabled     = true
-  base_ami               = "ami-0282e3837a18fd822"
-  iam_role_name          = "iris-role"
-  warm_pool               = { enabled = true }
-  asg_warm_pool_min       = 0
-  asg_size_min            = 0
-  asg_size_max            = 1
-  ia_max_sessions         = 2
- 
+  hostname_prefix = "iris"
+  instance_type   = "c7a.4xlarge"
+  key_name        = "my-key"
+  subnet_id       = ["subnet-1", "subnet-2"]
+  ia_secret_arn   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-anywhere"
+  ssl_alb_acm_arn = "arn:aws:acm:us-west-2:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-  # Required by HAProxy
-  haproxy                = true
-  instance_type_ha       = "t3.small"
-  //mgmt_cidr            = ["cidr1", "cidr2"]
-  ssl_haproxy_cert_secret_arn   = ""
-}
-  
-```
-
-### Argument Reference:
-The following arguments are supported:
-* `access_cidr` - (Optional) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `alb_internal` - (Optional) sets the application load balancer for Iris Anywhere to internal mode.  When set to `true` this also disables allocating public IP addresses to Iris Anywhere EC2 instances. Default to `false`
-* `asg_check_interval` - (Optional) Autoscale check interval.  Default to `60` (seconds)
-* `asg_scalein_cooldown` - (Optional) Scale in cooldown period.  Default to `1800` (seconds)
-* `asg_scalein_evaluation` - (Optional) Scale in evaluation periods.  Default to `30` (evaluation periods)
-* `asg_scalein_threshold` - (Optional) Scale in if the number of sessions drop below.  Default to `3`
-* `asg_scaleout_cooldown` - (Optional) Scale out cooldown period.  Default to `600` (seconds)
-* `asg_scaleout_evaluation` - (Optional) Scale out evaluation periods. Default to `2` (evaluation periods)
-* `asg_scaleout_threshold` - (Optional) Scale out if the number of sessions drop below.  Default to `1`
-* `asg_size_desired` - (Required) The number of EC2 instances that should be running in the group.
-* `asg_size_max` - (Required) Maximum size of the Auto Scaling Group.
-* `asg_size_min` - (Required) Minimum size of the Auto Scaling Group.
-* `asg_warm_pool_min` - (Optional) Minimum size of the Auto Scaling Group Warm Pool. Default is `1`.
-* `asg_warm_pool_max` - (Optional) Maximum size of the Auto Scaling Group Warm Pool. Default is `1`.
-* `base_ami` - (Optional) The AMI from which to launch the instance.  Default to latest released AMI
-* `disk_data_iops` - (Optional) The amount of provisioned IOPS. This must be set with a volume_type of io1/io2.
-* `disk_data_size` - (Optional) EBS volume size.  Default to `300`
-* `disk_data_type` - (Optional) EBS volume type.  Default to `io2`
-* `disk_os_size` - (Optional) EBS volume size.  Default to `60`
-* `disk_os_type` - (Optional) EBS volume type.  Default to `gp3`
-* `hostname_prefix` - (Required) A unique name.
-* `iam_policy_enabled` - (Optional) Enables the ability to add custom IAM policies for the instance profile
-* `instance_type` - (Required) The type of the EC2 instance.
-* `key_name` - (Required) The key name to use for the instances.
-* `lb_algorithm_type` - (Optional) Determines how the load balancer selects targets when routing requests.  The value is round_robin or least_outstanding_requests.  Default to `round_robin`
-* `lb_check_interval` - (Optional) Loadbalancer health check interval. Default to `30` (seconds)
-* `lb_unhealthy_threshold` - (Optional) Loadbalancer unhealthy threshold.  Default to `2` (evaluation periods)
-* `s3_policy` - (Optional) Provides customers the ability to supply their own IAM policy for instance profile to access S3 buckets - file("custom_policy.json")
-* `ssl_certificate_arn` - (Required) The ARN from ACM of the SSL server certificate for Load Balancer.
-* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
-* `tags` - (Optional) A map of the additional tags.
-
-* `ia_cert_crt_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
-* `ia_cert_key_arn` - (Optional) ARN from AWS Secrets. This enables end to end SSL on Iris Anywhere application server. Blank will force non-SSL between LB and Server.  Default to blank
-* `ia_domain` - (Required) domain name of SSL wildcard SSL used for end to end SSL, ie "yourdomain.com", or "test.yourdomain.com". Domain must match cert SAN.
-* `ia_secret_arn` - (Required) ARN of secrets for configurating Iris Anywhere.
-* `ia_max_sessions` - (Required) Set max sessions per Iris Anywhere instance before autoscaling.
-* `iam_role_name` - (Optional) Set name for IAM Role.
-* `search_enabled` - (Optional) Enable use of Elastic Search for s3 indexing.
-* `s3_sse_cmk_enabled` - (Optional) Enables S3 SSE CMK for customers with managed keys.
-* `s3_sse_cmk_arn` - (Optional) ARN of Customer Managed KMS Key.
-* `ia_video_bitrate` - (Optional) Sets video bitrate for Iris Anywhere. Default is 10000.
-* `ia_video_codec` - (Optional) Sets video codec for Iris Anywhere streams. Default is VP9.
-* `asg_warm_pool_min` - (Optional) Warm pool minimum value. Default is 0
-* `asg_warm_pool_max` "(Optional) Warm pool maximum value
-* `update_asg_lt` - (Optional) Updates launch template to latest. Default is true
-* `s3_progressive_retrieval` = (Optional) Sets the s3 download retrieval option for Iris Anywhere.  Default to `True`
-* `s3_reclaim_maxused` = (Optional) Sets the Max used scratch space available threshold before data is offlined.  Default to `90` 
-* `s3_reclaim_minused` = (Optional) Sets the Minimum used scratch space available threshold before data is offlined.  Default to `80` 
-* `s3_reclaim_age` (Optional) Sets the age of files threshold for data stored before data is offlined.  Default to `8h`
-* `s3_enterprise` (Optional) "Uses Config Map for S3 buckets configured with SSE - Contact GrayMeta for key/value info"
-
-### Attributes Reference:
-In addition to all the arguments above the following attributes are exported:
-* `alb_dns_name` - The DNS name of the load balancer.
-* `asg_name` - The autoscaling group name
-* `nsg_alb_id` - Network Security Group for ALB
-* `nsg_iris_id` - Network Security Group for ASG instances
-
-### Optional Additional Resources
-
-Set your own scaling schedule. For example, if you expect more usage during business hours Monday - Friday, you can plan your scaling actions accordingly.
-
-Example: Add a resource block like this to your `main.tf`.
-
-```
-resource "aws_autoscaling_schedule" "iris1_schedule_start" {
-  scheduled_action_name  = "iris1-schedule-start"
-  recurrence             = "0 16 * * MON-FRI"
-  desired_capacity       = 2
-  max_size               = 10
-  min_size               = 2
-  autoscaling_group_name = module.iris1.asg_name
-}
-
-resource "aws_autoscaling_schedule" "iris_anywhere_9xl_schedule_end" {
-  scheduled_action_name  = "iris1-schedule-end"
-  recurrence             = "0 6 * * MON-FRI"
-  desired_capacity       = 0
-  max_size               = 10
-  min_size               = 0
-  autoscaling_group_name = module.iris1.asg_name
+  warm_pool              = { enabled = true }
+  asg_size_min           = 0
+  asg_size_max           = 1
+  asg_size_desired       = 1
+  asg_scalein_threshold  = 1
+  asg_scaleout_threshold = 0
 }
 ```
 
-`recurrence` - (Optional) The time when recurring future actions will start. Start time is specified by the user following the Unix cron syntax format.   Based on UTC/GMT.
+Common inputs:
 
-`desired_capacity`, `max_size`, `min_size` - (Optional) Default `0`. Set to `-1` if you don't want to change the value at the scheduled time.
+* `hostname_prefix`
+* `instance_type`
+* `key_name`
+* `subnet_id`
+* `ia_secret_arn`
+* `ssl_alb_acm_arn` when using the ALB path.
+* `haproxy` and the HAProxy-specific variables when using HAProxy instead of the ALB path.
 
-### Creating Secrets for Iris Anywhere
-Before deploying Iris Admin and Iris Anywhere (ASG), the customer will need to create a secret in AWS Secrets Manager with the following keys/values:
+See [asg/README.MD](asg/README.MD) for the full ASG input and output reference.
 
-Required by Iris Admin server (these inputs are specified by the customer)
-* Key : Value
-* `admin_db_id`        : userid for Iris Admin database
-* `admin_db_pw`        : password for Iris Admin database
-* `admin_console_id`   : userid of Iris Admin console
-* `admin_console_pw`   : password for Iris Admin console
+## Creating Secrets for Iris Anywhere
 
-Required by Iris Anywhere ASG:
-* Key : Value
-* `admin_customer_id`  : provided by GrayMeta licensing
-* `admin_server`       : DNS of Iris Admin server
-* `iris_s3_bucketname` : Name of S3 bucket you would like to attach to Iris Anywhere
-* `iris_s3_access_key` : IAM Access Key with permission to access bucket
-* `iris_s3_secret_key` : IAM Secret key associated with access key
-* `iris_s3_lic_code`   : S3 connector license code - provided by GrayMeta during licensing
-* `iris_s3_lic_id`     : S3 connector license id - provided by GrayMeta during licensing
-* `iris_serviceacct`   : account used to run Iris Anywhere
+Before deploying Iris Admin and Iris Anywhere, create a secret in AWS Secrets Manager with the application values required by your deployment.
 
-Secrets required for End to End SSL (optional).  Create two seperate secret credentials:
-* `Certificate in X509 DER format` in plain text.
-* `Certificate Private Key` in plain text.
+Required by Iris Admin:
 
-### Creating DNS for the Iris ASG load balancer
-Create a DNS record for the Iris Anywhere implementation. A CNAME pointing to the load balancer.
+* `admin_db_id`
+* `admin_db_pw`
+* `admin_console_id`
+* `admin_console_pw`
 
-### AWS Quotas & Service Limits
-Select an AWS service to view its service limits.
+Common Iris Anywhere secret values:
+
+* `admin_customer_id`
+* `admin_server`
+* `s3_enterprise`
+
+Storage-related values are deployment-dependent and are not always required:
+
+* `iris_s3_bucketname`
+* `iris_s3_access_key`
+* `iris_s3_secret_key`
+
+Optional secrets are also used for end-to-end TLS, SAML, search, and storage integrations. The exact payload depends on which optional features and storage path you enable.
+
+## DNS
+
+Create a DNS record for the Iris Anywhere endpoint after deployment. For the ALB path, this is typically a CNAME pointing to the load balancer DNS name.
+
+## Service Limits
+
+Review relevant AWS quotas before deployment:
+
 * [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html)
 * [Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html)
 * [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html)
 * [RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html)
-* [OpenSearch/ElasticSearch](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/limits.html)
+* [OpenSearch](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/limits.html)
 * [S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/BucketRestrictions.html)
 * [ACM](https://docs.aws.amazon.com/acm/latest/userguide/acm-limits.html)
 * [VPC](https://docs.aws.amazon.com/vpc/latest/userguide/amazon-vpc-limits.html)
 * [NAT Gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
 * [SQS](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-quotas.html)
 
-### Emergency Maintenance
-The Iris Anywhere platform has been designed to be highly reproducible.  If ever a fault condition was found, whether it be hardware or software, the IA platform could easily be destroyed and fully recovered from the backup snapshots.  Prior to taking action, please contact support@graymeta.com for a full analysis.
+## Support
 
-### Graymeta Service-Level Agreement
-Each customer has different requirements based on multiple sets of criteria.  Graymeta will be provide a unique SLA that best suits the customers business requirements.
+Contact support@graymeta.com for AMI access, licensing, and deployment support.
 
-### Cost Structure
+## Cost Structure
+
 ![Iris Pricing Sheet](./Iris_Pricing_Sheet2023rv.png)
