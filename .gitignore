@@ -1,7 +1,10 @@
 # Local .terraform directories
 **/.terraform/*
 .terraform.lock.hcl
+
+# Terraform-generated Lambda zip artifacts
 *.zip
+outputs/
 .DS_Store
 
 # .tfstate files
