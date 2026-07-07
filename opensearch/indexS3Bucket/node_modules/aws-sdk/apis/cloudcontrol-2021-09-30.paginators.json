@@ -3,14 +3,12 @@
     "ListResourceRequests": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "ResourceRequestStatusSummaries"
+      "limit_key": "MaxResults"
     },
     "ListResources": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "ResourceDescriptions"
+      "limit_key": "MaxResults"
     }
   }
 }

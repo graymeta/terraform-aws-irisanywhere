@@ -13,14 +13,11 @@
       "output_token": "NextToken"
     },
     "ListStreams": {
-      "input_token": "NextToken",
+      "input_token": "ExclusiveStartStreamName",
       "limit_key": "Limit",
       "more_results": "HasMoreStreams",
-      "output_token": "NextToken",
-      "result_key": [
-        "StreamNames",
-        "StreamSummaries"
-      ]
+      "output_token": "StreamNames[-1]",
+      "result_key": "StreamNames"
     }
   }
 }

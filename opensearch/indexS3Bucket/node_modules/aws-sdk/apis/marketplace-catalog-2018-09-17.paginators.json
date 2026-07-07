@@ -3,14 +3,12 @@
     "ListChangeSets": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "ChangeSetSummaryList"
+      "limit_key": "MaxResults"
     },
     "ListEntities": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "EntitySummaryList"
+      "limit_key": "MaxResults"
     }
   }
 }
