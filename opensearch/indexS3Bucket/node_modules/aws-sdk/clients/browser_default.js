@@ -87,9 +87,7 @@ module.exports = {
   PersonalizeRuntime: require('./personalizeruntime'),
   ForecastService: require('./forecastservice'),
   ForecastQueryService: require('./forecastqueryservice'),
-  MarketplaceCatalog: require('./marketplacecatalog'),
   KinesisVideoSignalingChannels: require('./kinesisvideosignalingchannels'),
-  Amp: require('./amp'),
   Location: require('./location'),
   LexRuntimeV2: require('./lexruntimev2')
 };

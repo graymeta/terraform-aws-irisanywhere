@@ -1,10 +1,5 @@
 {
   "pagination": {
-    "ListLanguages": {
-      "input_token": "NextToken",
-      "limit_key": "MaxResults",
-      "output_token": "NextToken"
-    },
     "ListParallelData": {
       "input_token": "NextToken",
       "limit_key": "MaxResults",

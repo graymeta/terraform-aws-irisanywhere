@@ -1,100 +1,119 @@
-# Deploying GrayMeta Iris Anywhere AWS OpenSearch with Terraform
+# Deploying GrayMeta Iris Anywhere Search with Terraform
 
-The following contains instructions for deploying OpenSearch (within a VPC) with Iris Anywhere into an AWS environment. This module creates a domain with two instances for HA. We enable end-to-end encryption along with data encryption at rest.
+This module deploys the search domain used by Iris Anywhere. The Terraform directory name is `es`, but the implementation provisions an AWS-managed OpenSearch / Elasticsearch-compatible domain plus a supporting Lambda function.
 
-Prerequisites:
-* Stored credentials in [Secrets Manager](#creating-secrets-for-iris-anywhere) prior to deploying with the specific attributes specified for OpenSearch.
-* Secret and Access keys for the IAM user account created by this module. These must be populated in AWS Secrets Manager see below. These are used to authenticate with OpenSearch when managing indexes.
-* Iris Anywhere ASG set search_enabled to "true".
-* Certificates created or imported in AWS Certificate Manager.
-* OpenSearch requires two subnets for high availability.
-* Terraform 12 > compatible.
-* `version` - Current version is `v0.0.13`.
+## Requirements
+
+* Terraform 1.8.x or compatible.
+* Two or more subnets when using the default zone-aware HA configuration.
+* Secrets Manager entries ready to store the OpenSearch connection details used by Iris Anywhere.
+* `search_enabled = true` in the Iris Anywhere ASG deployment when you want the application tier to use this search domain.
 
 ## Example Usage
-  
+
 ```hcl
 provider "aws" {
   region  = "us-west-2"
   profile = "my-aws-profile"
 }
 
-module "ia-opensearch" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//es?ref=v0.0.13"
+module "ia_search" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//es?ref=<tag>"
 
-domain                                    = "es-domain-name" 
-instance_type                             = "m4.xlarge.elasticsearch"
-subnet_id                                 = ["subnet-foo1", "subnet-foo2"]
-custom_endpoint                           = "youres.domain.com"
-custom_endpoint_certificate_arn           = "arn:aws:acm:region:########:certificate/1234"
-encrypt_at_rest_kms_key_id                = "arn:aws:kms:region:########:key/1234"
-ia_secret_arn                             = "arn:aws:secretsmanager:region:##########/credname"
-bucketlist                                = "s3bucket1"
-
+  domain                          = "irisanywhere-es"
+  instance_type                   = "t2.small.elasticsearch"
+  subnet_id                       = ["subnet-foo1", "subnet-foo2"]
+  ia_secret_arn                   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-anywhere"
+  bucketlist                      = "media-bucket-1,media-bucket-2"
+  arn_of_indexresource            = "arn:aws:iam::123456789012:role/indexer-role"
+  custom_endpoint                 = "search.example.com"
+  custom_endpoint_certificate_arn = "arn:aws:acm:us-west-2:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
-
 ```
-### Argument Reference:
-Name of Domain
-* `allowed_cidr_blocks` - (Required) List of network cidr that have access.  Default to `["0.0.0.0/0"]`
-* `domain` - (Required) Name of es domain for cluster.  Default to `irisanywhere-es`
-* `instance_type` - (Required) Elasticsearch instance type for data nodes in the cluster.
-* `subnet_id` - (Required) A list of subnet IDs to launch resources in.
-* `custom_endpoint` - (Required) Specifies custom FQDN for the domain.
-* `custom_endpoint_certificate_arn` - (Required) ARN of certificate for configurating Iris Anywhere.
-* `encrypt_at_rest_kms_key_id` - (Required) ARN of ES key in Key Management Service to support encryption at rest.
-* `tags` -  (Optional) A map of the additional tags.
-* `volume_type` - (Optional) EBS volume type. Default to `gp3`.
-* `volume_size` - (Optional) EBS volume size. Default to `10`.
 
-The following secret keys must be set for OpenSearch to work properly.
+## Minimum Root Module
 
-    os_region          = ""
-    os_endpoint        = ""
-    os_accessid        = ""
-    os_secretkey       = ""
+Use this module only when the customer deployment requires search integration.
 
+Required for a first successful apply:
 
-### Attributes Reference:
-***
-* Create an IAM access and secret keys for the user OpenSearch created and store data in AWS Secrets Manager
-* Populate the key info created by OS in the secrets used by IA ASG created by OS
-* Add the IAM user created by OpenSearch as a Master User (OpenSearch, Select Domain, Edit Security, Set IAM ARN as master user by adding the IAM User ARN )
-* Redeploy IA ASG with newly created secrets for OpenSearch
+* `domain`
+* `subnet_id`
+* `ia_secret_arn`
+* `bucketlist`
+* `arn_of_indexresource`
 
-## Configuring ASG for OpenSearch
+Usually optional on the first apply:
 
+* `instance_type`
+* `instance_count`
+* `allowed_cidr_blocks`
+* `advanced_options`
+* `security_groups`
 
-## Indexing The S3 Bucket
-### Prerequisites:
-* s3-index.exe is installed on the Iris Admin server instance.
-* AWS CLI is installed on the AWS Iris Admin server instance.
-* AWS IAM policy credentials have access to the desired S3 bucket.
-* AWS IAM policy credentials have access to the OpenSearch endpoint.
+Required only for specific deployment modes:
 
-### Configure The AWS Environment
-From the terminal execute the aws configure command.
-``` 
-~ % aws configure
-```
-You will be prompted for the following configuration credentials...
-```
-AWS Access Key ID []: [Enter Your Access Key ID Here]
-AWS Secrete Access Key []: [Enter Your Secret Access Key ID Here]
-Default region name []: [Enter aws region name i.e. us-east-1]
-Default output format []: [Enter your preferred output format i.e. json]
-```
-Once the AWS environment is configured with proper credentials, proceed to executing the next step.
+* `custom_endpoint` and `custom_endpoint_certificate_arn` when `custom_endpoint_enabled = true`.
+* `encrypt_at_rest_kms_key_id` when using a customer-managed KMS key.
+* `advanced_security_options_master_user_arn` when you need to pin a specific IAM principal as the advanced-security master user.
 
-### Executing The s3-index.exe
-Locate the s3-index.exe directory and run the following command from that directory
-```
-.\s3-index --region [AWS region] --bucket [bucket name] --domain [domain name] --awsProfile [profile name]
-```
-Required by s3-index.exe
-* `region`  : AWS region
-* `bucket`  : Name of s3 bucket to be indexed
-* `domain`  : Domain of the OpenSearch service
+## Inputs
 
-Optional
-* `awsProfile` : Name of AWS profile if other than default
+* `domain` optional, default `irisanywhere-es`. Search domain name.
+* `instance_type` optional, default `t2.small.elasticsearch`. Search node instance type.
+* `es_version` optional, default `OpenSearch_1.0`. Engine version.
+* `tag_domain` optional, default `var.domain`. Tag value used by the module.
+* `volume_type` optional, default `gp3`. EBS volume type.
+* `ebs_volume_size` optional, default `10`. EBS volume size in GiB.
+* `advanced_options` optional, default `{}`. Advanced domain options.
+* `advanced_security_options_enabled` optional, default `true`. Enables advanced security options.
+* `advanced_security_options_master_user_arn` optional, default `""`. Required when you want to pin a specific IAM principal as the advanced-security master user.
+* `custom_endpoint_enabled` optional, default `true`. Enables the custom endpoint block.
+* `custom_endpoint` optional, default `""`. Required when `custom_endpoint_enabled = true`.
+* `custom_endpoint_certificate_arn` optional, default `""`. Required when `custom_endpoint_enabled = true`.
+* `subnet_id` required. Subnet IDs where the domain will be deployed.
+* `zone_awareness_enabled` optional, default `true`. Enables zone awareness.
+* `availability_zone_count` optional, default `2`. Number of availability zones used by the domain. When zone awareness is enabled, this should match the number of subnets you intend to use.
+* `instance_count` optional, default `2`. Number of data nodes.
+* `node_to_node_encryption_enabled` optional, default `true`. Enables node-to-node encryption.
+* `encrypt_at_rest_enabled` optional, default `true`. Enables encryption at rest.
+* `encrypt_at_rest_kms_key_id` optional, default `""`. Required when `encrypt_at_rest_enabled = true` and you want a customer-managed KMS key.
+* `domain_endpoint_options_enforce_https` optional, default `true`. Forces HTTPS.
+* `domain_endpoint_options_tls_security_policy` optional, default `Policy-Min-TLS-1-2-PFS-2023-10`. TLS policy for the endpoint.
+* `base_sg` optional, default `true`. Enables creation of the base security group path.
+* `security_groups` optional, default `[]`. Additional security groups allowed to connect.
+* `allowed_cidr_blocks` optional, default `["0.0.0.0/0"]`. Allowed CIDR blocks.
+* `ia_secret_arn` required. Secrets Manager ARN used by the indexing Lambda and integration flow.
+* `bucketlist` required. Comma-separated bucket list used by the indexing workflow.
+* `arn_of_indexresource` required. ARN of the trusted indexing role or resource.
+
+## Outputs
+
+* `arn` Domain ARN.
+* `domain_id` Domain ID.
+* `domain_name` Domain name.
+* `endpoint` Domain endpoint.
+* `kibana_endpoint` Kibana / Dashboards endpoint.
+* `subnet_id` Subnet IDs passed into the module.
+* `domain_arn` Joined domain ARN output.
+* `domain_endpoint` Joined endpoint output.
+* `lambda_arn` ARN of the Lambda function used by the indexing flow.
+
+## Post-Deployment Integration
+
+After deployment, update the Iris Anywhere secret with the OpenSearch connection values used by the application:
+
+* `os_region`
+* `os_endpoint`
+* `os_accessid`
+* `os_secretkey`
+
+Then redeploy or update the Iris Anywhere ASG with `search_enabled = true` and `es_domain_name` set appropriately.
+
+## Bucket Indexing Workflow
+
+The repository also contains helper content for indexing S3 buckets into the search domain. To use that workflow:
+
+* Install the indexing utility on the Iris Admin server.
+* Configure AWS credentials with access to the target bucket and search domain.
+* Run the indexing command with the correct region, bucket, and domain values.

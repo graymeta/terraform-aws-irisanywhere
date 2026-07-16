@@ -2,9 +2,6 @@
   "pagination": {
     "BatchGetTraces": {
       "input_token": "NextToken",
-      "non_aggregate_keys": [
-        "UnprocessedTraceIds"
-      ],
       "output_token": "NextToken",
       "result_key": "Traces"
     },
@@ -35,19 +32,11 @@
     },
     "GetServiceGraph": {
       "input_token": "NextToken",
-      "non_aggregate_keys": [
-        "StartTime",
-        "EndTime",
-        "ContainsOldGroupVersions"
-      ],
       "output_token": "NextToken",
       "result_key": "Services"
     },
     "GetTimeSeriesServiceStatistics": {
       "input_token": "NextToken",
-      "non_aggregate_keys": [
-        "ContainsOldGroupVersions"
-      ],
       "output_token": "NextToken",
       "result_key": "TimeSeriesServiceStatistics"
     },
@@ -58,22 +47,8 @@
     },
     "GetTraceSummaries": {
       "input_token": "NextToken",
-      "non_aggregate_keys": [
-        "TracesProcessedCount",
-        "ApproximateTime"
-      ],
       "output_token": "NextToken",
       "result_key": "TraceSummaries"
-    },
-    "ListResourcePolicies": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "result_key": "ResourcePolicies"
-    },
-    "ListTagsForResource": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "result_key": "Tags"
     }
   }
 }

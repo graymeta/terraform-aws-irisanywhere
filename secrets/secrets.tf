@@ -15,15 +15,9 @@ resource "aws_secretsmanager_secret_version" "iris_config" {
     admin_console_pw   = var.admin_console_pw,
     admin_db_id        = var.admin_db_id,
     admin_db_pw        = var.admin_db_pw,
-    admin_server       = "",
-    admin_customer_id  = "",
-
-    s3_enterprise = jsonencode({
-      buckets = [
-        { name = "name1", enabled = true },
-        { name = "name2", enabled = true }
-      ]
-    })
+    admin_server       = var.admin_server,
+    admin_customer_id  = var.admin_customer_id,
+    s3_enterprise      = var.s3_enterprise
   })
 }
 

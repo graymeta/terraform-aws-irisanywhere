@@ -95,12 +95,6 @@
       "limit_key": "Limit",
       "result_key": "Builds"
     },
-    "ListCompute": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "limit_key": "Limit",
-      "result_key": "ComputeList"
-    },
     "ListFleets": {
       "input_token": "NextToken",
       "output_token": "NextToken",
@@ -118,12 +112,6 @@
       "output_token": "NextToken",
       "limit_key": "Limit",
       "result_key": "GameServers"
-    },
-    "ListLocations": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "limit_key": "Limit",
-      "result_key": "Locations"
     },
     "ListScripts": {
       "input_token": "NextToken",

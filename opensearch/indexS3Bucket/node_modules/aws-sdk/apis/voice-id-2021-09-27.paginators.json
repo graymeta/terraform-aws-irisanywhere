@@ -3,38 +3,22 @@
     "ListDomains": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "DomainSummaries"
+      "limit_key": "MaxResults"
     },
     "ListFraudsterRegistrationJobs": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "JobSummaries"
-    },
-    "ListFraudsters": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "FraudsterSummaries"
+      "limit_key": "MaxResults"
     },
     "ListSpeakerEnrollmentJobs": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "JobSummaries"
+      "limit_key": "MaxResults"
     },
     "ListSpeakers": {
       "input_token": "NextToken",
       "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "SpeakerSummaries"
-    },
-    "ListWatchlists": {
-      "input_token": "NextToken",
-      "output_token": "NextToken",
-      "limit_key": "MaxResults",
-      "result_key": "WatchlistSummaries"
+      "limit_key": "MaxResults"
     }
   }
 }

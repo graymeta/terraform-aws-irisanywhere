@@ -9,7 +9,6 @@ Object.defineProperty(apiLoader.services['groundstation'], '2019-05-23', {
   get: function get() {
     var model = require('../apis/groundstation-2019-05-23.min.json');
     model.paginators = require('../apis/groundstation-2019-05-23.paginators.json').pagination;
-    model.waiters = require('../apis/groundstation-2019-05-23.waiters2.json').waiters;
     return model;
   },
   enumerable: true,

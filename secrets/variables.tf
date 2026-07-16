@@ -81,13 +81,6 @@ variable "iris_s3_secret_key" {
   default     = ""
 }
 
-variable "iris_serviceacct" {
-  type        = string
-  description = "account name for application"
-  default     = "iris-service"
-  sensitive   = true
-}
-
 variable "okta_issuer" {
   type        = string
   description = "Value for Okta Issuer SPA"
@@ -160,8 +153,7 @@ variable "os_secretkey" {
 
 variable "s3_enterprise" {
   type        = string
-  description = "List of S3 buckets and configs for SSE - requires keypair values"
-  default     = "{}"  
+  description = "List of S3 buckets - requires json string key/value pairs for each bucket.  Example: {\"buckets\": [{\"name\": \"bucket1\", \"enabled\": true}, {\"name\": \"bucket2\", \"enabled\": false}]}"
 }
 
 variable "saml_uniqueID" {
