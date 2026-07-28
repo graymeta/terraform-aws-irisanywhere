@@ -16,9 +16,11 @@ try {
     $admin_console_pw   = $secretdata.admin_console_pw
 
     #TEMP create event log for debugging
-    New-EventLog -LogName IrisAdmin -Source "IrisAdmin" ; Start-Sleep -Seconds 10
-    Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1001 -message "I have started initializing"
-}
+    if (-not (Get-EventLog -List -ErrorAction SilentlyContinue | Where-Object {$_.Log -eq 'IrisAdmin'})) {
+        New-EventLog -LogName IrisAdmin -Source "IrisAdmin"
+    }
+    Start-Sleep -Seconds 10    Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Information -eventid 1001 -message "I have started initializing"
+    }
 catch {
     Write-host $_.Exception | Format-List -force
     Write-host "Exception accessing secret $iasecretarn" -ForegroundColor Red 
@@ -46,8 +48,12 @@ catch {
     Write-host "Exception during install process."   
     Write-EventLog -LogName IrisAdmin -source IrisAdmin -EntryType Error -eventid 1001 -message "Iris Admin failed to install"
 }
+
 #Check and Cleanup
-$irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion 
+if (Test-Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server") {
+    $irisdbvercheck = Get-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMeta Iris DB Server" -name Displayversion | select -ExpandProperty displayversion
+}
+
 if($irisdbvercheck){
     Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green
 } else {
