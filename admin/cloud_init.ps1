@@ -56,8 +56,6 @@ if (Test-Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GrayMet
 }
 
 if($irisdbvercheck) {
-    ## Add the ServerID tag to the instance
-    & "C:\ProgramData\Graymeta\Launch\scripts\set-serverid.ps1"
     Write-host "GrayMeta Iris Server version $irisdbvercheck installed"  -ForegroundColor Green
 } else {
     Write-host "GrayMeta Iris Server installation $irisdbvercheck failed"  -ForegroundColor red
