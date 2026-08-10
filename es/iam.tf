@@ -6,7 +6,7 @@ resource "aws_iam_user" "iris_s3_index" {
 data "aws_iam_policy_document" "es_policy" {
   statement {
     actions   = ["es:*"]
-    resources = ["${aws_elasticsearch_domain.es.arn}/*"]
+    resources = ["${aws_opensearch_domain.es.arn}/*"]
     effect    = "Allow"
   }
 }
