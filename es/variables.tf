@@ -12,7 +12,7 @@ variable "instance_type" {
 
 variable "es_version" {
   type        = string
-  default     = "OpenSearch_1.0"
+  default     = "OpenSearch_3.5"
   description = "(Required) Desired version of Opensearch"
 }
 

@@ -130,3 +130,15 @@ variable "enterprise_ha_lb_public" {
   description = "If true the admin network load balancer will be public facing.  The scheme will show internet-facing.  Default to internal-facing"
   default     = false
 }
+
+variable "internal_domain" {
+  description = "Internal domain for private Route 53 hosted zone"
+  type        = string
+  default     = "iris-admin.internal"
+}
+
+variable "create_private_hosted_zone" {
+  description = "Whether to create private hosted zone for internal NLB access"
+  type        = bool
+  default     = true
+}

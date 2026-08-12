@@ -1,6 +1,6 @@
-resource "aws_elasticsearch_domain" "es" {
+resource "aws_opensearch_domain" "es" {
   domain_name           = var.domain
-  elasticsearch_version = var.es_version
+  engine_version        = var.es_version
 
   cluster_config {
     instance_count         = var.instance_count
@@ -70,8 +70,8 @@ resource "aws_elasticsearch_domain" "es" {
   }
 }
 
-resource "aws_elasticsearch_domain_policy" "iris_s3" {
-  domain_name     = aws_elasticsearch_domain.es.domain_name
+resource "aws_opensearch_domain_policy" "iris_s3" {
+  domain_name     = aws_opensearch_domain.es.domain_name
   access_policies = <<CONFIG
     {
         "Version": "2012-10-17",
@@ -84,7 +84,7 @@ resource "aws_elasticsearch_domain_policy" "iris_s3" {
                     "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
                 },
                 "Effect": "Allow",
-                "Resource": "${aws_elasticsearch_domain.es.arn}/*",
+                "Resource": "${aws_opensearch_domain.es.arn}/*",
                 "Condition": {
                   "StringEquals": {
                     "aws:PrincipalType": "AssumedRole"

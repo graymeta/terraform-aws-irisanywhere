@@ -6,8 +6,7 @@ data "aws_secretsmanager_secret_version" "iris-secret" {
 }
 
 resource "aws_db_instance" "default" {
-  #count = var.enterprise_ha == "true" ? 1 : 0
-  count = var.enterprise_ha ? 1 : 0
+  count = var.enterprise_ha && var.create_rds ? 1 : 0
 
   allocated_storage          = var.allocated_storage
   apply_immediately          = var.apply_immediately
@@ -29,11 +28,6 @@ resource "aws_db_instance" "default" {
   username                   = jsondecode(data.aws_secretsmanager_secret_version.iris-secret.secret_string)["admin_db_id"]
   vpc_security_group_ids     = ["${aws_security_group.rds.id}"]
 
-  #   snapshot_identifier = "${var.db_snapshot == "final" ?
-  #     format("GrayMetaIrisAdmin-${var.hostname_prefix}-final") :
-  #     var.db_snapshot
-  #   }"
-
   lifecycle {
     ignore_changes = [
       storage_encrypted,
@@ -52,7 +46,7 @@ resource "aws_db_instance" "default" {
 
 ### Network ###
 resource "aws_db_subnet_group" "default" {
-  count      = var.enterprise_ha ? 1 : 0
+  count      = var.enterprise_ha && var.create_rds ? 1 : 0
   subnet_ids = var.subnet_id
 
   tags = merge(
@@ -65,7 +59,7 @@ resource "aws_db_subnet_group" "default" {
 
 ### Output ###
 output "endpoint" {
-  value = var.enterprise_ha == true ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
+  value = var.enterprise_ha && var.create_rds ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
 }
 
 data "aws_subnet" "subnetinfo" {
@@ -90,6 +84,12 @@ resource "aws_security_group" "rds" {
       Name = "IrisAdmin"
     },
   )
+}
+
+variable "create_rds" {
+  type        = bool
+  description = "(Optional) Whether to create the RDS instance. Default is true."
+  default     = true
 }
 
 variable "apply_immediately" {

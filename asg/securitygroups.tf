@@ -96,6 +96,17 @@ resource "aws_security_group_rule" "iris_8080" {
   source_security_group_id = var.haproxy == true ? aws_security_group.ha[0].id : aws_security_group.alb.id
 }
 
+resource "aws_security_group_rule" "iris_8081" {
+  count                    = var.ia_cert_key_arn != "" ? 0 : 1
+  security_group_id        = aws_security_group.iris.id
+  description              = "iris_port8081_nginx"
+  type                     = "ingress"
+  from_port                = 8081
+  to_port                  = 8081
+  protocol                 = "tcp"
+  source_security_group_id = var.haproxy == true ? aws_security_group.ha[0].id : aws_security_group.alb.id
+}
+
 resource "aws_security_group_rule" "iris_443" {
   count                    = var.ia_cert_key_arn != "" ? 1 : 0
   security_group_id        = aws_security_group.iris.id

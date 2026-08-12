@@ -62,7 +62,7 @@ resource "aws_lb_listener" "port443" {
 resource "aws_lb_target_group" "port443" {
   count       = var.haproxy ? 0 : 1
   name_prefix = substr(replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}-ScaleIn", ".", ""), 0, 6)
-  port        = var.ia_cert_key_arn != "" ? "443" : "8080"
+  port        = var.ia_cert_key_arn != "" ? "443" : "8081"
   protocol    = var.ia_cert_key_arn != "" ? "HTTPS" : "HTTP"
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
@@ -81,8 +81,7 @@ resource "aws_lb_target_group" "port443" {
   }
 
   stickiness {
-    type            = "app_cookie"
-    cookie_name     = "iris-anywhere-lb-sid"
+    type            = "lb_cookie"
     cookie_duration = var.alb_cookie_duration
     enabled         = true
   }
