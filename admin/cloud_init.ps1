@@ -4,6 +4,8 @@ $enterprise_ha = "${enterprise_ha}"
 $dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
+$instance_index = [int]"${instance_index}"
+$ha_secondary_install_delay_seconds = [int]"${ha_secondary_install_delay_seconds}"
 
 
 #Retrieve and prepare Secrets
@@ -37,6 +39,11 @@ $iris_admin_exe = gci "$($env:systemdrive)\IrisTemp\" | where {$_.name -like "*.
 Write-Host "Message: Installing IrisAdmin $iadbversion"  -ForegroundColor Green
 try {
     if($enterprise_ha -eq "true") {
+            if($instance_index -gt 0 -and $ha_secondary_install_delay_seconds -gt 0) {
+                $install_delay_seconds = $instance_index * $ha_secondary_install_delay_seconds
+                Write-EventLog -LogName IrisAdmin -Source IrisAdmin -EntryType Information -EventId 1001 -Message "Waiting $install_delay_seconds seconds before secondary Iris Admin install"
+                Start-Sleep -Seconds $install_delay_seconds
+            }
             Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /DBHOST=$dbserver /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru
     } else {
             Start-Process -FilePath "C:\IrisTemp\$($iris_admin_exe)" -ArgumentList  "/S /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw" -Wait -PassThru

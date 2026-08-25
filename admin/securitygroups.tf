@@ -12,6 +12,10 @@ resource "aws_security_group" "iris_adm" {
   "Name" = format("${var.hostname_prefix}-iris-admin") })
 }
 
+locals {
+  nlb_private_cidr_blocks = var.enterprise_ha ? formatlist("%s/32", data.aws_network_interface.nlb_eni_details[*].private_ip) : []
+}
+
 # Allow all outbound traffic
 resource "aws_security_group_rule" "egress" {
   security_group_id = aws_security_group.iris_adm.id
@@ -47,7 +51,7 @@ resource "aws_security_group_rule" "allow_postgresql" {
 }
 
 
-# Allow Postgres inbound traffic
+# Allow HTTPS inbound traffic
 resource "aws_security_group_rule" "allow_https" {
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow Https"
@@ -55,5 +59,5 @@ resource "aws_security_group_rule" "allow_https" {
   from_port         = var.https_console_port
   to_port           = var.https_console_port
   protocol          = "tcp"
-  cidr_blocks       = var.api_console_access_cidr
+  cidr_blocks       = concat(var.api_console_access_cidr, local.nlb_private_cidr_blocks)
 }

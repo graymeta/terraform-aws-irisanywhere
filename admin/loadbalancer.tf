@@ -1,12 +1,12 @@
 resource "aws_lb" "irisadmin" {
-  count                      = var.enterprise_ha ? 1 : 0
-  enable_deletion_protection = false
-  load_balancer_type         = "network"
-  internal                   = var.enterprise_ha_lb_public ? false : true
-  name_prefix                = "iadm-"
-  subnets                    = var.subnet_id
+  count                            = var.enterprise_ha ? 1 : 0
+  enable_deletion_protection       = false
+  load_balancer_type               = "network"
+  internal                         = var.enterprise_ha_lb_public ? false : true
+  name_prefix                      = "iadm-"
+  subnets                          = var.subnet_id
   enable_cross_zone_load_balancing = true
-  
+
   tags = {
     Name            = "IrisAdmin-LB"
     ApplicationName = "IrisAdmin"
@@ -77,13 +77,13 @@ resource "aws_route53_zone" "private" {
 
 # Find NLB's network interfaces
 data "aws_network_interfaces" "nlb_enis" {
-  count = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
-  
+  count = var.enterprise_ha ? 1 : 0
+
   filter {
     name   = "subnet-id"
     values = var.subnet_id
   }
-  
+
   filter {
     name   = "description"
     values = ["ELB net/iadm-*"]
@@ -94,7 +94,7 @@ data "aws_network_interfaces" "nlb_enis" {
 
 # Get details of each NLB network interface
 data "aws_network_interface" "nlb_eni_details" {
-  count      = var.create_private_hosted_zone && var.enterprise_ha ? length(var.subnet_id) : 0
+  count      = var.enterprise_ha ? length(var.subnet_id) : 0
   id         = data.aws_network_interfaces.nlb_enis[0].ids[count.index]
   depends_on = [data.aws_network_interfaces.nlb_enis]
 }
