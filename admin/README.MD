@@ -76,6 +76,7 @@ Usually optional on the first apply:
 * `tags`
 * `additional_tags`
 * `user_init`
+* `ha_secondary_install_delay_seconds`
 
 Required only for specific deployment modes:
 
@@ -106,6 +107,7 @@ Core inputs:
 * `instance_protection` optional, default `true`. Enables EC2 instance protection.
 * `associate_public_ip` optional, default `false`. Associates public IPs to the Admin instances. Typically set to `true` only when you need direct public access to standalone Admin instances.
 * `enterprise_ha` optional, default `false`. Enables the HA topology. When enabled, provide at least two subnet IDs.
+* `ha_secondary_install_delay_seconds` optional, default `300`. Seconds to delay each secondary Admin instance install when `enterprise_ha = true`, preventing simultaneous database initialization attempts.
 * `https_console_port` optional, default `8021`. HTTPS port for the Admin console.
 * `http_console_port` optional, default `8020`. HTTP port for the Admin console.
 * `disable_rdp` optional, default `false`. Disables RDP access in the security group.

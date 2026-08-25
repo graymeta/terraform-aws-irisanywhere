@@ -95,6 +95,12 @@ variable "enterprise_ha" {
   default     = false
 }
 
+variable "ha_secondary_install_delay_seconds" {
+  type        = number
+  description = "Seconds to delay each secondary Iris Admin install when enterprise_ha is enabled. This staggers database initialization across HA instances."
+  default     = 300
+}
+
 variable "additional_tags" {
   default     = {}
   description = "Additional resource tags"
