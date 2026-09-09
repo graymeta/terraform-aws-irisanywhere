@@ -9,7 +9,7 @@ resource "aws_security_group" "iris_adm" {
   vpc_id      = data.aws_subnet.subnet.0.vpc_id
 
   tags = merge(local.merged_tags, {
-  "Name" = format("${var.hostname_prefix}-iris-admin") })
+  "Name" = "${var.hostname_prefix}${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}-iris-admin" })
 }
 
 locals {
