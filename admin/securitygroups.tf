@@ -17,47 +17,48 @@ locals {
 }
 
 # Allow all outbound traffic
-resource "aws_security_group_rule" "egress" {
+resource "aws_vpc_security_group_egress_rule" "egress" {
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow all outbound"
-  type              = "egress"
   from_port         = 0
   to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 # Allow RDP inbound traffic
-resource "aws_security_group_rule" "allow_rdp" {
-  count             = var.disable_rdp ? 0 : 1
+resource "aws_vpc_security_group_ingress_rule" "allow_rdp" {
+  for_each          = var.disable_rdp ? toset([]) : toset(var.rdp_access_cidr)
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow RDP"
-  type              = "ingress"
-  from_port         = "3389"
-  to_port           = "3389"
-  protocol          = "tcp"
-  cidr_blocks       = var.rdp_access_cidr
+  from_port         = 3389
+  to_port           = 3389
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
 # Allow Postgres inbound traffic
-resource "aws_security_group_rule" "allow_postgresql" {
+resource "aws_vpc_security_group_ingress_rule" "allow_postgresql" {
+  for_each          = toset(var.api_console_access_cidr)
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow Postgresql"
-  type              = "ingress"
-  from_port         = "5432"
-  to_port           = "5432"
-  protocol          = "tcp"
-  cidr_blocks       = var.api_console_access_cidr
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
 
 # Allow HTTPS inbound traffic
-resource "aws_security_group_rule" "allow_https" {
+resource "aws_vpc_security_group_ingress_rule" "allow_https" {
+  for_each = merge(
+    { for index, cidr in var.api_console_access_cidr : "api-${index}" => cidr },
+    { for index, cidr in local.nlb_private_cidr_blocks : "nlb-${index}" => cidr },
+  )
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow Https"
-  type              = "ingress"
   from_port         = var.https_console_port
   to_port           = var.https_console_port
-  protocol          = "tcp"
-  cidr_blocks       = concat(var.api_console_access_cidr, local.nlb_private_cidr_blocks)
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
