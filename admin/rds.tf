@@ -71,19 +71,22 @@ resource "aws_security_group" "rds" {
   description = "Access to RDS Database"
   vpc_id      = data.aws_subnet.subnetinfo.0.vpc_id
 
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = var.access_cidr
-  }
-
   tags = merge(
     var.additional_tags,
     {
       Name = "IrisAdmin${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
     },
   )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "rds_postgresql" {
+  for_each          = { for index, cidr in var.access_cidr : index => cidr }
+  security_group_id = aws_security_group.rds.id
+  description       = "Allow Postgresql"
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
 variable "create_rds" {
