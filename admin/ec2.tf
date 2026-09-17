@@ -14,7 +14,6 @@ resource "aws_instance" "iris_adm" {
     https_console_port                 = var.https_console_port
     http_console_port                  = var.http_console_port
     instance_index                     = count.index
-    ha_secondary_install_delay_seconds = var.ha_secondary_install_delay_seconds
   }), var.user_init, "\n", "</powershell>"]))
 
   associate_public_ip_address = var.associate_public_ip
