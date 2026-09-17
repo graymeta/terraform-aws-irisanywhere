@@ -16,6 +16,10 @@ locals {
   nlb_private_cidr_blocks = var.enterprise_ha ? formatlist("%s/32", data.aws_network_interface.nlb_eni_details[*].private_ip) : []
 }
 
+locals {
+  nlb_private_cidr_blocks = var.enterprise_ha ? formatlist("%s/32", data.aws_network_interface.nlb_eni_details[*].private_ip) : []
+}
+
 # Allow all outbound traffic
 resource "aws_vpc_security_group_egress_rule" "egress" {
   security_group_id = aws_security_group.iris_adm.id
