@@ -16,8 +16,8 @@ resource "aws_db_instance" "default" {
   db_subnet_group_name       = var.enterprise_ha ? aws_db_subnet_group.default[0].id : null
   engine                     = "postgres"
   engine_version             = var.db_version
-  final_snapshot_identifier  = "GrayMeta-IrisAdmin-${var.hostname_prefix}-${formatdate("YYYYMMDDhhmmss", timestamp())}-final"
-  identifier                 = var.hostname_prefix
+  final_snapshot_identifier  = "GrayMeta-IrisAdmin-${var.hostname_prefix}${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}-${formatdate("YYYYMMDDhhmmss", timestamp())}-final"
+  identifier                 = "${var.hostname_prefix}${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
   instance_class             = var.db_instance_size
   kms_key_id                 = var.db_kms_key_id
   multi_az                   = var.db_multi_az
@@ -39,7 +39,7 @@ resource "aws_db_instance" "default" {
   tags = merge(
     var.additional_tags,
     {
-      Name = "IrisAdmin"
+      Name = "IrisAdmin${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
     },
   )
 }
@@ -52,7 +52,7 @@ resource "aws_db_subnet_group" "default" {
   tags = merge(
     var.additional_tags,
     {
-      Name = "IrisAdmin"
+      Name = "IrisAdmin${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
     },
   )
 }
@@ -71,19 +71,22 @@ resource "aws_security_group" "rds" {
   description = "Access to RDS Database"
   vpc_id      = data.aws_subnet.subnetinfo.0.vpc_id
 
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = var.access_cidr
-  }
-
   tags = merge(
     var.additional_tags,
     {
-      Name = "IrisAdmin"
+      Name = "IrisAdmin${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
     },
   )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "rds_postgresql" {
+  for_each          = { for index, cidr in var.access_cidr : index => cidr }
+  security_group_id = aws_security_group.rds.id
+  description       = "Allow Postgresql"
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
 variable "create_rds" {

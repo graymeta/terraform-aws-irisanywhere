@@ -3,12 +3,12 @@ resource "aws_lb" "irisadmin" {
   enable_deletion_protection       = false
   load_balancer_type               = "network"
   internal                         = var.enterprise_ha_lb_public ? false : true
-  name_prefix                      = "iadm-"
+  name                             = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
   subnets                          = var.subnet_id
   enable_cross_zone_load_balancing = true
 
   tags = {
-    Name            = "IrisAdmin-LB"
+    Name            = "IrisAdmin-LB${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
     ApplicationName = "IrisAdmin"
   }
 }
@@ -38,11 +38,11 @@ resource "aws_lb_listener" "port5432" {
 }
 
 resource "aws_lb_target_group" "iadm" {
-  count       = var.enterprise_ha ? 1 : 0
-  name_prefix = "iadm"
-  port        = var.https_console_port
-  protocol    = "TCP"
-  vpc_id      = data.aws_subnet.subnet.0.vpc_id
+  count    = var.enterprise_ha ? 1 : 0
+  name     = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
+  port     = var.https_console_port
+  protocol = "TCP"
+  vpc_id   = data.aws_subnet.subnet.0.vpc_id
 
   health_check {
     healthy_threshold   = 3
@@ -56,7 +56,7 @@ resource "aws_lb_target_group" "iadm" {
 
 #Instance Attachment
 resource "aws_alb_target_group_attachment" "instance_attach" {
-  count            = length(aws_instance.iris_adm.*.id) == 2 ? 2 : 0
+  count            = length(aws_instance.iris_adm.*.id)
   target_group_arn = aws_lb_target_group.iadm.0.arn
   target_id        = element(aws_instance.iris_adm.*.id, count.index)
   port             = var.https_console_port
@@ -64,14 +64,14 @@ resource "aws_alb_target_group_attachment" "instance_attach" {
 
 resource "aws_route53_zone" "private" {
   count = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
-  name  = var.internal_domain
+  name  = "${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
 
   vpc {
     vpc_id = data.aws_subnet.subnet.0.vpc_id
   }
 
   tags = merge(local.merged_tags, {
-    "Name" = "${var.hostname_prefix}-internal-zone"
+    "Name" = "${var.hostname_prefix}${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}-internal-zone"
   })
 }
 
@@ -86,7 +86,7 @@ data "aws_network_interfaces" "nlb_enis" {
 
   filter {
     name   = "description"
-    values = ["ELB net/iadm-*"]
+    values = ["ELB net/iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}*"]
   }
 
   depends_on = [aws_lb.irisadmin]
@@ -102,7 +102,7 @@ data "aws_network_interface" "nlb_eni_details" {
 resource "aws_route53_record" "nlb_internal" {
   count   = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
   zone_id = aws_route53_zone.private.0.zone_id
-  name    = "nlb.${var.internal_domain}"
+  name    = "nlb.${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
   type    = "A"
   ttl     = 60
   records = [for eni in data.aws_network_interface.nlb_eni_details : eni.private_ip]
