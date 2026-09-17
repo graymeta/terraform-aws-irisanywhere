@@ -5,7 +5,6 @@ $dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
 $instance_index = [int]"${instance_index}"
-$ha_secondary_install_delay_seconds = [int]"${ha_secondary_install_delay_seconds}"
 
 # Ensure temp directory exists and start transcript logging
 $temp_dir = "$($env:systemdrive)\IrisTemp"
