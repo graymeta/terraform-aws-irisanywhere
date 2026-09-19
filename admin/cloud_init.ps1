@@ -114,8 +114,8 @@ if ($enterprise_ha -eq "true" -and -not [string]::IsNullOrEmpty($dbserver)) {
 try {
     # $instance_index 0 installs immediately, all else wait an additional $instance_index * 60 seconds
     if ($instance_index -gt 0) {
-        Write-Log -Message "Instance index is $instance_index. Waiting additional $($instance_index * 60) seconds..." -Level Information
-        Start-Sleep -Seconds ($instance_index * 60)
+        Write-Log -Message "Instance index is $instance_index. Waiting additional $($instance_index * 120) seconds..." -Level Information
+        Start-Sleep -Seconds ($instance_index * 120)
     }
 
     if ([string]::IsNullOrEmpty($iris_admin_exe)) {
@@ -139,21 +139,20 @@ try {
 
     if ($proc.ExitCode -eq 0) {
         Write-Log -Message "Iris Admin installer completed successfully (ExitCode: 0, Duration: $($duration_sec)s)" -Level Information -EventId 1000
-    } 
-    #   else {
-    #     Write-Log -Message "Iris Admin installer exited with non-zero ExitCode: $($proc.ExitCode) (Duration: $($duration_sec)s)" -Level Warning -EventId 1001
-    #     Write-Log -Message "Trying to install again..." -Level Information
-    #     $install_stopwatch.Restart()
-    #     $proc = Start-Process -FilePath $exe_full_path -ArgumentList $arg_list -Wait -PassThru -RedirectStandardOutput "C:\IrisTemp\installer_output2.log" -RedirectStandardError "C:\IrisTemp\installer_error2.log"
-    #     $install_stopwatch.Stop()
-    #     $duration_sec = [math]::Round($install_stopwatch.Elapsed.TotalSeconds, 1)
+    } else {
+        Write-Log -Message "Iris Admin installer exited with non-zero ExitCode: $($proc.ExitCode) (Duration: $($duration_sec)s)" -Level Warning -EventId 1001
+        Write-Log -Message "Trying to install again..." -Level Information
+        $install_stopwatch.Restart()
+        $proc = Start-Process -FilePath $exe_full_path -ArgumentList $arg_list -Wait -PassThru -RedirectStandardOutput "C:\IrisTemp\admin_installer_output_retry.log"
+        $install_stopwatch.Stop()
+        $duration_sec = [math]::Round($install_stopwatch.Elapsed.TotalSeconds, 1)
 
-    #     if ($proc.ExitCode -eq 0) {
-    #         Write-Log -Message "Iris Admin installer completed successfully on RETRY (ExitCode: 0, Duration: $($duration_sec)s)" -Level Information -EventId 1000
-    #     } else {
-    #         Write-Log -Message "Iris Admin installer exited with non-zero ExitCode on retry: $($proc.ExitCode) (Duration: $($duration_sec)s)" -Level Error -EventId 1001
-    #     }
-    #  }
+        if ($proc.ExitCode -eq 0) {
+            Write-Log -Message "Iris Admin installer completed successfully on RETRY (ExitCode: 0, Duration: $($duration_sec)s)" -Level Information -EventId 1000
+        } else {
+            Write-Log -Message "Iris Admin installer exited with non-zero ExitCode on retry: $($proc.ExitCode) (Duration: $($duration_sec)s)" -Level Error -EventId 1001
+        }
+    }
 } catch {
     Write-Log -Message "Exception during install execution: $($_.Exception.ToString())" -Level Error
 }
