@@ -56,7 +56,8 @@ resource "aws_lb_target_group" "iadm" {
 
 #Instance Attachment
 resource "aws_alb_target_group_attachment" "instance_attach" {
-  count            = length(aws_instance.iris_adm.*.id)
+  count    = var.enterprise_ha ? length(aws_instance.iris_adm.*.id) : 0
+  #count            = length(aws_instance.iris_adm.*.id)
   target_group_arn = aws_lb_target_group.iadm.0.arn
   target_id        = element(aws_instance.iris_adm.*.id, count.index)
   port             = var.https_console_port
