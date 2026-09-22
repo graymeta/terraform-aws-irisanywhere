@@ -77,6 +77,16 @@ variable "ia_secret_arn" {
   description = "ARN containing secrets for Iris Admin"
 }
 
+variable "iris_admin_ver" {
+  type        = string
+  description = "GrayMeta Iris Admin version to download and install, for example 9.7.5.205."
+  default     = "9.7.5.205"
+  validation {
+    condition     = can(regex("^[0-9]+(\\.[0-9]+){3}$", var.iris_admin_ver))
+    error_message = "iris_admin_ver must use a four-part version such as 9.7.5.205."
+  }
+}
+
 variable "instance_protection" {
   type        = bool
   description = "Enables instance protection"
@@ -123,12 +133,6 @@ variable "disable_rdp" {
   type        = bool
   description = "(Optional) Disables RDP in SG"
   default     = false
-}
-
-variable "user_init" {
-  type        = string
-  description = "(Optional) Provides the ability for customers to input their own custom userinit scripts"
-  default     = ""
 }
 
 variable "enterprise_ha_lb_public" {

@@ -7,15 +7,6 @@ resource "aws_instance" "iris_adm" {
   vpc_security_group_ids = [aws_security_group.iris_adm.id]
   subnet_id              = element(var.subnet_id, count.index)
 
-  user_data_base64 = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_init.ps1", {
-    ia_secret_arn                      = var.ia_secret_arn
-    enterprise_ha                      = var.enterprise_ha
-    dbserver                           = var.enterprise_ha == true && var.create_rds ? "${element(split(":", "${aws_db_instance.default.0.endpoint}"), 0)}" : ""
-    https_console_port                 = var.https_console_port
-    http_console_port                  = var.http_console_port
-    instance_index                     = count.index
-  }), var.user_init, "\n", "</powershell>"]))
-
   associate_public_ip_address = var.associate_public_ip
   disable_api_termination     = var.instance_protection ? true : false
 
@@ -28,7 +19,6 @@ resource "aws_instance" "iris_adm" {
       key_name,
       root_block_device,
       tags,
-      user_data
     ]
   }
 
@@ -51,5 +41,32 @@ resource "aws_instance" "iris_adm" {
   depends_on = [
     aws_db_instance.default
   ]
+}
+
+resource "aws_ssm_association" "iris_admin_install" {
+  count                            = var.instance_count
+  name                             = "AWS-RunPowerShellScript"
+  association_name                 = replace("${var.hostname_prefix}-${var.deployment_name}-iris-admin-install-${count.index}", ".", "-")
+  apply_only_at_cron_interval      = false
+  wait_for_success_timeout_seconds = 1800
+
+  parameters = {
+    commands = templatefile("${path.module}/cloud_init.ps1", {
+      ia_secret_arn      = var.ia_secret_arn
+      enterprise_ha      = var.enterprise_ha
+      dbserver           = var.enterprise_ha && var.create_rds ? element(split(":", aws_db_instance.default[0].endpoint), 0) : ""
+      https_console_port = var.https_console_port
+      http_console_port  = var.http_console_port
+      instance_index     = count.index
+      iris_admin_ver     = var.iris_admin_ver
+    })
+  }
+
+  targets {
+    key    = "InstanceIds"
+    values = [aws_instance.iris_adm[count.index].id]
+  }
+
+  depends_on = [aws_instance.iris_adm]
 }
 

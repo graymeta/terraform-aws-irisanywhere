@@ -11,6 +11,7 @@ Note: IAM resources are account-scoped, not regional. If you reuse the same role
 * Required Secrets Manager values created before deployment.
 * Access to the GrayMeta Iris Admin AMIs. Contact support@graymeta.com.
 * ACM certificates when using HA and TLS termination on the load balancer.
+* The Admin AMI must include a running Amazon SSM Agent and have network access to SSM and the public installer URL.
 
 ## Standalone Example
 
@@ -75,7 +76,6 @@ Usually optional on the first apply:
 * `associate_public_ip`
 * `tags`
 * `additional_tags`
-* `user_init`
 * `ha_secondary_install_delay_seconds`
 
 Required only for specific deployment modes:
@@ -104,6 +104,7 @@ Core inputs:
 * `volume_type` optional, default `gp3`. Root EBS volume type.
 * `volume_size` optional, default `60`. Root EBS volume size in GiB.
 * `ia_secret_arn` required. Secrets Manager ARN containing the Iris Admin application secrets.
+* `iris_admin_ver` required. Iris Admin installer version to download, for example `9.7.5.205`.
 * `instance_protection` optional, default `true`. Enables EC2 instance protection.
 * `associate_public_ip` optional, default `false`. Associates public IPs to the Admin instances. Typically set to `true` only when you need direct public access to standalone Admin instances.
 * `enterprise_ha` optional, default `false`. Enables the HA topology. When enabled, provide at least two subnet IDs.
@@ -111,7 +112,6 @@ Core inputs:
 * `https_console_port` optional, default `8021`. HTTPS port for the Admin console.
 * `http_console_port` optional, default `8020`. HTTP port for the Admin console.
 * `disable_rdp` optional, default `false`. Disables RDP access in the security group.
-* `user_init` optional, default `""`. Custom user-init PowerShell.
 * `enterprise_ha_lb_public` optional, default `false`. Makes the Admin HA load balancer internet-facing. Applies only when `enterprise_ha = true`.
 
 HA and RDS inputs:
