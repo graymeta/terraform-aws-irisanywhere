@@ -5,6 +5,7 @@ $dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
 $instance_index = [int]"${instance_index}"
+$iris_admin_ver = "${iris_admin_ver}"
 
 # Ensure temp directory exists and start transcript logging
 $temp_dir = "$($env:systemdrive)\IrisTemp"
@@ -63,23 +64,102 @@ try {
     Write-Log -Message "Exception accessing secret $($iasecretarn): $($_.Exception.Message)" -Level Error
 }
 
-# Ensure SSM Agent is running
+
+
+
+
+
+
+
+
+
+# Install available Windows updates before installing Iris Admin.
+$windows_update_reboot_required = $false
 try {
-    Set-Service -Name AmazonSSMAgent -StartupType Automatic -ErrorAction SilentlyContinue
-    Start-Service -Name AmazonSSMAgent -ErrorAction SilentlyContinue
-    Write-Log -Message "AmazonSSMAgent service status: $((Get-Service -Name AmazonSSMAgent -ErrorAction SilentlyContinue).Status)" -Level Information
+    Write-Log -Message "Searching for available Windows updates..." -Level Information
+    $update_session = New-Object -ComObject Microsoft.Update.Session
+    $update_searcher = $update_session.CreateUpdateSearcher()
+    $update_result = $update_searcher.Search("IsInstalled=0 and IsHidden=0 and Type='Software'")
+    $updates = New-Object -ComObject Microsoft.Update.UpdateColl
+    $allowed_update_categories = @("Security Updates", "Critical Updates")
+    $excluded_update_pattern = "(?i)Microsoft Defender|Windows Defender|SmartScreen|User Account Control|\bUAC\b"
+
+    foreach ($update in $update_result.Updates) {
+        $categories = @($update.Categories | ForEach-Object { $_.Name })
+        if (($categories | Where-Object { $_ -in $allowed_update_categories }) -and $update.Title -notmatch $excluded_update_pattern) {
+            Write-Log -Message "Selecting Windows update: $($update.Title)" -Level Information
+            if (-not $update.EulaAccepted) {
+                $update.AcceptEula()
+            }
+            [void]$updates.Add($update)
+        } else {
+            Write-Log -Message "Skipping Windows update: $($update.Title) (category or excluded component)" -Level Information
+        }
+    }
+
+    if ($updates.Count -eq 0) {
+        Write-Log -Message "No applicable Windows updates found." -Level Information
+    } else {
+        Write-Log -Message "Found $($updates.Count) Windows update(s). Downloading..." -Level Information
+        $downloader = $update_session.CreateUpdateDownloader()
+        $downloader.Updates = $updates
+        $download_result = $downloader.Download()
+
+        if ($download_result.ResultCode -ne 2) {
+            throw "Windows update download failed with result code $($download_result.ResultCode)."
+        }
+
+        Write-Log -Message "Installing $($updates.Count) Windows update(s)..." -Level Information
+        $installer = $update_session.CreateUpdateInstaller()
+        $installer.Updates = $updates
+        $install_result = $installer.Install()
+        $windows_update_reboot_required = $install_result.RebootRequired
+
+        if ($install_result.ResultCode -eq 2) {
+            Write-Log -Message "Windows updates installed successfully. Reboot required: $windows_update_reboot_required" -Level Information
+        } else {
+            Write-Log -Message "Windows update installation completed with result code $($install_result.ResultCode). Reboot required: $windows_update_reboot_required" -Level Warning
+        }
+    }
 } catch {
-    Write-Log -Message "Warning configuring AmazonSSMAgent: $($_.Exception.Message)" -Level Warning
+    Write-Log -Message "Windows update installation failed; continuing with Iris Admin installation: $($_.Exception.Message)" -Level Warning
 }
 
-# Locate and validate installer executable
-$exe_files = Get-ChildItem -Path $temp_dir -Filter "*.exe" -ErrorAction SilentlyContinue
-if (-not $exe_files -or $exe_files.Count -eq 0) {
-    Write-Log -Message "FATAL: No .exe installer found in $temp_dir! Installation cannot proceed." -Level Error
+
+
+
+
+
+
+
+
+
+
+# Download and validate the requested installer
+try {
+    if ([string]::IsNullOrWhiteSpace($iris_admin_ver)) {
+        throw "iris_admin_ver must be provided."
+    }
+
+    $iris_admin_exe = "GrayMeta_Iris_Admin_x64_v$iris_admin_ver.exe"
+    $exe_full_path = Join-Path $temp_dir $iris_admin_exe
+    if ((Test-Path $exe_full_path -PathType Leaf) -and ((Get-Item $exe_full_path).Length -gt 0)) {
+        Write-Log -Message "Iris Admin $iris_admin_ver is already downloaded at $exe_full_path. Skipping download." -Level Information
+    } else {
+        Write-Log -Message "Downloading Iris Admin $iris_admin_ver from the GrayMeta S3 bucket" -Level Information
+        $download_url = "https://gm-iris.s3.us-west-1.amazonaws.com/Server/GrayMeta_Iris_Admin_x64_v$iris_admin_ver.exe"
+        & curl.exe --fail --location --retry 3 --retry-delay 5 --output $exe_full_path $download_url
+        if ($LASTEXITCODE -ne 0) {
+            throw "curl.exe failed with exit code $LASTEXITCODE."
+        }
+        if (-not (Test-Path $exe_full_path -PathType Leaf) -or (Get-Item $exe_full_path).Length -eq 0) {
+            throw "Installer download did not create a non-empty file at $exe_full_path."
+        }
+        Write-Log -Message "Downloaded installer: $exe_full_path" -Level Information
+    }
+} catch {
+    Write-Log -Message "FATAL: Installer download failed: $($_.Exception.Message)" -Level Error
     $iris_admin_exe = $null
-} else {
-    $iris_admin_exe = $exe_files[0].Name
-    Write-Log -Message "Found installer: $iris_admin_exe" -Level Information
 }
 
 # Test database reachability if external RDS/PostgreSQL is used
@@ -121,8 +201,6 @@ try {
     if ([string]::IsNullOrEmpty($iris_admin_exe)) {
         throw "Installer executable not found in $temp_dir."
     }
-
-    $exe_full_path = Join-Path $temp_dir $iris_admin_exe
 
     if ($enterprise_ha -eq "true") {
         $arg_list = "/S /INSTALLPOSTGRES=0 /DBHOST=$dbserver /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw"
@@ -202,6 +280,11 @@ if ($irisdbvercheck) {
     Import-Module AWS.Tools.EC2 -ErrorAction Stop
     New-EC2Tag -Resource $instanceid -Tag @{ Key = "ServerID"; Value = $serverid }
     Write-Log -Message "Tagged instance $instanceid with Server ID $serverid" -Level Information
+}
+
+if ($windows_update_reboot_required) {
+    Write-Log -Message "Scheduling a restart in 60 seconds to complete Windows updates." -Level Warning
+    shutdown.exe /r /t 60 /d p:4:1 /c "Restarting to complete Windows updates installed by Iris Admin deployment" | Out-Null
 }
 
 Stop-Transcript -ErrorAction SilentlyContinue
