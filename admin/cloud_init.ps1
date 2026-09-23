@@ -4,7 +4,6 @@ $enterprise_ha = "${enterprise_ha}"
 $dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
-$instance_index = [int]"${instance_index}"
 $iris_admin_ver = "${iris_admin_ver}"
 
 # Ensure temp directory exists and start transcript logging
@@ -43,7 +42,23 @@ function Write-Log {
     } catch {}
 }
 
-Write-Log -Message "Iris Admin cloud_init initialization started (Instance Index: $instance_index, Enterprise HA: $enterprise_ha)" -Level Information
+function Get-InstalledIrisAdminVersion {
+    $uninstall_paths = @(
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    return Get-ItemProperty -Path $uninstall_paths -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -match "(?i)GrayMeta Iris Admin|Iris Admin" } |
+        Select-Object -First 1 -ExpandProperty DisplayVersion
+}
+
+Write-Log -Message "Iris Admin cloud_init initialization started (Enterprise HA: $enterprise_ha)" -Level Information
+
+$installed_version_before = Get-InstalledIrisAdminVersion
+if ($installed_version_before) {
+    Write-Log -Message "Installed Iris Admin version before deployment: $installed_version_before" -Level Information
+}
 
 # Retrieve and prepare Secrets
 try {
@@ -192,12 +207,6 @@ if ($enterprise_ha -eq "true" -and -not [string]::IsNullOrEmpty($dbserver)) {
 
 # Install execution with timing and exit code inspection
 try {
-    # $instance_index 0 installs immediately, all else wait an additional $instance_index * 60 seconds
-    if ($instance_index -gt 0) {
-        Write-Log -Message "Instance index is $instance_index. Waiting additional $($instance_index * 120) seconds..." -Level Information
-        Start-Sleep -Seconds ($instance_index * 120)
-    }
-
     if ([string]::IsNullOrEmpty($iris_admin_exe)) {
         throw "Installer executable not found in $temp_dir."
     }
@@ -229,10 +238,13 @@ try {
             Write-Log -Message "Iris Admin installer completed successfully on RETRY (ExitCode: 0, Duration: $($duration_sec)s)" -Level Information -EventId 1000
         } else {
             Write-Log -Message "Iris Admin installer exited with non-zero ExitCode on retry: $($proc.ExitCode) (Duration: $($duration_sec)s)" -Level Error -EventId 1001
+            throw "Iris Admin installer failed after retry with exit code $($proc.ExitCode)."
         }
     }
 } catch {
     Write-Log -Message "Exception during install execution: $($_.Exception.ToString())" -Level Error
+    Stop-Transcript -ErrorAction SilentlyContinue
+    throw
 }
 
 # Post-installation verification
@@ -256,11 +268,28 @@ foreach ($key in $uninstall_keys) {
     }
 }
 
-if ($installed_version) {
-    Write-Log -Message "GrayMeta Iris Server version $installed_version installation verification SUCCEEDED." -Level Information
-} else {
-    Write-Log -Message "GrayMeta Iris Server installation verification FAILED." -Level Error
+if ($installed_version -ne $iris_admin_ver) {
+    Write-Log -Message "Iris Admin version verification FAILED. Expected $iris_admin_ver, found $installed_version." -Level Error
+    Stop-Transcript -ErrorAction SilentlyContinue
+    throw "Iris Admin version verification failed."
 }
+
+$port_listening = $false
+for ($attempt = 1; $attempt -le 12; $attempt++) {
+    if (Get-NetTCPConnection -LocalPort $https_console_port -State Listen -ErrorAction SilentlyContinue) {
+        $port_listening = $true
+        break
+    }
+    Start-Sleep -Seconds 10
+}
+
+if (-not $port_listening) {
+    Write-Log -Message "Iris Admin $iris_admin_ver is installed, but port $https_console_port is not listening." -Level Error
+    Stop-Transcript -ErrorAction SilentlyContinue
+    throw "Iris Admin health verification failed on port $https_console_port."
+}
+
+Write-Log -Message "Iris Admin $installed_version installation verification SUCCEEDED and port $https_console_port is listening." -Level Information
 
 # Dot source the set-serverid script to make its functions available in this session
 $setServerIdScript = "$env:ProgramData\Graymeta\Launch\scripts\set-serverid.ps1"

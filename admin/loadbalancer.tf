@@ -56,7 +56,7 @@ resource "aws_lb_target_group" "iadm" {
 
 #Instance Attachment
 resource "aws_alb_target_group_attachment" "instance_attach" {
-  count    = var.enterprise_ha ? length(aws_instance.iris_adm.*.id) : 0
+  count = var.enterprise_ha ? length(aws_instance.iris_adm.*.id) : 0
   #count            = length(aws_instance.iris_adm.*.id)
   target_group_arn = aws_lb_target_group.iadm.0.arn
   target_id        = element(aws_instance.iris_adm.*.id, count.index)
@@ -78,11 +78,11 @@ resource "aws_route53_zone" "private" {
 
 # Find NLB's network interfaces
 data "aws_network_interfaces" "nlb_enis" {
-  count = var.enterprise_ha ? 1 : 0
+  count = var.enterprise_ha ? length(var.subnet_id) : 0
 
   filter {
     name   = "subnet-id"
-    values = var.subnet_id
+    values = [var.subnet_id[count.index]]
   }
 
   filter {
@@ -96,7 +96,7 @@ data "aws_network_interfaces" "nlb_enis" {
 # Get details of each NLB network interface
 data "aws_network_interface" "nlb_eni_details" {
   count      = var.enterprise_ha ? length(var.subnet_id) : 0
-  id         = data.aws_network_interfaces.nlb_enis[0].ids[count.index]
+  id         = one(data.aws_network_interfaces.nlb_enis[count.index].ids)
   depends_on = [data.aws_network_interfaces.nlb_enis]
 }
 
