@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "es_policy" {
 
 resource "aws_iam_policy" "es-policy" {
   name        = "${var.domain}-policy"
-  description = "My test policy"
+  description = "OpenSearch policy for ${var.domain}"
   policy      = data.aws_iam_policy_document.es_policy.json
 }
 

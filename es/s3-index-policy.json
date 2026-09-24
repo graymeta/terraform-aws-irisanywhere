@@ -7,16 +7,21 @@
                 "s3:GetBucketLocation",
                 "s3:GetBucketVersioning",
                 "s3:ListBucket",
-                "s3:ListBucketVersions"
+                "s3:ListBucketVersions",
+                "s3:GetObject",
+                "s3:GetObjectVersion"
             ],
             "Resource": "*"
        },
         {
             "Effect": "Allow",
             "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion"
-            ],
+				"es:ESHTTPPut",
+				"es:ESHttpGet",
+				"es:ESHttpDelete",
+				"es:ESHttpPatch",
+				"es:ESHttpPost"
+			],
             "Resource": "*"
         }
     ]
