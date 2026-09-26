@@ -216,6 +216,7 @@ Notes:
 * Destroying this module also destroys the gateway and its cache.
 * Each instance registers an `fgw-watchdog` scheduled task (at startup and every 3 minutes) that maps any missing share and link, so instances launched while the gateway is stopped or rebooting pick up the shares once it is reachable. It logs to `C:\Logs\fgw-watchdog.log`.
 * With `file_gateway = true` the rclone mounts and the `launch-rclone`/`rclone-watchdog` tasks are disabled on application instances.
+* On the ALB path, the scale-from-zero Lambdas start the gateway instance when the Auto Scaling group scales up from 0 (or any instance launches) and stop it when the group is back at 0, so the gateway only runs while Iris Anywhere does. The cache disk is kept while it is stopped.
 
 ## Outputs
 

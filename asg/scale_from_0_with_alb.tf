@@ -111,6 +111,7 @@ def handler(event, context):
             AutoScalingGroupName=asg_name,
             DesiredCapacity=1
         )
+        set_file_gateway('running')
         boto3.client('lambda').invoke(
             FunctionName=worker_arn,
             InvocationType='Event',
@@ -125,6 +126,23 @@ def handler(event, context):
         'body': STARTING_UP_HTML,
         'isBase64Encoded': False
     }
+
+def set_file_gateway(state):
+    # Start or stop the S3 File Gateway instance; no-op when file_gateway is disabled
+    fgw_id = os.environ.get('FGW_INSTANCE_ID', '')
+    if not fgw_id:
+        return
+    ec2 = boto3.client('ec2')
+    try:
+        current = ec2.describe_instances(InstanceIds=[fgw_id])['Reservations'][0]['Instances'][0]['State']['Name']
+        if state == 'running' and current == 'stopped':
+            ec2.start_instances(InstanceIds=[fgw_id])
+            print(f"Starting file gateway {fgw_id}")
+        elif state == 'stopped' and current == 'running':
+            ec2.stop_instances(InstanceIds=[fgw_id])
+            print(f"Stopping file gateway {fgw_id}")
+    except Exception as e:
+        print(f"File gateway {fgw_id} request to be {state} failed: {e}")
 EOF
     filename = "index.py"
   }
@@ -147,6 +165,7 @@ resource "aws_lambda_function" "scale_from_zero_handler" {
       WORKER_LAMBDA_ARN   = aws_lambda_function.scale_from_zero_worker[0].arn
       LISTENER_RULE_ARN   = aws_lb_listener_rule.port443[0].arn
       EC2_TARGET_GROUP_ARN = aws_lb_target_group.port443[0].arn
+      FGW_INSTANCE_ID      = local.fgw_enabled ? aws_instance.fgw[0].id : ""
     }
   }
 
@@ -169,8 +188,16 @@ def handler(event, context):
     ec2_tg_arn      = os.environ['EC2_TARGET_GROUP_ARN']
     lambda_tg_arn   = os.environ['LAMBDA_TARGET_GROUP_ARN']
 
-    # ASG termination notification — only switch to Lambda TG if desired is now 0
+    # ASG notification — launch starts the file gateway; termination switches to Lambda TG if desired is now 0
     if 'Records' in event:
+        try:
+            notification = json.loads(event['Records'][0]['Sns']['Message']).get('Event', '')
+        except Exception:
+            notification = ''
+        if notification == 'autoscaling:EC2_INSTANCE_LAUNCH':
+            set_file_gateway('running')
+            return
+
         asg = boto3.client('autoscaling').describe_auto_scaling_groups(
             AutoScalingGroupNames=[os.environ['ASG_NAME']]
         )['AutoScalingGroups'][0]
@@ -178,6 +205,7 @@ def handler(event, context):
         if asg['DesiredCapacity'] == 0 and in_service == 0:
             print("ASG at 0 — switching ALB rule to Lambda TG")
             switch_rule(rule_arn, lambda_tg_arn)
+            set_file_gateway('stopped')
         else:
             print(f"Instance terminated but ASG still running (desired={asg['DesiredCapacity']}, in_service={in_service}) — no action")
         return
@@ -187,6 +215,7 @@ def handler(event, context):
         elbv2 = boto3.client('elbv2')
         print("Polling for healthy EC2 target...")
         for i in range(60):
+            set_file_gateway('running')
             time.sleep(5)
             health = elbv2.describe_target_health(TargetGroupArn=ec2_tg_arn)
             healthy = [t for t in health['TargetHealthDescriptions']
@@ -209,6 +238,23 @@ def switch_rule(rule_arn, target_group_arn):
         Actions=[{'Type': 'forward', 'TargetGroupArn': target_group_arn}]
     )
     print(f"ALB rule switched to {target_group_arn}")
+
+def set_file_gateway(state):
+    # Start or stop the S3 File Gateway instance; no-op when file_gateway is disabled
+    fgw_id = os.environ.get('FGW_INSTANCE_ID', '')
+    if not fgw_id:
+        return
+    ec2 = boto3.client('ec2')
+    try:
+        current = ec2.describe_instances(InstanceIds=[fgw_id])['Reservations'][0]['Instances'][0]['State']['Name']
+        if state == 'running' and current == 'stopped':
+            ec2.start_instances(InstanceIds=[fgw_id])
+            print(f"Starting file gateway {fgw_id}")
+        elif state == 'stopped' and current == 'running':
+            ec2.stop_instances(InstanceIds=[fgw_id])
+            print(f"Stopping file gateway {fgw_id}")
+    except Exception as e:
+        print(f"File gateway {fgw_id} request to be {state} failed: {e}")
 EOF
     filename = "index.py"
   }
@@ -231,6 +277,7 @@ resource "aws_lambda_function" "scale_from_zero_worker" {
       LISTENER_RULE_ARN       = aws_lb_listener_rule.port443[0].arn
       EC2_TARGET_GROUP_ARN    = aws_lb_target_group.port443[0].arn
       LAMBDA_TARGET_GROUP_ARN = aws_lb_target_group.scale_from_zero_lambda[0].arn
+      FGW_INSTANCE_ID         = local.fgw_enabled ? aws_instance.fgw[0].id : ""
     }
   }
 
@@ -291,9 +338,10 @@ resource "aws_autoscaling_notification" "scale_from_zero" {
   group_names = [aws_autoscaling_group.iris.name]
   topic_arn   = aws_sns_topic.scale_from_zero[0].arn
 
-  notifications = [
-    "autoscaling:EC2_INSTANCE_TERMINATE",
-  ]
+  notifications = concat(
+    ["autoscaling:EC2_INSTANCE_TERMINATE"],
+    local.fgw_enabled ? ["autoscaling:EC2_INSTANCE_LAUNCH"] : []
+  )
 }
 
 # ---- IAM (shared role for both Lambdas) ----
@@ -346,6 +394,28 @@ resource "aws_iam_role_policy" "scale_from_zero" {
         Effect   = "Allow"
         Action   = ["lambda:InvokeFunction"]
         Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "scale_from_zero_fgw" {
+  count = !var.haproxy && local.fgw_enabled ? 1 : 0
+  name  = "scale-from-zero-file-gateway"
+  role  = aws_iam_role.scale_from_zero[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:DescribeInstances"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:StartInstances", "ec2:StopInstances"]
+        Resource = aws_instance.fgw[0].arn
       }
     ]
   })
