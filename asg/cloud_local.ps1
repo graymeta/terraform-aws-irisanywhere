@@ -17,6 +17,12 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $otlp_enabled = "${otlp_enabled}"
     $otlp_agent_gateway_endpoint = "${otlp_exporter_destination}"
     #$wasabi = "${wasabi}"
+    $file_gateway = "${file_gateway}"
+    $file_gateway_ip = "${file_gateway_ip}"
+    $file_gateway_id = "${file_gateway_id}"
+    $file_gateway_shares = "${file_gateway_shares}"
+    $file_gateway_link_root = "${file_gateway_link_root}"
+    $file_gateway_link_suffix = "${file_gateway_link_suffix}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -38,6 +44,7 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
         $saml_acsUrlRelativePath = $secretdata.saml_acsUrlRelativePath
         $rfm_filters             = $secretdata.rfm_filters
+        $filegateway_smb_password = $secretdata.filegateway_smb_password
         #$otlp_agent_gateway_endpoint = $secretdata.otlp_agent_gateway_endpoint
         #$wasabi_access_key       = $secretdata.wasabi_access_key
         #$wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
@@ -58,6 +65,48 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType `
         Error -eventid 1002 -message "Exception executing local_init_enterprise_rclone.ps1: $_"
     }
+
+#Map S3 File Gateway shares
+#Global mappings are visible to all users and services; symlinks expose each share under the link root.
+if ($file_gateway -eq "true") {
+    try {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Mapping File Gateway shares from $file_gateway_ip"
+        $fgwCred = New-Object System.Management.Automation.PSCredential("$file_gateway_id\smbguest", (ConvertTo-SecureString $filegateway_smb_password -AsPlainText -Force))
+        Set-SmbClientConfiguration -EnableBandwidthThrottling $false -Force
+
+        $deadline = (Get-Date).AddMinutes(10)
+        while (-not (Test-Path $file_gateway_link_root) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 10 }
+
+        foreach ($share in $file_gateway_shares.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries)) {
+            $remote = "\\$file_gateway_ip\$share"
+            $link = Join-Path $file_gateway_link_root "$share$file_gateway_link_suffix"
+
+            #The share may still be coming up on a freshly created gateway
+            $mapped = $false
+            while (-not $mapped -and (Get-Date) -lt $deadline) {
+                try {
+                    if (-not (Get-SmbGlobalMapping -RemotePath $remote -ErrorAction SilentlyContinue)) {
+                        New-SmbGlobalMapping -RemotePath $remote -Credential $fgwCred -Persistent $true -ErrorAction Stop | Out-Null
+                    }
+                    $mapped = $true
+                } catch {
+                    Start-Sleep -Seconds 15
+                }
+            }
+
+            if (-not $mapped) {
+                Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1003 -message "Could not map File Gateway share $remote"
+                continue
+            }
+            if (-not (Test-Path $link)) {
+                New-Item -ItemType SymbolicLink -Path $link -Target $remote | Out-Null
+            }
+        }
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Completed File Gateway share mapping"
+    } catch {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1003 -message "Exception mapping File Gateway shares: $_"
+    }
+}
 
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent

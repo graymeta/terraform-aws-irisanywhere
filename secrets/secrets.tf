@@ -8,16 +8,17 @@ resource "aws_secretsmanager_secret" "iris_config" {
 }
 
 resource "aws_secretsmanager_secret_version" "iris_config" {
-  secret_id     = aws_secretsmanager_secret.iris_config.id
+  secret_id = aws_secretsmanager_secret.iris_config.id
 
   secret_string = jsonencode({
-    admin_console_id   = var.admin_console_id,
-    admin_console_pw   = var.admin_console_pw,
-    admin_db_id        = var.admin_db_id,
-    admin_db_pw        = var.admin_db_pw,
-    admin_server       = var.admin_server,
-    admin_customer_id  = var.admin_customer_id,
-    s3_enterprise      = var.s3_enterprise
+    admin_console_id         = var.admin_console_id,
+    admin_console_pw         = var.admin_console_pw,
+    admin_db_id              = var.admin_db_id,
+    admin_db_pw              = var.admin_db_pw,
+    admin_server             = var.admin_server,
+    admin_customer_id        = var.admin_customer_id,
+    s3_enterprise            = var.s3_enterprise,
+    filegateway_smb_password = var.filegateway_smb_password
   })
 }
 

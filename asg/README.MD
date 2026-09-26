@@ -170,6 +170,52 @@ HAProxy-specific inputs:
 * `hap_loglevel` optional, default `info`. HAProxy logging level. Applies only when `haproxy = true`.
 * `haproxy_user_init` optional, default `""`. Custom HAProxy user-init script. Applies only when `haproxy = true`.
 
+File Gateway inputs (see [S3 File Gateway](#s3-file-gateway)):
+
+* `file_gateway` optional, default `false`. Deploys an S3 File Gateway with one SMB share per enabled `s3_enterprise` bucket and maps the shares on application instances.
+* `file_gateway_instance_type` optional, default `m5.xlarge`. Gateway instance type. Minimum `xlarge` (`2xlarge` for compute-optimized families).
+* `file_gateway_subnet_id` optional, default `""`. Gateway subnet. Defaults to the first `subnet_id`.
+* `file_gateway_root_size` optional, default `80`. Gateway root volume size in GiB.
+* `file_gateway_cache_size` optional, default `1024`. Cache disk size in GiB (150 - 65536). Cannot be resized after creation.
+* `file_gateway_cache_type` optional, default `gp3`. Cache disk type: `gp3`, `gp2`, `io1`, `io2`, `st1` or `sc1`.
+* `file_gateway_cache_iops` optional, default `null`. Cache disk IOPS for `gp3`, `io1` or `io2`. Required for `io1`/`io2`.
+* `file_gateway_cache_throughput` optional, default `null`. Cache disk throughput in MiB/s for `gp3`.
+* `file_gateway_smb_security_strategy` optional, default `ClientSpecified`. SMB signing/encryption requirement.
+* `file_gateway_cache_refresh_seconds` optional, default `null`. Automatic cache refresh interval so objects written directly to S3 appear on the shares.
+* `file_gateway_timezone` optional, default `GMT`. Gateway timezone for the maintenance window.
+* `file_gateway_activation_cidr` optional, default `[]`. CIDR blocks allowed to reach the gateway on port 80. Must include the Terraform runner on the first apply.
+* `file_gateway_link_root` optional, default `D:\IrisAnywhere`. Folder where share symlinks are created on application instances.
+* `file_gateway_link_suffix` optional, default `-fgw`. Suffix appended to each bucket name for its symlink.
+
+## S3 File Gateway
+
+Set `file_gateway = true` to deploy an [S3 File Gateway](https://docs.aws.amazon.com/filegateway/latest/files3/what-is-file-s3.html) alongside the application tier. The gateway serves each enabled bucket in the `s3_enterprise` config map as an SMB share and keeps recently used data on a local cache disk shared by all instances. Each application instance maps the shares at boot and links them as `<file_gateway_link_root>\<bucket><file_gateway_link_suffix>`, next to the existing rclone mounts.
+
+Requirements:
+
+* Add a `filegateway_smb_password` key (6 - 512 characters) to the `ia_secret_arn` secret. The `secrets` module accepts it as `filegateway_smb_password`.
+* Terraform activates the gateway over HTTP on port 80 from the machine running the apply. Set `file_gateway_activation_cidr` to that address for the first apply; it can be set back to `[]` afterwards. When `associate_public_ip = false`, Terraform must run from inside the VPC.
+
+```hcl
+module "irisanywhere1" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//asg?ref=<tag>"
+
+  # ...
+  file_gateway                 = true
+  file_gateway_instance_type   = "m5.2xlarge"
+  file_gateway_cache_size      = 2048
+  file_gateway_cache_type      = "gp3"
+  file_gateway_activation_cidr = ["203.0.113.10/32"]
+}
+```
+
+Notes:
+
+* The cache holds recently read data, not every file. Size it for the data users work on at once; older data is evicted and read again from S3 when needed.
+* Cache disks cannot be resized once allocated. Changes to `file_gateway_cache_size` are ignored after creation.
+* Objects written directly to S3 only appear on a share after a cache refresh. Set `file_gateway_cache_refresh_seconds` or call `aws storagegateway refresh-cache`.
+* Destroying this module also destroys the gateway and its cache.
+
 ## Outputs
 
 * `alb_dns_name` ALB DNS name when `haproxy = false`.
@@ -211,6 +257,9 @@ HAProxy-specific inputs:
 * `local_policy_text`
 * `vpc_dns_support_enabled`
 * `vpc_dns_hostnames_enabled`
+* `file_gateway_id` File Gateway ID when `file_gateway = true`.
+* `file_gateway_private_ip` File Gateway private IP when `file_gateway = true`.
+* `file_gateway_shares` SMB share paths when `file_gateway = true`.
 
 ## DNS
 

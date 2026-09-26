@@ -156,6 +156,13 @@ variable "s3_enterprise" {
   description = "List of S3 buckets - requires json string key/value pairs for each bucket.  Example: {\"buckets\": [{\"name\": \"bucket1\", \"enabled\": true}, {\"name\": \"bucket2\", \"enabled\": false}]}"
 }
 
+variable "filegateway_smb_password" {
+  type        = string
+  description = "(Optional) SMB guest password (6-512 characters) for the S3 File Gateway. Required when the asg module sets file_gateway = true."
+  sensitive   = true
+  default     = ""
+}
+
 variable "saml_uniqueID" {
   type        = string
   description = "(Optional) ID of IDP for SAML configuration (Either okta or ping-identity)."

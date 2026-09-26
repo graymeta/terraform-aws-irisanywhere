@@ -109,6 +109,7 @@ Optional OpenSearch inputs:
 Enterprise S3 config-map input:
 
 * `s3_enterprise` required. JSON string representing the enterprise S3 config-map. Provide the real enterprise bucket config when that storage path is enabled, or provide an empty structure such as `jsonencode({ buckets = [] })` when you want the secret payload to include the key but you are not enabling enterprise S3 buckets yet.
+* `filegateway_smb_password` optional. SMB guest password (6 - 512 characters) for the S3 File Gateway. Required when the `asg` module sets `file_gateway = true`.
 
 Optional SAML inputs:
 
