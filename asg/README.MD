@@ -214,6 +214,8 @@ Notes:
 * Cache disks cannot be resized once allocated. Changes to `file_gateway_cache_size` are ignored after creation.
 * Objects written directly to S3 only appear on a share after a cache refresh. Set `file_gateway_cache_refresh_seconds` or call `aws storagegateway refresh-cache`.
 * Destroying this module also destroys the gateway and its cache.
+* Each instance registers an `fgw-watchdog` scheduled task (at startup and every 3 minutes) that maps any missing share and link, so instances launched while the gateway is stopped or rebooting pick up the shares once it is reachable. It logs to `C:\Logs\fgw-watchdog.log`.
+* With `file_gateway = true` the rclone mounts and the `launch-rclone`/`rclone-watchdog` tasks are disabled on application instances.
 
 ## Outputs
 

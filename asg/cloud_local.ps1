@@ -70,52 +70,88 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     }
 
 #Map S3 File Gateway shares as <link root>\<bucket>
+#fgw-watchdog maps any missing share and link at startup and every 3 minutes, so instances
+#that boot while the gateway is stopped or rebooting pick up the shares once it is back.
 if ($file_gateway -eq "true") {
     try {
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Mapping File Gateway shares from $file_gateway_ip"
-        if (-not (Test-Path $file_gateway_link_root)) {
-            New-Item -Path $file_gateway_link_root -ItemType Directory | Out-Null
-        }
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Configuring File Gateway shares from $file_gateway_ip"
 
         #bucketmount.ps1 and watchdog.ps1 are not generated in this mode
         foreach ($task in "launch-rclone", "rclone-watchdog") {
             Disable-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue | Out-Null
         }
-
-        $fgwPassword = ConvertTo-SecureString $secretdata.filegateway_smb_password -AsPlainText -Force
-        $fgwCred = New-Object System.Management.Automation.PSCredential("$file_gateway_id\smbguest", $fgwPassword)
         Set-SmbClientConfiguration -EnableBandwidthThrottling $false -Force
 
-        #Global mappings are visible to every user and service, including iris-service
-        $deadline = (Get-Date).AddMinutes(10)
-        foreach ($share in $file_gateway_shares.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries)) {
-            $remote = "\\$file_gateway_ip\$share"
-            $link = Join-Path $file_gateway_link_root $share
-
-            #The share may still be coming up on a freshly created gateway
-            $mapped = $false
-            while (-not $mapped -and (Get-Date) -lt $deadline) {
-                try {
-                    if (-not (Get-SmbGlobalMapping -RemotePath $remote -ErrorAction SilentlyContinue)) {
-                        New-SmbGlobalMapping -RemotePath $remote -Credential $fgwCred -Persistent $true -ErrorAction Stop | Out-Null
-                    }
-                    $mapped = $true
-                } catch {
-                    Start-Sleep -Seconds 15
-                }
-            }
-
-            if (-not $mapped) {
-                Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1003 -message "Could not map File Gateway share $remote"
-                continue
-            }
-            if (-not (Test-Path $link)) {
-                New-Item -ItemType SymbolicLink -Path $link -Target $remote | Out-Null
-            }
+        if (-not (Test-Path "C:\fgw")) {
+            New-Item -Path "C:\fgw" -ItemType Directory | Out-Null
         }
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Completed File Gateway share mapping"
+        @{
+            ip         = $file_gateway_ip
+            gateway_id = $file_gateway_id
+            shares     = @($file_gateway_shares.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries))
+            link_root  = $file_gateway_link_root
+            secret_arn = $iasecretarn
+        } | ConvertTo-Json | Set-Content -Path "C:\fgw\config.json"
+
+$fgwWatchdog = @'
+$config = Get-Content -Path "C:\fgw\config.json" -Raw | ConvertFrom-Json
+$log    = "C:\Logs\fgw-watchdog.log"
+
+function Log($m) {
+    Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
+}
+
+if (-not (Test-Path $config.link_root)) {
+    New-Item -Path $config.link_root -ItemType Directory | Out-Null
+}
+
+$cred = $null
+foreach ($share in $config.shares) {
+    $remote = "\\$($config.ip)\$share"
+
+    #Global mappings are visible to every user and service, including iris-service
+    if (-not (Get-SmbGlobalMapping -RemotePath $remote -ErrorAction SilentlyContinue)) {
+        try {
+            if (-not $cred) {
+                Import-Module AWSPowerShell -ErrorAction SilentlyContinue
+                $region = $config.secret_arn.Split(":")[3]
+                $secret = (Get-SECSecretValue -SecretId $config.secret_arn -Region $region).SecretString | ConvertFrom-Json
+                $password = ConvertTo-SecureString $secret.filegateway_smb_password -AsPlainText -Force
+                $cred = New-Object System.Management.Automation.PSCredential("$($config.gateway_id)\smbguest", $password)
+            }
+            New-SmbGlobalMapping -RemotePath $remote -Credential $cred -Persistent $true -ErrorAction Stop | Out-Null
+            Log "Mapped $remote"
+        } catch {
+            Log "Could not map $remote : $($_.Exception.Message)"
+        }
+    }
+
+    #Look for the link itself; Test-Path follows it and is false while the gateway is unreachable
+    #mklink creates the link even while the gateway is unreachable
+    if (-not (Get-ChildItem -Path $config.link_root -Force | Where-Object Name -eq $share)) {
+        $link = Join-Path $config.link_root $share
+        cmd /c mklink /D "$link" "$remote" | Out-Null
+        if ($LASTEXITCODE -eq 0) { Log "Linked $link to $remote" } else { Log "Could not link $link to $remote" }
+    }
+}
+'@
+        Set-Content -Path "C:\fgw\fgw-watchdog.ps1" -Value $fgwWatchdog
+
+        $dt = Get-Date
+        $action    = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\fgw\fgw-watchdog.ps1"'
+        $triggers  = @(
+            (New-ScheduledTaskTrigger -AtStartup),
+            (New-ScheduledTaskTrigger -Once -At $dt -RepetitionInterval (New-TimeSpan -Minutes 3) -RepetitionDuration ($dt.AddYears(25) - $dt))
+        )
+        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+        $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+        Register-ScheduledTask -TaskName "fgw-watchdog" -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Description "Maps S3 File Gateway shares and links" -Force | Out-Null
+
+        #First pass now; the gateway is normally up before instances launch
+        & "C:\fgw\fgw-watchdog.ps1"
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Configured File Gateway shares and fgw-watchdog task"
     } catch {
-        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1003 -message "Exception mapping File Gateway shares: $_"
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1003 -message "Exception configuring File Gateway shares: $_"
     }
 }
 
