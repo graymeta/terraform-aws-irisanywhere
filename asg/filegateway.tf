@@ -1,6 +1,6 @@
 # Optional AWS S3 File Gateway.
 # Creates one SMB share per enabled bucket in the ia_secret s3_enterprise config map.
-# Iris Anywhere instances map the shares at boot (see cloud_local.ps1).
+# Iris Anywhere instances map the shares at boot in place of the rclone mounts (see cloud_local.ps1).
 
 locals {
   fgw_enabled      = var.file_gateway
@@ -350,12 +350,6 @@ variable "file_gateway_activation_cidr" {
 
 variable "file_gateway_link_root" {
   type        = string
-  description = "(Optional) Folder on Iris Anywhere instances where share symlinks are created. Default to `D:\\IrisAnywhere`"
+  description = "(Optional) Folder on Iris Anywhere instances where each share is linked as <folder>\\<bucket>, in place of the rclone mount. Default to `D:\\IrisAnywhere`"
   default     = "D:\\IrisAnywhere"
-}
-
-variable "file_gateway_link_suffix" {
-  type        = string
-  description = "(Optional) Suffix appended to each bucket name for the share symlink, so it does not collide with the rclone mount. Default to `-fgw`"
-  default     = "-fgw"
 }

@@ -22,7 +22,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     $file_gateway_id = "${file_gateway_id}"
     $file_gateway_shares = "${file_gateway_shares}"
     $file_gateway_link_root = "${file_gateway_link_root}"
-    $file_gateway_link_suffix = "${file_gateway_link_suffix}"
     #Retrieve and prepare Secrets
     try {
         $secretdata = get-SECsecretValue $iasecretarn ; $secretdata=$secretdata.secretstring | convertfrom-json
@@ -44,7 +43,6 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         $saml_acsUrlBasePath    = $secretdata.saml_acsUrlBasePath
         $saml_acsUrlRelativePath = $secretdata.saml_acsUrlRelativePath
         $rfm_filters             = $secretdata.rfm_filters
-        $filegateway_smb_password = $secretdata.filegateway_smb_password
         #$otlp_agent_gateway_endpoint = $secretdata.otlp_agent_gateway_endpoint
         #$wasabi_access_key       = $secretdata.wasabi_access_key
         #$wasabi_secret_access_key= $secretdata.wasabi_secret_access_key
@@ -57,6 +55,11 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
     }
 
 
+    #S3 File Gateway shares replace the rclone mounts; local_init only uses s3_enterprise for rclone
+    if ($file_gateway -eq "true") {
+        $s3_enterprise = "false"
+    }
+
     try {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Initiate local_init... "
         & "C:\ProgramData\GrayMeta\launch\scripts\local_init_enterprise_rclone.ps1"
@@ -66,20 +69,28 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         Error -eventid 1002 -message "Exception executing local_init_enterprise_rclone.ps1: $_"
     }
 
-#Map S3 File Gateway shares
-#Global mappings are visible to all users and services; symlinks expose each share under the link root.
+#Map S3 File Gateway shares as <link root>\<bucket>
 if ($file_gateway -eq "true") {
     try {
         Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "Mapping File Gateway shares from $file_gateway_ip"
-        $fgwCred = New-Object System.Management.Automation.PSCredential("$file_gateway_id\smbguest", (ConvertTo-SecureString $filegateway_smb_password -AsPlainText -Force))
+        if (-not (Test-Path $file_gateway_link_root)) {
+            New-Item -Path $file_gateway_link_root -ItemType Directory | Out-Null
+        }
+
+        #bucketmount.ps1 and watchdog.ps1 are not generated in this mode
+        foreach ($task in "launch-rclone", "rclone-watchdog") {
+            Disable-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue | Out-Null
+        }
+
+        $fgwPassword = ConvertTo-SecureString $secretdata.filegateway_smb_password -AsPlainText -Force
+        $fgwCred = New-Object System.Management.Automation.PSCredential("$file_gateway_id\smbguest", $fgwPassword)
         Set-SmbClientConfiguration -EnableBandwidthThrottling $false -Force
 
+        #Global mappings are visible to every user and service, including iris-service
         $deadline = (Get-Date).AddMinutes(10)
-        while (-not (Test-Path $file_gateway_link_root) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 10 }
-
         foreach ($share in $file_gateway_shares.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries)) {
             $remote = "\\$file_gateway_ip\$share"
-            $link = Join-Path $file_gateway_link_root "$share$file_gateway_link_suffix"
+            $link = Join-Path $file_gateway_link_root $share
 
             #The share may still be coming up on a freshly created gateway
             $mapped = $false

@@ -184,12 +184,11 @@ File Gateway inputs (see [S3 File Gateway](#s3-file-gateway)):
 * `file_gateway_cache_refresh_seconds` optional, default `null`. Automatic cache refresh interval so objects written directly to S3 appear on the shares.
 * `file_gateway_timezone` optional, default `GMT`. Gateway timezone for the maintenance window.
 * `file_gateway_activation_cidr` optional, default `[]`. CIDR blocks allowed to reach the gateway on port 80. Must include the Terraform runner on the first apply.
-* `file_gateway_link_root` optional, default `D:\IrisAnywhere`. Folder where share symlinks are created on application instances.
-* `file_gateway_link_suffix` optional, default `-fgw`. Suffix appended to each bucket name for its symlink.
+* `file_gateway_link_root` optional, default `D:\IrisAnywhere`. Folder where each share is linked as `<folder>\<bucket>` on application instances.
 
 ## S3 File Gateway
 
-Set `file_gateway = true` to deploy an [S3 File Gateway](https://docs.aws.amazon.com/filegateway/latest/files3/what-is-file-s3.html) alongside the application tier. The gateway serves each enabled bucket in the `s3_enterprise` config map as an SMB share and keeps recently used data on a local cache disk shared by all instances. Each application instance maps the shares at boot and links them as `<file_gateway_link_root>\<bucket><file_gateway_link_suffix>`, next to the existing rclone mounts.
+Set `file_gateway = true` to deploy an [S3 File Gateway](https://docs.aws.amazon.com/filegateway/latest/files3/what-is-file-s3.html) alongside the application tier. The gateway serves each enabled bucket in the `s3_enterprise` config map as an SMB share and keeps recently used data on a local cache disk shared by all instances. Each application instance maps the shares at boot and links them as `<file_gateway_link_root>\<bucket>` in place of the rclone mounts.
 
 Requirements:
 

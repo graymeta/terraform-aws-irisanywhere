@@ -98,7 +98,6 @@ resource "aws_launch_template" "iris" {
     file_gateway_id          = local.fgw_enabled ? aws_storagegateway_gateway.fgw[0].gateway_id : ""
     file_gateway_shares      = join(",", [for s in aws_storagegateway_smb_file_share.fgw : s.file_share_name])
     file_gateway_link_root   = var.file_gateway_link_root
-    file_gateway_link_suffix = var.file_gateway_link_suffix
   }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
 
   update_default_version               = var.update_asg_lt
