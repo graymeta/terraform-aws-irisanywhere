@@ -70,30 +70,7 @@ resource "aws_launch_template" "iris" {
   image_id      = coalesce(var.base_ami, data.aws_ami.GrayMeta-Iris-Anywhere.id)
   instance_type = var.instance_type
   key_name      = var.key_name
-  user_data = base64encode(join("\n", ["<powershell>", templatefile("${path.module}/cloud_local.ps1", {
-    name                     = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
-    metric_check_interval    = var.asg_check_interval
-    health_check_interval    = var.lb_check_interval
-    unhealthy_threshold      = var.lb_unhealthy_threshold
-    cooldown                 = var.asg_scalein_cooldown
-    ia_cert_crt_arn          = var.ia_cert_crt_arn
-    ia_cert_key_arn          = var.ia_cert_key_arn
-    ia_max_sessions          = var.ia_max_sessions
-    ia_keepalivetimeout      = var.ia_keepalivetimeout
-    ia_secret_arn            = var.ia_secret_arn
-    ia_domain                = var.ia_domain
-    search_enabled           = var.search_enabled
-    ia_video_bitrate         = var.ia_video_bitrate
-    ia_video_codec           = var.ia_video_codec
-    s3_enterprise            = var.s3_enterprise
-    haproxy                  = var.haproxy
-    saml_enabled             = var.saml_enabled
-    saml_cert_secret_arn     = var.saml_cert_secret_arn
-    disk_data_size           = var.disk_data_size
-    otlp_enabled             = var.otlp_enabled
-    otlp_exporter_destination = var.otlp_exporter_destination
-    wasabi                   = var.wasabi
-  }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"]))
+  user_data     = base64encode(local.iris_user_data)
 
   update_default_version               = var.update_asg_lt
   ebs_optimized                        = true
@@ -158,6 +135,11 @@ resource "aws_launch_template" "iris" {
 
   lifecycle {
     create_before_destroy = true
+
+    precondition {
+      condition     = length(local.iris_user_data) <= 16384
+      error_message = "The instance user data is ${length(local.iris_user_data)} bytes; EC2 allows 16384. Shorten var.user_init or disable file_warm."
+    }
   }
 }
 

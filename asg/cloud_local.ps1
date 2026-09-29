@@ -59,6 +59,40 @@ Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information
         Error -eventid 1002 -message "Exception executing local_init_enterprise_rclone.ps1: $_"
     }
 
+#rclone warm: retune the mounts local_init wrote and install the auto-warm watcher (runs at startup)
+if ($s3_enterprise -eq "true" -and "${file_warm}" -eq "true") {
+    try {
+        $warmDir = "C:\rclone\warm"
+        New-Item -ItemType Directory -Force -Path $warmDir | Out-Null
+        foreach ($f in @(@('rclone-autowarm.ps1', '${rclone_warm_watcher}'), @('rclone-prewarm.ps1', '${rclone_warm_prewarm}'))) {
+            $gz = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String($f[1]))), [IO.Compression.CompressionMode]::Decompress)
+            $out = [IO.File]::Create((Join-Path $warmDir $f[0])); $gz.CopyTo($out); $out.Close(); $gz.Close()
+        }
+
+        #Mount flags; --rc (one localhost port per bucket, 5572 up) lets the watcher lower --buffer-size while it warms
+        $flags = @{ 'vfs-cache-max-age' = '${rclone_warm_max_age}'; 'vfs-read-chunk-size' = '512K'; 'vfs-read-chunk-size-limit' = '128M'
+                    'vfs-read-chunk-streams' = '16'; 'vfs-read-ahead' = '0'; 'buffer-size' = '128M'; 'low-level-retries' = '10' }
+        $mountScript = Get-Content C:\rclone\bucketmount.ps1 -Raw
+        $watchdogScript = Get-Content C:\rclone\watchdog.ps1 -Raw
+        foreach ($k in $flags.Keys) {
+            $mountScript = $mountScript -replace "('--$k',\s*)'[^']*'", "`$1'$($flags[$k])'"
+            $watchdogScript = $watchdogScript -replace "(`"--$k`",)`"[^`"]*`"", "`$1`"$($flags[$k])`""
+        }
+        $port = [ref]5571
+        $mountScript = [regex]::Replace($mountScript, "'--log-level', 'NOTICE'", { param($m) $port.Value++; "'--log-level', 'NOTICE', '--rc', '--rc-addr', '127.0.0.1:$($port.Value)', '--rc-no-auth'" })
+        $watchdogScript = $watchdogScript.Replace('"--log-level","NOTICE"', '"--log-level","NOTICE","--rc","--rc-addr","127.0.0.1:$(5572 + [array]::IndexOf($buckets, $b))","--rc-no-auth"')
+        Set-Content C:\rclone\bucketmount.ps1 -Value $mountScript -NoNewline
+        Set-Content C:\rclone\watchdog.ps1 -Value $watchdogScript -NoNewline
+
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$warmDir\rclone-autowarm.ps1`""
+        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        Register-ScheduledTask -TaskName 'rclone-autowarm' -Action $action -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Information -eventid 1000 -message "rclone warm installed: mounts retuned, rclone-autowarm task registered"
+    } catch {
+        Write-EventLog -LogName IrisAnywhere -source IrisAnywhere -EntryType Error -eventid 1002 -message "Exception installing rclone warm: $_"
+    }
+}
+
 #Start SSM Service
 Set-Service -Name AmazonSSMAgent -StartupType Automatic ; Start-Service AmazonSSMAgent
 

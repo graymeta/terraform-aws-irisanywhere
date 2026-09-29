@@ -249,7 +249,7 @@ variable "search_enabled" {
 variable "es_domain_name" {
   type        = string
   description = "Required for strict OpenSearch role permissions if search_enabled = true."
-  default     = ""  
+  default     = ""
 }
 
 variable "ia_video_codec" {
@@ -354,6 +354,18 @@ variable "wasabi" {
   type        = bool
   description = "(Optional) Uses wasabi storage instead of s3 for rclone"
   default     = false
+}
+
+variable "file_warm" {
+  type        = bool
+  description = "(Optional) When s3_enterprise is on, retunes the rclone mounts and installs a watcher that warms files into the rclone cache as they are opened (MXF partitions, the start of other large files). Set false to keep the AMI's rclone mounts as they are"
+  default     = true
+}
+
+variable "rclone_warm_max_age" {
+  type        = string
+  description = "(Optional) --vfs-cache-max-age for the rclone mounts when file_warm is on; the watcher holds warmed files open, so this can stay short"
+  default     = "3s"
 }
 
 variable "deregistration_delay" {
