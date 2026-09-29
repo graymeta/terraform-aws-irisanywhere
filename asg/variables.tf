@@ -365,7 +365,7 @@ variable "file_warm" {
 variable "rclone_warm_max_age" {
   type        = string
   description = "(Optional) --vfs-cache-max-age for the rclone mounts when file_warm is on; the watcher holds warmed files open, so this can stay short"
-  default     = "3s"
+  default     = "0s"
 }
 
 variable "deregistration_delay" {
