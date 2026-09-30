@@ -2,13 +2,14 @@
 #   -HeadMB  the first N MB, -Streams 16 MB reads at a time
 #   -Mxf     -MxfKB at every partition in the MXF Random Index Pack, -MxfStreams at a time, end to start
 #            (the order Iris walks them when it opens the file)
-# Reads bypass the Windows file cache so they reach rclone. Logs to C:\Logs\rclone-prewarm.log.
+# Reads bypass the Windows file cache so they reach rclone. A read that fails is skipped; the count and
+# the first error are logged. Logs to C:\Logs\rclone-prewarm.log.
 param(
     [Parameter(Mandatory = $true)][string]$Path,
     [int]$HeadMB = 0,
     [int]$Streams = 16,
     [switch]$Mxf,
-    [int]$MxfKB = 256,
+    [int]$MxfKB = 48,
     [int]$MxfStreams = 8
 )
 $log = 'C:\Logs\rclone-prewarm.log'
@@ -18,19 +19,31 @@ Add-Type -TypeDefinition @'
 using System; using System.IO; using System.Threading; using System.Threading.Tasks;
 public static class RclonePrewarm {
     const FileOptions NoBuffering = (FileOptions)0x20000000;
+    public static long Failed;
+    public static string FirstError;
+    static void Fail(Exception e) {
+        Interlocked.Increment(ref Failed);
+        Interlocked.CompareExchange(ref FirstError, e.GetType().Name + ": " + e.Message, null);
+    }
     public static long Read(string path, int workers, long[] offsets, int length) {
         long next = -1, done = 0;
         Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, w => {
             var buf = new byte[length];
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, NoBuffering)) {
-                long i;
-                while ((i = Interlocked.Increment(ref next)) < offsets.Length) {
+            FileStream fs = null;
+            long i;
+            while ((i = Interlocked.Increment(ref next)) < offsets.Length) {
+                try {
+                    if (fs == null) fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, NoBuffering);
                     fs.Seek(offsets[i], SeekOrigin.Begin);
                     int got = 0, n;
                     while (got < length && (n = fs.Read(buf, got, length - got)) > 0) got += n;
                     Interlocked.Add(ref done, got);
+                } catch (Exception e) {
+                    Fail(e);
+                    if (fs != null) { fs.Dispose(); fs = null; }   // reopen for the next piece
                 }
             }
+            if (fs != null) fs.Dispose();
         });
         return done;
     }
@@ -77,7 +90,8 @@ try {
         Log ("Start  {0}  ({1:N1} GB, first {2} MB)" -f $f.FullName, ($f.Length / 1GB), $HeadMB)
         $got += [RclonePrewarm]::Read($f.FullName, $Streams, $offs, 16MB)
     }
-    Log ("Done   {0}  {1:N0} MB in {2:N1}s" -f $f.Name, ($got / 1MB), $sw.Elapsed.TotalSeconds)
+    $failed = if ([RclonePrewarm]::Failed) { "  ({0} reads failed, first: {1})" -f [RclonePrewarm]::Failed, [RclonePrewarm]::FirstError } else { '' }
+    Log ("Done   {0}  {1:N0} MB in {2:N1}s{3}" -f $f.Name, ($got / 1MB), $sw.Elapsed.TotalSeconds, $failed)
 } catch {
     Log ("Failed {0}: {1}" -f $f.Name, $_.Exception.Message)
 }

@@ -70,8 +70,8 @@ if ($s3_enterprise -eq "true" -and "${file_warm}" -eq "true") {
         }
 
         #Mount flags; --rc (one localhost port per bucket, 5572 up) lets the watcher lower --buffer-size while it warms
-        $flags = @{ 'vfs-cache-max-age' = '${rclone_warm_max_age}'; 'vfs-read-chunk-size' = '512K'; 'vfs-read-chunk-size-limit' = '128M'
-                    'vfs-read-chunk-streams' = '16'; 'vfs-read-ahead' = '0'; 'buffer-size' = '128M'; 'low-level-retries' = '10' }
+        $flags = @{ 'vfs-cache-max-age' = '${rclone_warm_max_age}'; 'vfs-read-chunk-size' = '64K'; 'vfs-read-chunk-size-limit' = '2M'
+                    'vfs-read-chunk-streams' = '16'; 'vfs-read-ahead' = '0'; 'buffer-size' = '64M'; 'low-level-retries' = '10' }
         $mountScript = Get-Content C:\rclone\bucketmount.ps1 -Raw
         $watchdogScript = Get-Content C:\rclone\watchdog.ps1 -Raw
         foreach ($k in $flags.Keys) {

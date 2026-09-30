@@ -9,9 +9,17 @@
 #            by one when it opens the file after OK.
 # An MXF reopened within $RecentSec after the cache dropped it goes straight to stage 2.
 # At most $MaxWarms warms run at once.
-# While a stage 2 warm runs, that bucket's mount has --buffer-size set to 0 through its rc port (from the
-# mount's --rc-addr): every partition read would otherwise pull a whole buffer in the background. The
-# previous value goes back when the bucket's last stage 2 warm ends.
+# --buffer-size is set to $OpenBuffer through the bucket mount's rc port (from its --rc-addr) while a file is being
+# opened: every read at a new position would otherwise pull a whole buffer in the background, and the media
+# probes, the partition warm and Iris's steps after OK all jump around the file. It goes to 0 at the first
+# open of an MXF and back to its previous value when the file's partition warm is done (Iris's partition
+# walks after OK then read the cache, where the buffer costs nothing); if no warm runs, when mxfdump (the
+# last step Iris runs after OK) exits, or $AfterOkSec after OK (OK: the file's second mediainfo run,
+# an "mediainfo --Inform" run, or mxfdump). Other files are opened with only a few reads and keep the
+# playback buffer throughout. A stage 2 warm still running keeps it low until it ends.
+# The mounts rest at the playback buffer, set by the launch script.
+# Iris's Whisper language detection (python main.py, ~half the CPU for minutes after a load) runs at idle
+# priority so opens get the CPU first.
 # A file to be warmed is held open by this watcher from its first open, so rclone (short --vfs-cache-max-age
 # drops closed files) keeps the warm while the Open dialog is up and until Iris plays it. Holds are released
 # when the next main file (MXF or >= $MinSizeGB, not a caption/audio/xml sidecar) is opened, or after
@@ -26,7 +34,9 @@ $ProbeWaitSec = 20
 $ProbeStartSec = 3
 $ProbeHeadSec = 1
 $HoldMaxSec = 900
-$PlayBuffer = 128MB   # fallback when the mount's own value can't be read
+$AfterOkSec = 20
+$PlayBuffer = 64MB   # --buffer-size for playback
+$OpenBuffer = 0      # --buffer-size while an MXF is being opened (the mounts rest at $PlayBuffer)
 $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap', '.sub', '.ass', '.ssa', '.sbv', '.itt', '.mcc',
                '.wav', '.bwf', '.w64', '.aif', '.aiff', '.mp3', '.aac', '.m4a', '.flac', '.ac3', '.ec3', '.eac3', '.dts', '.mp2', '.ogg', '.opus')
 $SkipExt   = @('.dpx', '.exr', '.tif', '.tiff', '.png', '.jpg', '.jpeg', '.tga', '.cin', '.j2c', '.j2k', '.jp2', '.ari', '.dng')
@@ -60,14 +70,14 @@ $bufHold = @{}   # bucket -> @{ Url; Count; Saved }  (stage 2 warms running with
 $warmOf  = @{}   # warm process id -> bucket
 $warmPath = @{}  # warm process id -> path
 
-function Hold-Buffer($bucket) {
+function Hold-Buffer($bucket, $why) {
     if ($bufHold.ContainsKey($bucket)) { $bufHold[$bucket].Count++; return $true }
     $url = Get-RcUrl $bucket
     if (-not $url) { return $false }
-    $saved = Get-Buffer $url; if ($saved -le 0) { $saved = $PlayBuffer }
-    if (-not (Set-Buffer $url 0)) { return $false }
+    $saved = Get-Buffer $url; if ($saved -le $OpenBuffer) { $saved = $PlayBuffer }
+    if (-not (Set-Buffer $url $OpenBuffer)) { return $false }
     $bufHold[$bucket] = @{ Url = $url; Count = 1; Saved = $saved }
-    Log "buffer 0 on $bucket for partition warm"
+    Log "buffer $($OpenBuffer / 1MB)M on $bucket ($why)"
     $true
 }
 
@@ -81,6 +91,15 @@ function Release-Buffer($bucket) {
 }
 
 $holds = @{}   # path -> @{ Stream; Since }
+$session = $null   # the main file being opened: @{ Path; Leaf; Bucket; Mxf; Held; Since; OkAt; DumpSeen; Probes }
+
+function End-Session($why) {
+    if ($script:session -and $script:session.Held) {
+        $script:session.Held = $false
+        Log "open of $($script:session.Leaf) done ($why)"
+        Release-Buffer $script:session.Bucket
+    }
+}
 
 function Hold-File($path) {
     if ($holds.ContainsKey($path)) { return }
@@ -105,23 +124,15 @@ function Release-Holds($except, $why) {
 function Start-Warm($path, $stage) {
     $warmArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\rclone-prewarm.ps1", '-Path', "`"$path`"")
     if ($stage -eq 1) { $warmArgs += @('-HeadMB', '512') }                              # first 512 MB
-    else              { $warmArgs += @('-Mxf', '-MxfStreams', '8', '-MxfKB', '256') }   # MXF partitions
+    else              { $warmArgs += @('-Mxf', '-MxfStreams', '8', '-MxfKB', '48') }   # MXF partitions
     $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
     Hold-File $path
-    $held = ($stage -eq 2) -and (Hold-Buffer $bucket)
+    $held = ($stage -eq 2) -and (Hold-Buffer $bucket 'partition warm')
     Log "stage $stage warming $path"
     $p = Start-Process -FilePath powershell.exe -WindowStyle Hidden -PassThru -ArgumentList $warmArgs
     if ($held) { $warmOf[$p.Id] = $bucket }
     $warmPath[$p.Id] = $path
     $p
-}
-
-# A previous watcher may have been stopped mid-warm with a buffer left at 0
-Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" | ForEach-Object {
-    if ($_.CommandLine -match '--rc-addr\s+"?([\d.]+:\d+)') {
-        $url = "http://$($Matches[1])"
-        if ((Get-Buffer $url) -eq 0 -and (Set-Buffer $url $PlayBuffer)) { Log "buffer restored on $url at startup" }
-    }
 }
 
 # Files already cached when the watcher starts are not warmed again
@@ -132,6 +143,9 @@ $pending2 = @{}                                                   # MXF path -> 
 $recent   = @{}                                                   # path -> time first seen
 $running  = @()
 $wasProbing = $false
+$wasProbingSession = $false
+$tick = 0
+$lowered = New-Object System.Collections.Generic.HashSet[int]
 Log "watching $metaRoot ($($known.Count) files already cached, two-stage, min $MinSizeGB GB, max $MaxWarms at once)"
 
 while ($true) {
@@ -157,7 +171,17 @@ while ($true) {
             $queue.Enqueue(@{ Path = $path; Stage = 2 })
         } else {
             $recent[$path] = $now
-            if ($isMxf -or ($size -ge $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext)) { Release-Holds $path 'next file opened' }
+            if ($isMxf -or ($size -ge $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext)) {
+                Release-Holds $path 'next file opened'
+                End-Session 'next file opened'
+            }
+            # Only MXF opens jump around the file (hundreds of partition reads); other files keep the full buffer
+            if ($isMxf) {
+                $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
+                if (Hold-Buffer $bucket 'file opened') {
+                    $session = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $bucket; Mxf = $isMxf; Held = $true; Since = $now; OkAt = $null; DumpSeen = $false; Probes = [int]$probing }
+                }
+            }
             Hold-File $path
             if ($isMxf) {
                 Log ("first open of {0} ({1:N2} GB), stage 2 pending" -f $path, ($size / 1GB))
@@ -187,12 +211,38 @@ while ($true) {
             }
         }
     }
+    # Buffer back just before playback: OK is Iris's first "mediainfo --Inform" run on the file; for MXF
+    # wait for mxfdump, the last step Iris runs after OK
+    if ($session -and $session.Held) {
+        # Each new mediainfo run while the file is open; the dialog's probe is the first
+        if ($probing -and -not $wasProbingSession) { $session.Probes++ }
+        if (-not $session.OkAt -and $session.Probes -ge 2) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (second mediainfo run)" }
+        if (-not $session.OkAt -and $probing) {
+            foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'mediainfo.exe'") {
+                if ($c.CommandLine -match '--Inform' -and $c.CommandLine.ToLower().Contains($session.Leaf.ToLower())) {
+                    $session.OkAt = $now; Log "OK clicked for $($session.Leaf)"; break
+                }
+            }
+        }
+        if ($session.Held -and $session.OkAt -and -not $session.Mxf) { End-Session 'OK clicked' }
+        $dumping = $session.Held -and [bool](Get-Process -Name mxfdump -ErrorAction SilentlyContinue)
+        if ($dumping -and -not $session.OkAt) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (mxfdump)" }
+        if ($session.Held -and $session.OkAt) {
+            if ($dumping) { $session.DumpSeen = $true }
+            elseif ($session.DumpSeen) { End-Session 'mxfdump done' }
+            elseif (($now - $session.OkAt).TotalSeconds -ge $AfterOkSec) { End-Session "$AfterOkSec s after OK" }
+        }
+        if ($session.Held -and ($now - $session.Since).TotalSeconds -ge $HoldMaxSec) { End-Session "after $HoldMaxSec s" }
+    }
+    $wasProbingSession = $probing
     foreach ($p in @($holds.Keys)) {
         if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log "released $p (after $HoldMaxSec s)" }
     }
     foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
 
     foreach ($p in @($running | Where-Object { $_.HasExited })) {
+        # The open's partition warm is done: Iris's walks after OK read the cache, so the buffer only helps now
+        if ($warmOf.ContainsKey($p.Id) -and $session -and $session.Held -and $warmPath[$p.Id] -eq $session.Path) { End-Session 'partition warm done' }
         if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
         $warmPath.Remove($p.Id)
     }
@@ -200,6 +250,14 @@ while ($true) {
     while ($queue.Count -gt 0 -and $running.Count -lt $MaxWarms) {
         $w = $queue.Dequeue()
         $running += Start-Warm $w.Path $w.Stage
+    }
+    if (($tick = $tick + 1) % 5 -eq 0) {
+        foreach ($p in Get-Process -Name python -ErrorAction SilentlyContinue) {
+            if ($lowered.Contains($p.Id)) { continue }
+            [void]$lowered.Add($p.Id)
+            $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)").CommandLine
+            if ($cmd -match 'main\.py') { try { $p.PriorityClass = 'Idle'; Log "whisper python $($p.Id) set to idle priority" } catch { } }
+        }
     }
     Start-Sleep -Milliseconds 200
 }
