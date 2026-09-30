@@ -12,11 +12,12 @@
 # --buffer-size is set to $OpenBuffer through the bucket mount's rc port (from its --rc-addr) while a file is being
 # opened: every read at a new position would otherwise pull a whole buffer in the background, and the media
 # probes, the partition warm and Iris's steps after OK all jump around the file. It goes to 0 at the first
-# open of an MXF and back to its previous value when the file's partition warm is done (Iris's partition
-# walks after OK then read the cache, where the buffer costs nothing); if no warm runs, when mxfdump (the
-# last step Iris runs after OK) exits, or $AfterOkSec after OK (OK: the file's second mediainfo run,
-# an "mediainfo --Inform" run, or mxfdump). Other files are opened with only a few reads and keep the
-# playback buffer throughout. A stage 2 warm still running keeps it low until it ends.
+# open of an MXF and back to its previous value when mxfdump (the last step Iris runs after OK) exits, or
+# $AfterOkSec after OK (OK: the file's second mediainfo run, an "mediainfo --Inform" run, or mxfdump), or
+# $OpenBufferMaxSec after the first open if OK is never seen, so playback never runs on the open buffer. Not
+# when the partition warm is done: the Open dialog walks every partition again, and with the buffer back
+# each of those reads pulls a whole buffer (22 s instead of ~2 s on a 686-partition file). Other files are
+# opened with only a few reads and keep the playback buffer throughout. A stage 2 warm still running keeps it low until it ends.
 # The mounts rest at the playback buffer, set by the launch script.
 # Iris's Whisper language detection (python main.py, ~half the CPU for minutes after a load) runs at idle
 # priority so opens get the CPU first.
@@ -35,6 +36,7 @@ $ProbeStartSec = 3
 $ProbeHeadSec = 1
 $HoldMaxSec = 900
 $AfterOkSec = 20
+$OpenBufferMaxSec = 120   # buffer back regardless this long after the first open (OK not seen)
 $PlayBuffer = 64MB   # --buffer-size for playback
 $OpenBuffer = 0      # --buffer-size while an MXF is being opened (the mounts rest at $PlayBuffer)
 $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap', '.sub', '.ass', '.ssa', '.sbv', '.itt', '.mcc',
@@ -232,7 +234,7 @@ while ($true) {
             elseif ($session.DumpSeen) { End-Session 'mxfdump done' }
             elseif (($now - $session.OkAt).TotalSeconds -ge $AfterOkSec) { End-Session "$AfterOkSec s after OK" }
         }
-        if ($session.Held -and ($now - $session.Since).TotalSeconds -ge $HoldMaxSec) { End-Session "after $HoldMaxSec s" }
+        if ($session.Held -and ($now - $session.Since).TotalSeconds -ge $OpenBufferMaxSec) { End-Session "after $OpenBufferMaxSec s" }
     }
     $wasProbingSession = $probing
     foreach ($p in @($holds.Keys)) {
@@ -241,8 +243,6 @@ while ($true) {
     foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
 
     foreach ($p in @($running | Where-Object { $_.HasExited })) {
-        # The open's partition warm is done: Iris's walks after OK read the cache, so the buffer only helps now
-        if ($warmOf.ContainsKey($p.Id) -and $session -and $session.Held -and $warmPath[$p.Id] -eq $session.Path) { End-Session 'partition warm done' }
         if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
         $warmPath.Remove($p.Id)
     }

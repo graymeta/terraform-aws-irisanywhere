@@ -1,6 +1,7 @@
 # Warms part of a file on an rclone mount into the rclone VFS cache by reading it through the mount.
 #   -HeadMB  the first N MB, -Streams 16 MB reads at a time
-#   -Mxf     -MxfKB at every partition in the MXF Random Index Pack, -MxfStreams at a time, end to start
+#   -Mxf     -MxfBeforeKB before to -MxfKB after every partition in the MXF Random Index Pack, -MxfStreams
+#            at a time, end to start
 #            (the order Iris walks them when it opens the file)
 # Reads bypass the Windows file cache so they reach rclone. A read that fails is skipped; the count and
 # the first error are logged. Logs to C:\Logs\rclone-prewarm.log.
@@ -10,6 +11,7 @@ param(
     [int]$Streams = 16,
     [switch]$Mxf,
     [int]$MxfKB = 48,
+    [int]$MxfBeforeKB = 16,
     [int]$MxfStreams = 8
 )
 $log = 'C:\Logs\rclone-prewarm.log'
@@ -79,10 +81,11 @@ try {
     $got = 0L
     if ($Mxf) {
         $parts = @(Get-MxfPartitions $f.FullName)
-        # One read starting at each partition, 4 KB aligned for the unbuffered reads
-        $offs = [long[]]@($parts | Sort-Object -Descending | ForEach-Object { [long][math]::Floor($_ / 4KB) * 4KB } | Where-Object { $_ -lt $f.Length })
-        Log ("Start  {0}  ({1:N1} GB, {2} MXF partitions x {3} KB)" -f $f.FullName, ($f.Length / 1GB), $offs.Count, $MxfKB)
-        if ($offs.Count -gt 0) { $got += [RclonePrewarm]::Read($f.FullName, $MxfStreams, $offs, $MxfKB * 1KB) }
+        # One read at each partition from -MxfBeforeKB (Iris's Open dialog reads 32 KB starting 12.5 KB before
+        # every other partition), 4 KB aligned for the unbuffered reads
+        $offs = [long[]]@($parts | Sort-Object -Descending | ForEach-Object { [long][math]::Floor([math]::Max([long]0, [long]$_ - $MxfBeforeKB * 1KB) / 4KB) * 4KB } | Where-Object { $_ -lt $f.Length })
+        Log ("Start  {0}  ({1:N1} GB, {2} MXF partitions x -{3}..+{4} KB)" -f $f.FullName, ($f.Length / 1GB), $offs.Count, $MxfBeforeKB, $MxfKB)
+        if ($offs.Count -gt 0) { $got += [RclonePrewarm]::Read($f.FullName, $MxfStreams, $offs, ($MxfBeforeKB + $MxfKB) * 1KB) }
     }
     if ($HeadMB -gt 0) {
         $n = [long][math]::Ceiling([math]::Min([long]$f.Length, [long]$HeadMB * 1MB) / 16MB)
