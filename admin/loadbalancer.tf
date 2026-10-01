@@ -25,18 +25,6 @@ resource "aws_lb_listener" "porthttps" {
   }
 }
 
-resource "aws_lb_listener" "port5432" {
-  count             = var.enterprise_ha ? 1 : 0
-  load_balancer_arn = aws_lb.irisadmin.0.arn
-  port              = "5432"
-  protocol          = "TCP"
-
-  default_action {
-    target_group_arn = aws_lb_target_group.iadm.0.arn
-    type             = "forward"
-  }
-}
-
 resource "aws_lb_target_group" "iadm" {
   count    = var.enterprise_ha ? 1 : 0
   name     = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
