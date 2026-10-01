@@ -10,7 +10,7 @@ param(
     [int]$HeadMB = 0,
     [int]$Streams = 16,
     [switch]$Mxf,
-    [int]$MxfKB = 48,
+    [int]$MxfKB = 32,
     [int]$MxfBeforeKB = 16,
     [int]$MxfStreams = 8
 )

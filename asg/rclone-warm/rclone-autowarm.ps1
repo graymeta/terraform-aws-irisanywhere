@@ -126,7 +126,7 @@ function Release-Holds($except, $why) {
 function Start-Warm($path, $stage) {
     $warmArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\rclone-prewarm.ps1", '-Path', "`"$path`"")
     if ($stage -eq 1) { $warmArgs += @('-HeadMB', '512') }                              # first 512 MB
-    else              { $warmArgs += @('-Mxf', '-MxfStreams', '8', '-MxfKB', '48') }   # MXF partitions
+    else              { $warmArgs += @('-Mxf', '-MxfStreams', '8', '-MxfKB', '32') }   # MXF partitions, -16..+32 KB
     $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
     Hold-File $path
     $held = ($stage -eq 2) -and (Hold-Buffer $bucket 'partition warm')
