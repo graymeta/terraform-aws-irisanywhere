@@ -56,17 +56,18 @@ function Log-Warm($m) { Add-Content -Path $warmLog -Value "$(Get-Date -Format 'y
 # Pack, end to start (the order Iris walks them); Iris's Open dialog reads 32 KB at every other partition
 # start and 32 KB from 12.8 KB before the next one. Other files: the first HeadMB in 16 MB reads.
 Add-Type -TypeDefinition @'
-using System; using System.IO; using System.Threading; using System.Threading.Tasks; using System.Collections.Generic;
+using System; using System.IO; using System.Net; using System.Text; using System.Text.RegularExpressions; using System.Threading; using System.Threading.Tasks; using System.Collections.Generic;
 public class RcloneWarm {
     const FileOptions NoBuffering = (FileOptions)0x20000000;
     static int ids;
     public int Id; public string Path; public string What = ""; public string Error;
     public long Bytes, Failed, Retried; public string FirstError, FirstRetry;
+    string rcUrl, rcFs, rcPath;   // the mount's rc and the file there: ranges are fetched by rclone's vfs/prefetch if it has it
     public System.Diagnostics.Stopwatch Watch = System.Diagnostics.Stopwatch.StartNew();
     public Task Work;
     public bool HasExited { get { return Work.IsCompleted; } }
-    public static RcloneWarm Start(string path, bool mxf, int headMB, int workers, int beforeKB, int afterKB) {
-        var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path;
+    public static RcloneWarm Start(string path, bool mxf, int headMB, int workers, int beforeKB, int afterKB, string rcUrl = null, string rcFs = null, string rcPath = null) {
+        var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path; w.rcUrl = rcUrl; w.rcFs = rcFs; w.rcPath = rcPath;
         w.Work = Task.Run(() => {
             try {
                 long len = new FileInfo(path).Length;
@@ -86,26 +87,59 @@ public class RcloneWarm {
                     if (cs >= 0) { offs.Add(cs); lens.Add((int)(ce - cs)); }
                     offs.Reverse(); lens.Reverse();   // end to start, the order Iris walks them
                     w.What = string.Format("{0} MXF partitions in {1} reads, -{2}..+{3} KB", parts.Count, offs.Count, beforeKB, afterKB);
-                    if (offs.Count > 0) w.Read(offs.ToArray(), lens.ToArray(), workers, NoBuffering);
+                    if (offs.Count > 0) w.Fetch(offs.ToArray(), lens.ToArray(), workers, NoBuffering);
                     // Then 32 MB around 1/3, 1/2 and 2/3 of the duration, where Iris decodes frames after OK
                     // (from the index tables the partition warm just cached)
                     var spots = new List<long>();
                     try { foreach (long t in TimeOffsets(path, parts, new[] { 1 / 3.0, 0.5, 2 / 3.0 })) spots.Add(Math.Max(0L, t - 8388608) / 4096 * 4096); } catch { }
                     if (spots.Count > 0) {
                         w.What += string.Format(", {0} frame spots", spots.Count);
-                        w.Read(spots.ToArray(), spots.ConvertAll(x => 33554432).ToArray(), spots.Count, NoBuffering);
+                        w.Fetch(spots.ToArray(), spots.ConvertAll(x => 33554432).ToArray(), spots.Count, NoBuffering);
                     }
                 } else {
                     long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
                     int size = (int)Math.Min(16777216L, Math.Max(len, 4096L));
                     for (long i = 0; i < n; i++) { offs.Add(i * 16777216); lens.Add(size); }
                     w.What = string.Format("first {0} MB", headMB);
-                    w.Read(offs.ToArray(), lens.ToArray(), workers, len < 16777216 ? FileOptions.None : NoBuffering);
+                    // QuickTime/MP4: right after the first 16 MB, 96 MB from the frames at 1/3, 1/2 and 2/3 of the
+                    // duration, where Iris decodes ~10 frames when it opens the file (offsets from the moov index)
+                    string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+                    if ((ext == ".mov" || ext == ".mp4" || ext == ".m4v") && len >= 1073741824) {
+                        var spots = new List<long>();
+                        try { spots = MovTimeOffsets(path, new[] { 1 / 3.0, 0.5, 2 / 3.0 }); } catch { }
+                        int at = Math.Min(1, offs.Count);
+                        foreach (long t in spots) for (long o = t / 4096 * 4096; o < t + 100663296 && o < len; o += 16777216) { offs.Insert(at, o); lens.Insert(at, 16777216); at++; }
+                        if (spots.Count > 0) w.What += string.Format(", {0} frame spots", spots.Count);
+                    }
+                    w.Fetch(offs.ToArray(), lens.ToArray(), workers, len < 16777216 ? FileOptions.None : NoBuffering);
                 }
             } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
             w.Watch.Stop();
         });
         return w;
+    }
+    // Through rclone's vfs/prefetch when the mount has it: rclone reads the ranges into its cache itself, 64 at
+    // a time, without the Windows file system in between (which passes rclone ~16 reads at once); else, or if
+    // the call fails, through the mount
+    void Fetch(long[] offsets, int[] lengths, int workers, FileOptions opts) {
+        if (rcUrl != null) {
+            int big = 1; foreach (int l in lengths) big = Math.Max(big, l);
+            int rcWorkers = Math.Max(1, Math.Min(Math.Max(workers, Math.Min(64, offsets.Length)), 536870912 / big));   // <= 512 MB of buffers in rclone
+            try { Prefetch(offsets, lengths, rcWorkers); if (!What.Contains("via rc")) What += " via rc"; return; }
+            catch (Exception e) { What += " (rc " + e.Message + ", read through the mount)"; rcUrl = null; }
+        }
+        Read(offsets, lengths, workers, opts);
+    }
+    static string Json(string v) { return "\"" + v.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""; }
+    void Prefetch(long[] offsets, int[] lengths, int workers) {
+        var sb = new StringBuilder("{\"fs\":" + Json(rcFs) + ",\"path\":" + Json(rcPath) + ",\"workers\":" + workers + ",\"ranges\":[");
+        for (int i = 0; i < offsets.Length; i++) sb.Append(i > 0 ? "," : "").Append("[" + offsets[i] + "," + lengths[i] + "]");
+        sb.Append("]}");
+        string res;
+        using (var c = new WebClient()) { c.Headers[HttpRequestHeader.ContentType] = "application/json"; res = c.UploadString(rcUrl + "/vfs/prefetch", sb.ToString()); }
+        var m = Regex.Match(res, "\"bytes\":\\s*(\\d+)"); if (m.Success) Interlocked.Add(ref Bytes, long.Parse(m.Groups[1].Value));
+        m = Regex.Match(res, "\"failed\":\\s*(\\d+)"); if (m.Success) Interlocked.Add(ref Failed, long.Parse(m.Groups[1].Value));
+        m = Regex.Match(res, "\"firstError\":\\s*\"((?:[^\"\\\\]|\\\\.)*)\""); if (m.Success) Interlocked.CompareExchange(ref FirstError, m.Groups[1].Value, null);
     }
     void Read(long[] offsets, int[] lengths, int workers, FileOptions opts) {
         long next = -1;
@@ -191,6 +225,69 @@ public class RcloneWarm {
         }
         return res;
     }
+    // QuickTime/MP4: file offsets of the video frames at the given fractions of the video track's duration
+    // (moov > trak with a "vide" handler > stbl: stts time to sample, stsc sample to chunk, stco/co64 chunk
+    // offsets, stsz sample sizes)
+    static IEnumerable<int[]> Atoms(byte[] b, int start, int end) {
+        for (int p = start; p + 8 <= end; ) {
+            long size = BE(b, p, 4); int hl = 8;
+            if (size == 1) { size = BE(b, p + 8, 8); hl = 16; } else if (size == 0) size = end - p;
+            if (size < hl || p + size > end) yield break;
+            yield return new[] { p, p + hl, (int)(p + size) };   // atom start, data start, end
+            p += (int)size;
+        }
+    }
+    static int[] Atom(byte[] b, int[] parent, string type) {
+        if (parent == null) return null;
+        foreach (var a in Atoms(b, parent[1], parent[2])) if (Encoding.ASCII.GetString(b, a[0] + 4, 4) == type) return a;
+        return null;
+    }
+    static List<long> MovTimeOffsets(string path, double[] fracs) {
+        var res = new List<long>();
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536)) {
+            long len = fs.Length, pos = 0, moovPos = -1, moovSize = 0;
+            while (pos + 8 <= len) {
+                var h = At(fs, pos, 16); if (h.Length < 8) break;
+                long size = BE(h, 0, 4); int hl = 8;
+                if (size == 1) { size = BE(h, 8, 8); hl = 16; } else if (size == 0) size = len - pos;
+                if (size < hl) break;
+                if (Encoding.ASCII.GetString(h, 4, 4) == "moov") { moovPos = pos + hl; moovSize = size - hl; break; }
+                pos += size;
+            }
+            if (moovPos < 0 || moovSize > 268435456) return res;
+            var m = At(fs, moovPos, (int)moovSize);
+            foreach (var trak in Atoms(m, 0, m.Length)) {
+                if (Encoding.ASCII.GetString(m, trak[0] + 4, 4) != "trak") continue;
+                var mdia = Atom(m, trak, "mdia"); var hdlr = Atom(m, mdia, "hdlr");
+                if (hdlr == null || Encoding.ASCII.GetString(m, hdlr[1] + 8, 4) != "vide") continue;
+                var stbl = Atom(m, Atom(m, mdia, "minf"), "stbl");
+                var stts = Atom(m, stbl, "stts"); var stsc = Atom(m, stbl, "stsc"); var stsz = Atom(m, stbl, "stsz");
+                var co = Atom(m, stbl, "stco"); int cw = 4; if (co == null) { co = Atom(m, stbl, "co64"); cw = 8; }
+                if (stts == null || stsc == null || stsz == null || co == null) continue;
+                int nch = (int)BE(m, co[1] + 4, 4), ne = (int)BE(m, stts[1] + 4, 4), nsc = (int)BE(m, stsc[1] + 4, 4);
+                long usz = BE(m, stsz[1] + 4, 4), total = 0;
+                for (int i = 0; i < ne; i++) total += BE(m, stts[1] + 8 + i * 8, 4) * BE(m, stts[1] + 12 + i * 8, 4);
+                foreach (double f in fracs) {
+                    long t = (long)(total * f), acc = 0, n = 0;
+                    for (int i = 0; i < ne; i++) { long c = BE(m, stts[1] + 8 + i * 8, 4), d = BE(m, stts[1] + 12 + i * 8, 4); if (d > 0 && acc + c * d > t) { n += (t - acc) / d; break; } acc += c * d; n += c; }
+                    long first = 0;
+                    for (int i = 0; i < nsc; i++) {
+                        long fc = BE(m, stsc[1] + 8 + i * 12, 4) - 1, spc = BE(m, stsc[1] + 12 + i * 12, 4);
+                        long lc = i + 1 < nsc ? BE(m, stsc[1] + 8 + (i + 1) * 12, 4) - 1 : nch, run = (lc - fc) * spc;
+                        if (spc > 0 && n < first + run) {
+                            long ci = fc + (n - first) / spc, s0 = first + ((n - first) / spc) * spc, off = BE(m, co[1] + 8 + (int)ci * cw, cw);
+                            for (long k = s0; k < n; k++) off += usz != 0 ? usz : BE(m, stsz[1] + 12 + (int)k * 4, 4);
+                            if (off > 0 && off < len && !res.Contains(off)) res.Add(off);
+                            break;
+                        }
+                        first += run;
+                    }
+                }
+                break;
+            }
+        }
+        return res;
+    }
     static List<long> Partitions(string path) {
         var parts = new List<long>();
         using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
@@ -221,6 +318,13 @@ function Get-RcUrl($bucket) {
     $c = (Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" |
         Where-Object { $_.CommandLine -match "S3BUCKETS:$([regex]::Escape($bucket))\s" } | Select-Object -First 1).CommandLine
     if ($c -match '--rc-addr\s+"?([\d.]+:\d+)') { "http://$($Matches[1])" }
+}
+
+# rclone remote a bucket is mounted from, e.g. S3BUCKETS:bucket (for vfs/prefetch's "fs")
+function Get-RcFs($bucket) {
+    $c = (Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'" |
+        Where-Object { $_.CommandLine -match "S3BUCKETS:$([regex]::Escape($bucket))\s" } | Select-Object -First 1).CommandLine
+    if ($c -match "\s(\S+:$([regex]::Escape($bucket)))\s") { $Matches[1] }
 }
 
 function Get-Buffer($url) {
@@ -295,8 +399,11 @@ function Start-Warm($path, $stage) {
     $held = ($stage -eq 2) -and (Hold-Buffer $bucket 'partition warm')
     Log "stage $stage warming $path"
     Log-Warm "Start  $path"
-    if ($stage -eq 1) { $p = [RcloneWarm]::Start($path, $false, 512, 16, 0, 0) }   # first 512 MB
-    else              { $p = [RcloneWarm]::Start($path, $true, 0, 32, 16, 32) }     # MXF partitions, -16..+32 KB, 32 at once
+    $rel = $path.Substring($mountRoot.Length + $bucket.Length + 2).Replace('\', '/')
+    if ($stage -eq 1) { $p = [RcloneWarm]::Start($path, $false, 512, 16, 0, 0, (Get-RcUrl $bucket), (Get-RcFs $bucket), $rel) }   # first 512 MB (+ MOV frame spots)
+    else {                                                                            # MXF partitions, -16..+32 KB, 32 at once
+        $p = [RcloneWarm]::Start($path, $true, 0, 32, 16, 32, (Get-RcUrl $bucket), (Get-RcFs $bucket), $rel)
+    }
     if ($held) { $warmOf[$p.Id] = $bucket }
     $warmPath[$p.Id] = $path
     $p
