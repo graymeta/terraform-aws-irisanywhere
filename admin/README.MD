@@ -1,13 +1,14 @@
 # Deploying GrayMeta Iris Admin with Terraform
 
-This module deploys GrayMeta Iris Admin into AWS. It supports a standalone deployment and an enterprise HA deployment that adds a load balancer and RDS.
+This module deploys GrayMeta Iris Admin into AWS. It supports a standalone deployment and an enterprise HA deployment that adds a load balancer. By default Iris Admin installs PostgreSQL locally on the instance. To use an RDS PostgreSQL database instead, create it with the `rds` module, in its own Terraform state so destroying Iris Admin never affects it, and pass its hostname as `db_endpoint`.
 
 Note: IAM resources are account-scoped, not regional. If you reuse the same role or policy names across regional deployments, manage them from one Terraform state or use region-specific names so one region does not delete resources another region still needs.
 
 ## Requirements
 
-* Terraform 1.8.x or compatible.
-* IAM permissions to deploy EC2, security groups, load balancers, IAM roles and policies, and RDS when HA is enabled.
+* Terraform 1.7 or later.
+* IAM permissions to deploy EC2, security groups, load balancers, and IAM roles and policies.
+* For HA with RDS: a database created with the `rds` module.
 * Required Secrets Manager values created before deployment.
 * Access to the GrayMeta Iris Admin AMIs. Contact support@graymeta.com.
 * ACM certificates when using HA and TLS termination on the load balancer.
@@ -35,6 +36,25 @@ module "irisadmin" {
 
 ## Enterprise HA Example
 
+Without `db_endpoint`, Iris Admin installs PostgreSQL locally. To use RDS, create the database first, in its own root module and state:
+
+```hcl
+module "irisadmin_rds" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=<tag>"
+
+  hostname_prefix = "iris-admin-ha"
+  subnet_id       = ["subnet-foo1", "subnet-foo2"]
+  ia_secret_arn   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
+  db_version      = "17.9"
+}
+
+output "db_endpoint" {
+  value = module.irisadmin_rds.address
+}
+```
+
+Then deploy Iris Admin in a separate root module, using that output as `db_endpoint` (omit it for local PostgreSQL):
+
 ```hcl
 provider "aws" {
   region  = "us-west-2"
@@ -53,6 +73,7 @@ module "irisadmin_ha" {
   enterprise_ha           = true
   enterprise_ha_lb_public = true
   https_console_port      = 443
+  db_endpoint             = "iris-admin-ha.abc123.us-west-2.rds.amazonaws.com"
 }
 ```
 
@@ -81,8 +102,8 @@ Required only for specific deployment modes:
 
 * `enterprise_ha = true` when you want the HA topology.
 * At least two subnet IDs when `enterprise_ha = true`.
+* `db_endpoint` when `enterprise_ha = true` and the database is on RDS.
 * `enterprise_ha_lb_public` only when you need a public HA load balancer.
-* RDS-related inputs only when `enterprise_ha = true` and you want to override the defaults.
 
 ## Inputs
 
@@ -112,18 +133,11 @@ Core inputs:
 * `disable_rdp` optional, default `false`. Disables RDP access in the security group.
 * `enterprise_ha_lb_public` optional, default `false`. Makes the Admin HA load balancer internet-facing. Applies only when `enterprise_ha = true`.
 
-HA and RDS inputs:
+HA database input:
 
-* `apply_immediately` optional, default `true`. Apply RDS changes immediately. Applies only when `enterprise_ha = true`.
-* `allocated_storage` optional, default `100`. RDS allocated storage in GiB. Applies only when `enterprise_ha = true`.
-* `db_backup_retention` optional, default `3`. Number of automated RDS backups retained. Applies only when `enterprise_ha = true`.
-* `db_backup_window` optional, default `03:00-04:00`. Preferred RDS backup window. Applies only when `enterprise_ha = true`.
-* `db_instance_size` optional, default `db.m6g.large`. RDS instance class. Applies only when `enterprise_ha = true`.
-* `db_kms_key_id` optional, default `""`. Customer-managed KMS key ID for RDS encryption. Required when you want RDS encrypted with a customer-managed key and `enterprise_ha = true`.
-* `db_multi_az` optional, default `true`. Enables Multi-AZ RDS. Applies only when `enterprise_ha = true`.
-* `db_snapshot` optional, default `iris-admin-backup`. Snapshot identifier used by the module. Applies only when `enterprise_ha = true`.
-* `db_storage_encrypted` optional, default `false`. Enables RDS storage encryption. Applies only when `enterprise_ha = true`.
-* `db_version` optional, default `14.8`. PostgreSQL engine version. Applies only when `enterprise_ha = true`.
+* `db_endpoint` optional, default `""`. Applies when `enterprise_ha = true`. Hostname of an RDS PostgreSQL instance, without the port (the `address` output of the `rds` module). The module looks up the instance and adds a rule to its security group allowing PostgreSQL from the Iris Admin instances; destroying Iris Admin removes only that rule. Leave empty to install PostgreSQL locally on the Iris Admin instance. As an upgrade safeguard, the plan fails if `db_endpoint` is empty but an RDS instance named like one created by earlier versions of this module (`hostname_prefix`, plus `-deployment_name` when set) exists.
+
+Deprecated inputs, accepted but ignored (the database is managed by the `rds` module): `create_rds`, `apply_immediately`, `allocated_storage`, `db_backup_retention`, `db_backup_window`, `db_instance_size`, `db_kms_key_id`, `db_multi_az`, `db_snapshot`, `db_storage_encrypted`, `db_version`.
 
 ## Outputs
 
@@ -132,7 +146,20 @@ HA and RDS inputs:
 * `private_ip` Private IP addresses of the Admin instances.
 * `alb_dns_name` Load balancer DNS name list when HA is enabled.
 * `alb_dns_name_none` Joined load balancer DNS name when HA is enabled.
-* `endpoint` RDS endpoint hostname when `enterprise_ha = true`.
+* `endpoint` Database hostname used by Iris Admin (the value of `db_endpoint`), or empty when PostgreSQL is installed locally.
+
+## Upgrading an HA Deployment That Created Its Own Database
+
+Earlier versions of this module created the RDS database. This version stops managing it without deleting it. Deployments that use local PostgreSQL need no changes.
+
+1. Take a manual RDS snapshot.
+2. Record the database hostname from your current state:
+   `terraform state show 'module.<name>.aws_db_instance.default[0]' | grep -E '^\s+address'`
+3. Update `source` to this version and set `db_endpoint` to that hostname.
+4. Run `terraform plan`. Every `aws_db_instance`, `aws_db_subnet_group`, and `aws_security_group.rds` entry must say "will no longer be managed by Terraform, but will not be destroyed". If any says "will be destroyed" or "must be replaced", stop.
+5. Run `terraform apply`.
+
+To manage the database with Terraform again, import it into a separate root module that uses the `rds` module, and check that its first plan replaces nothing.
 
 ## Licensing
 

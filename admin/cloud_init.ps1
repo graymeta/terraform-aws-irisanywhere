@@ -213,8 +213,10 @@ try {
 
     if ($enterprise_ha -eq "true") {
         $arg_list = "/S /INSTALLPOSTGRES=0 /DBHOST=$dbserver /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw"
+        Write-Log -Message "Will execute HA installer with arguments: $arg_list" -Level Information
     } else {
         $arg_list = "/S /SERVERPORTHTTPS=$https_console_port /SERVERPORTHTTP=$http_console_port /DATAFOLDER=C:\PostgreSQLData /DBUSERNAME=$admin_db_id /DBPORT=5432 /DBPASSWORD=$admin_db_pw /ADMINUSERNAME=$admin_console_id /ADMINPASSWORD=$admin_console_pw"
+        Write-Log -Message "Will execute non-HA installer with arguments: $arg_list" -Level Information
     }
 
     Write-Log -Message "Executing installer: $exe_full_path" -Level Information

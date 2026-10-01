@@ -145,12 +145,18 @@ variable "ia_secret_arn" {
   description = "(Required) arn of secrets for configuring application. See Readme for instructions for required inputs"
 }
 
-variable "bucketlist" {
-  type        = string
-  description = "(Required) list of S3 buckets"
+variable "manage_bucket_notifications" {
+  type        = bool
+  default     = false
+  description = "Whether to create S3 bucket notifications for the enabled enterprise buckets"
 }
 
 variable "arn_of_indexresource" {
   type        = string
   description = "(Required) ARN of Role trusted to index"
+}
+
+variable "admin_instance_id" {
+  type        = string
+  description = "(Required) ID of the admin instance to run the initial S3 indexing script."
 }
