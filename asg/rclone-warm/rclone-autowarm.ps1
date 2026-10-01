@@ -231,120 +231,139 @@ $tick = 0
 $lowered = New-Object System.Collections.Generic.HashSet[int]
 Log "watching $metaRoot ($($known.Count) files already cached, two-stage, min $MinSizeGB GB, max $MaxWarms at once)"
 
+# A watcher killed mid-open (no finally) leaves a mount at the open buffer: back to the playback buffer
+foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'") {
+    if ($c.CommandLine -match '--rc-addr\s+"?([\d.]+:\d+)') {
+        $u = "http://$($Matches[1])"
+        if ((Get-Buffer $u) -eq $OpenBuffer -and (Set-Buffer $u $PlayBuffer)) { Log "buffer $($PlayBuffer / 1MB)M reset on $u (left at $($OpenBuffer / 1MB)M)" }
+    }
+}
+# An error in one pass is logged and the loop carries on; on any exit the script controls, lowered buffers
+# go back and held files are closed
+try {
 while ($true) {
-    $now = Get-Date
-    $current = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($m in Get-Meta) {
-        [void]$current.Add($m)
-        if ($known.Contains($m)) { continue }
-        # vfsMeta\S3BUCKETS\<bucket>\<path> -> D:\IrisAnywhere\<bucket>\<path>
-        $path = Join-Path $mountRoot $m.Substring($metaRoot.Length + 1)
-        $ext  = [IO.Path]::GetExtension($path).ToLower()
-        if ($SkipExt -contains $ext) { continue }
-        $size = (Get-Item -LiteralPath $path -ErrorAction SilentlyContinue).Length
-        if ($size -lt $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext) { continue }
-        $isMxf = $ext -eq '.mxf'
-        if ($holds.ContainsKey($path) -or $pending2.ContainsKey($path) -or ($warmPath.Values -contains $path)) {
-            continue   # already held or being warmed: rclone just re-listed it
-        }
-        if ($isMxf -and $recent.ContainsKey($path) -and ($now - $recent[$path]).TotalSeconds -lt $RecentSec) {
-            # Reopened (Iris after OK) after the cache dropped it: partitions now
-            Log ("reopen of {0}, queued stage 2" -f $path)
-            $pending2.Remove($path)
-            $queue.Enqueue(@{ Path = $path; Stage = 2 })
-        } else {
-            $recent[$path] = $now
-            if ($isMxf -or ($size -ge $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext)) {
-                Release-Holds $path 'next file opened'
-                End-Session 'next file opened'
+    try {
+        $now = Get-Date
+        $current = New-Object System.Collections.Generic.HashSet[string]
+        foreach ($m in Get-Meta) {
+            [void]$current.Add($m)
+            if ($known.Contains($m)) { continue }
+            # vfsMeta\S3BUCKETS\<bucket>\<path> -> D:\IrisAnywhere\<bucket>\<path>
+            $path = Join-Path $mountRoot $m.Substring($metaRoot.Length + 1)
+            $ext  = [IO.Path]::GetExtension($path).ToLower()
+            if ($SkipExt -contains $ext) { continue }
+            $size = (Get-Item -LiteralPath $path -ErrorAction SilentlyContinue).Length
+            if ($size -lt $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext) { continue }
+            $isMxf = $ext -eq '.mxf'
+            if ($holds.ContainsKey($path) -or $pending2.ContainsKey($path) -or ($warmPath.Values -contains $path)) {
+                continue   # already held or being warmed: rclone just re-listed it
             }
-            # Only MXF opens jump around the file (hundreds of partition reads); other files keep the full buffer
-            if ($isMxf) {
-                $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
-                if (Hold-Buffer $bucket 'file opened') {
-                    $session = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $bucket; Mxf = $isMxf; Held = $true; Since = $now; OkAt = $null; DumpSeen = $false; Probes = [int]$probing }
-                }
-            }
-            Hold-File $path
-            if ($isMxf) {
-                Log ("first open of {0} ({1:N2} GB), stage 2 pending" -f $path, ($size / 1GB))
-                $pending2[$path] = @{ Queued = $now; Seen = $false }
+            if ($isMxf -and $recent.ContainsKey($path) -and ($now - $recent[$path]).TotalSeconds -lt $RecentSec) {
+                # Reopened (Iris after OK) after the cache dropped it: partitions now
+                Log ("reopen of {0}, queued stage 2" -f $path)
+                $pending2.Remove($path)
+                $queue.Enqueue(@{ Path = $path; Stage = 2 })
             } else {
-                Log ("first open of {0} ({1:N2} GB), queued stage 1" -f $path, ($size / 1GB))
-                $queue.Enqueue(@{ Path = $path; Stage = 1 })
-            }
-        }
-    }
-    # Entries rclone evicted drop out, so the next open is seen again
-    $known = $current
-
-    # Stage 2 $ProbeHeadSec after the media probe (mediainfo.exe) starts, or when it exits if sooner;
-    # if none shows up within $ProbeStartSec, start anyway
-    $probing = [bool](Get-Process -Name mediainfo -ErrorAction SilentlyContinue)
-    if ($probing -ne $wasProbing) { Log ("mediainfo {0}" -f $(if ($probing) { 'started' } else { 'exited' })); $wasProbing = $probing }
-    if ($pending2.Count -gt 0) {
-        foreach ($p in @($pending2.Keys)) {
-            $e = $pending2[$p]; if ($probing -and -not $e.Seen) { $e.Seen = $true; $e.SeenAt = $now }
-            $age = ($now - $e.Queued).TotalSeconds
-            if (($e.Seen -and (-not $probing -or ($now - $e.SeenAt).TotalSeconds -ge $ProbeHeadSec)) -or
-                (-not $e.Seen -and $age -ge $ProbeStartSec) -or $age -ge $ProbeWaitSec) {
-                Log ("queued stage 2 for {0} ({1:N1}s after first open, mediainfo {2})" -f $p, $age, $(if ($e.Seen) { 'seen' } else { 'not seen' }))
-                $pending2.Remove($p)
-                $queue.Enqueue(@{ Path = $p; Stage = 2 })
-            }
-        }
-    }
-    # Buffer back just before playback: OK is Iris's first "mediainfo --Inform" run on the file; for MXF
-    # wait for mxfdump, the last step Iris runs after OK
-    if ($session -and $session.Held) {
-        # Each new mediainfo run while the file is open; the dialog's probe is the first
-        if ($probing -and -not $wasProbingSession) { $session.Probes++ }
-        if (-not $session.OkAt -and $session.Probes -ge 2) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (second mediainfo run)" }
-        if (-not $session.OkAt -and $probing) {
-            foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'mediainfo.exe'") {
-                if ($c.CommandLine -match '--Inform' -and $c.CommandLine.ToLower().Contains($session.Leaf.ToLower())) {
-                    $session.OkAt = $now; Log "OK clicked for $($session.Leaf)"; break
+                $recent[$path] = $now
+                if ($isMxf -or ($size -ge $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext)) {
+                    Release-Holds $path 'next file opened'
+                    End-Session 'next file opened'
+                }
+                # Only MXF opens jump around the file (hundreds of partition reads); other files keep the full buffer
+                if ($isMxf) {
+                    $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
+                    if (Hold-Buffer $bucket 'file opened') {
+                        $session = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $bucket; Mxf = $isMxf; Held = $true; Since = $now; OkAt = $null; DumpSeen = $false; Probes = [int]$probing }
+                    }
+                }
+                Hold-File $path
+                if ($isMxf) {
+                    Log ("first open of {0} ({1:N2} GB), stage 2 pending" -f $path, ($size / 1GB))
+                    $pending2[$path] = @{ Queued = $now; Seen = $false }
+                } else {
+                    Log ("first open of {0} ({1:N2} GB), queued stage 1" -f $path, ($size / 1GB))
+                    $queue.Enqueue(@{ Path = $path; Stage = 1 })
                 }
             }
         }
-        if ($session.Held -and $session.OkAt -and -not $session.Mxf) { End-Session 'OK clicked' }
-        $dumping = $session.Held -and [bool](Get-Process -Name mxfdump -ErrorAction SilentlyContinue)
-        if ($dumping -and -not $session.OkAt) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (mxfdump)" }
-        if ($session.Held -and $session.OkAt) {
-            if ($dumping) { $session.DumpSeen = $true }
-            elseif ($session.DumpSeen) { End-Session 'mxfdump done' }
-            elseif (($now - $session.OkAt).TotalSeconds -ge $AfterOkSec) { End-Session "$AfterOkSec s after OK" }
-        }
-        if ($session.Held -and ($now - $session.Since).TotalSeconds -ge $OpenBufferMaxSec) { End-Session "after $OpenBufferMaxSec s" }
-    }
-    $wasProbingSession = $probing
-    foreach ($p in @($holds.Keys)) {
-        if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log "released $p (after $HoldMaxSec s)" }
-    }
-    foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
+        # Entries rclone evicted drop out, so the next open is seen again
+        $known = $current
 
-    foreach ($p in @($running | Where-Object { $_.HasExited })) {
-        $name = [IO.Path]::GetFileName($p.Path)
-        if ($p.Error) { Log-Warm "Failed $name ($($p.What)): $($p.Error)" }
-        else {
-            $failed = if ($p.Failed) { "  ($($p.Failed) reads failed, first: $($p.FirstError))" } else { '' }
-            Log-Warm ("Done   {0}  {1:N0} MB in {2:N1}s  ({3}){4}" -f $name, ($p.Bytes / 1MB), $p.Watch.Elapsed.TotalSeconds, $p.What, $failed)
+        # Stage 2 $ProbeHeadSec after the media probe (mediainfo.exe) starts, or when it exits if sooner;
+        # if none shows up within $ProbeStartSec, start anyway
+        $probing = [bool](Get-Process -Name mediainfo -ErrorAction SilentlyContinue)
+        if ($probing -ne $wasProbing) { Log ("mediainfo {0}" -f $(if ($probing) { 'started' } else { 'exited' })); $wasProbing = $probing }
+        if ($pending2.Count -gt 0) {
+            foreach ($p in @($pending2.Keys)) {
+                $e = $pending2[$p]; if ($probing -and -not $e.Seen) { $e.Seen = $true; $e.SeenAt = $now }
+                $age = ($now - $e.Queued).TotalSeconds
+                if (($e.Seen -and (-not $probing -or ($now - $e.SeenAt).TotalSeconds -ge $ProbeHeadSec)) -or
+                    (-not $e.Seen -and $age -ge $ProbeStartSec) -or $age -ge $ProbeWaitSec) {
+                    Log ("queued stage 2 for {0} ({1:N1}s after first open, mediainfo {2})" -f $p, $age, $(if ($e.Seen) { 'seen' } else { 'not seen' }))
+                    $pending2.Remove($p)
+                    $queue.Enqueue(@{ Path = $p; Stage = 2 })
+                }
+            }
         }
-        if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
-        $warmPath.Remove($p.Id)
-    }
-    $running = @($running | Where-Object { -not $_.HasExited })
-    while ($queue.Count -gt 0 -and $running.Count -lt $MaxWarms) {
-        $w = $queue.Dequeue()
-        $running += Start-Warm $w.Path $w.Stage
-    }
-    if (($tick = $tick + 1) % 5 -eq 0) {
-        foreach ($p in Get-Process -Name python -ErrorAction SilentlyContinue) {
-            if ($lowered.Contains($p.Id)) { continue }
-            [void]$lowered.Add($p.Id)
-            $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)").CommandLine
-            if ($cmd -match 'main\.py') { try { $p.PriorityClass = 'Idle'; Log "whisper python $($p.Id) set to idle priority" } catch { } }
+        # Buffer back just before playback: OK is Iris's first "mediainfo --Inform" run on the file; for MXF
+        # wait for mxfdump, the last step Iris runs after OK
+        if ($session -and $session.Held) {
+            # Each new mediainfo run while the file is open; the dialog's probe is the first
+            if ($probing -and -not $wasProbingSession) { $session.Probes++ }
+            if (-not $session.OkAt -and $session.Probes -ge 2) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (second mediainfo run)" }
+            if (-not $session.OkAt -and $probing) {
+                foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'mediainfo.exe'") {
+                    if ($c.CommandLine -match '--Inform' -and $c.CommandLine.ToLower().Contains($session.Leaf.ToLower())) {
+                        $session.OkAt = $now; Log "OK clicked for $($session.Leaf)"; break
+                    }
+                }
+            }
+            if ($session.Held -and $session.OkAt -and -not $session.Mxf) { End-Session 'OK clicked' }
+            $dumping = $session.Held -and [bool](Get-Process -Name mxfdump -ErrorAction SilentlyContinue)
+            if ($dumping -and -not $session.OkAt) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (mxfdump)" }
+            if ($session.Held -and $session.OkAt) {
+                if ($dumping) { $session.DumpSeen = $true }
+                elseif ($session.DumpSeen) { End-Session 'mxfdump done' }
+                elseif (($now - $session.OkAt).TotalSeconds -ge $AfterOkSec) { End-Session "$AfterOkSec s after OK" }
+            }
+            if ($session.Held -and ($now - $session.Since).TotalSeconds -ge $OpenBufferMaxSec) { End-Session "after $OpenBufferMaxSec s" }
         }
+        $wasProbingSession = $probing
+        foreach ($p in @($holds.Keys)) {
+            if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log "released $p (after $HoldMaxSec s)" }
+        }
+        foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
+
+        foreach ($p in @($running | Where-Object { $_.HasExited })) {
+            $name = [IO.Path]::GetFileName($p.Path)
+            if ($p.Error) { Log-Warm "Failed $name ($($p.What)): $($p.Error)" }
+            else {
+                $failed = if ($p.Failed) { "  ($($p.Failed) reads failed, first: $($p.FirstError))" } else { '' }
+                Log-Warm ("Done   {0}  {1:N0} MB in {2:N1}s  ({3}){4}" -f $name, ($p.Bytes / 1MB), $p.Watch.Elapsed.TotalSeconds, $p.What, $failed)
+            }
+            if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
+            $warmPath.Remove($p.Id)
+        }
+        $running = @($running | Where-Object { -not $_.HasExited })
+        while ($queue.Count -gt 0 -and $running.Count -lt $MaxWarms) {
+            $w = $queue.Dequeue()
+            $running += Start-Warm $w.Path $w.Stage
+        }
+        if (($tick = $tick + 1) % 5 -eq 0) {
+            foreach ($p in Get-Process -Name python -ErrorAction SilentlyContinue) {
+                if ($lowered.Contains($p.Id)) { continue }
+                [void]$lowered.Add($p.Id)
+                $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)").CommandLine
+                if ($cmd -match 'main\.py') { try { $p.PriorityClass = 'Idle'; Log "whisper python $($p.Id) set to idle priority" } catch { } }
+            }
+        }
+    } catch {
+        Log "error: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
+        Start-Sleep -Seconds 1
     }
     Start-Sleep -Milliseconds 200
+}
+} finally {
+    foreach ($b in @($bufHold.Keys)) { if (Set-Buffer $bufHold[$b].Url $bufHold[$b].Saved) { Log "buffer $($bufHold[$b].Saved / 1MB)M restored on $b (watcher exiting)" } }
+    Release-Holds $null 'watcher exiting'
 }
