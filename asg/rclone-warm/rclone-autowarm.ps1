@@ -60,8 +60,19 @@ $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap',
                '.wav', '.bwf', '.w64', '.aif', '.aiff', '.mp3', '.aac', '.m4a', '.flac', '.ac3', '.ec3', '.eac3', '.dts', '.mp2', '.ogg', '.opus')
 $SkipExt   = @('.dpx', '.exr', '.tif', '.tiff', '.png', '.jpg', '.jpeg', '.tga', '.cin', '.j2c', '.j2k', '.jp2', '.ari', '.dng')
 
-function Log($m) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
-function Log-Warm($m) { Add-Content -Path $warmLog -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
+# Logs roll over to <name>.1 at 5 MB. $LogDetail adds each open's steps (mediainfo runs, holds, buffer
+# changes, OK clicks, warm starts) for troubleshooting.
+$LogDetail = $false
+function Write-Log($file, $m) {
+    try {
+        $f = Get-Item $file -ErrorAction SilentlyContinue
+        if ($f -and $f.Length -gt 5MB) { Move-Item $file "$file.1" -Force }
+        Add-Content -Path $file -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
+    } catch { }
+}
+function Log($m) { Write-Log $log $m }
+function Log-Detail($m) { if ($LogDetail) { Write-Log $log $m } }
+function Log-Warm($m) { Write-Log $warmLog $m }
 
 # Warms run on background tasks in this process (compiled once here, no PowerShell start per warm).
 # Reads go through the mount and bypass the Windows file cache so they reach rclone (files under 16 MB,
@@ -421,7 +432,7 @@ function Hold-Buffer($bucket, $why) {
     $saved = Get-Buffer $url; if ($saved -le $OpenBuffer) { $saved = $PlayBuffer }
     if (-not (Set-Buffer $url $OpenBuffer)) { return $false }
     $bufHold[$bucket] = @{ Url = $url; Count = 1; Saved = $saved }
-    Log "buffer $($OpenBuffer / 1MB)M on $bucket ($why)"
+    Log-Detail "buffer $($OpenBuffer / 1MB)M on $bucket ($why)"
     $true
 }
 
@@ -430,7 +441,7 @@ function Release-Buffer($bucket) {
     $h.Count--
     if ($h.Count -le 0) {
         $bufHold.Remove($bucket)
-        if (Set-Buffer $h.Url $h.Saved) { Log "buffer $($h.Saved / 1MB)M restored on $bucket" }
+        if (Set-Buffer $h.Url $h.Saved) { Log-Detail "buffer $($h.Saved / 1MB)M restored on $bucket" }
     }
 }
 
@@ -460,7 +471,7 @@ $session = $null   # the main file being opened: @{ Path; Leaf; Bucket; Mxf; Hel
 function End-Session($why) {
     if ($script:session -and $script:session.Held) {
         $script:session.Held = $false
-        Log "open of $($script:session.Leaf) done ($why)"
+        Log-Detail "open of $($script:session.Leaf) done ($why)"
         Release-Buffer $script:session.Bucket
     }
 }
@@ -472,7 +483,7 @@ function Hold-File($path) {
         $fs = [IO.File]::Open($path, 'Open', 'Read', 'ReadWrite')
         [void]$fs.Read((New-Object byte[] 4096), 0, 4096)
         $holds[$path] = @{ Stream = $fs; Since = Get-Date }
-        Log "holding open $path"
+        Log-Detail "holding open $path"
     } catch { Log "hold failed for ${path}: $($_.Exception.Message)" }
 }
 
@@ -481,7 +492,7 @@ function Release-Holds($except, $why) {
         if ($k -eq $except) { continue }
         try { $holds[$k].Stream.Dispose() } catch { }
         $holds.Remove($k)
-        Log "released $k ($why)"
+        Log-Detail "released $k ($why)"
     }
 }
 
@@ -489,8 +500,8 @@ function Start-Warm($path, $stage) {
     $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
     Hold-File $path
     $held = ($stage -eq 2) -and (Hold-Buffer $bucket 'partition warm')
-    Log "stage $stage warming $path"
-    Log-Warm "Start  $path"
+    Log-Detail "stage $stage warming $path"
+    Log-Detail "warm start:  $path"
     $rel = $path.Substring($mountRoot.Length + $bucket.Length + 2).Replace('\', '/')
     if ($stage -eq 1) { $p = [RcloneWarm]::Start($path, $false, 512, 16, 0, 0, (Get-RcUrl $bucket), (Get-RcFs $bucket), $rel) }   # first 512 MB (+ MOV frame spots)
     else {                                                                            # MXF partitions, -16..+32 KB, 32 at once
@@ -586,7 +597,7 @@ while ($true) {
             }
             if ($isMxf -and $recent.ContainsKey($path) -and ($now - $recent[$path]).TotalSeconds -lt $RecentSec) {
                 # Reopened (Iris after OK) after the cache dropped it: partitions now
-                Log ("reopen of {0}, queued stage 2" -f $path)
+                Log-Detail ("reopen of {0}, queued stage 2" -f $path)
                 $pending2.Remove($path)
                 $queue.Enqueue(@{ Path = $path; Stage = 2 })
             } else {
@@ -607,10 +618,10 @@ while ($true) {
                 }
                 Hold-File $path
                 if ($isMxf) {
-                    Log ("first open of {0} ({1:N2} GB), stage 2 pending" -f $path, ($size / 1GB))
+                    Log-Detail ("first open of {0} ({1:N2} GB), stage 2 pending" -f $path, ($size / 1GB))
                     $pending2[$path] = @{ Queued = $now; Seen = $false }
                 } else {
-                    Log ("first open of {0} ({1:N2} GB), queued stage 1" -f $path, ($size / 1GB))
+                    Log-Detail ("first open of {0} ({1:N2} GB), queued stage 1" -f $path, ($size / 1GB))
                     $queue.Enqueue(@{ Path = $path; Stage = 1 })
                 }
             }
@@ -621,7 +632,7 @@ while ($true) {
         # Stage 2 $ProbeHeadSec after the media probe (mediainfo.exe) starts, or $ProbeGapSec after it exits if sooner;
         # if none shows up within $ProbeStartSec, start anyway
         $probing = [bool](Get-Process -Name mediainfo -ErrorAction SilentlyContinue)
-        if ($probing -ne $wasProbing) { Log ("mediainfo {0}" -f $(if ($probing) { 'started' } else { 'exited' })); $wasProbing = $probing }
+        if ($probing -ne $wasProbing) { Log-Detail ("mediainfo {0}" -f $(if ($probing) { 'started' } else { 'exited' })); $wasProbing = $probing }
         if ($pending2.Count -gt 0) {
             foreach ($p in @($pending2.Keys)) {
                 $e = $pending2[$p]; if ($probing -and -not $e.Seen) { $e.Seen = $true; $e.SeenAt = $now }
@@ -629,7 +640,7 @@ while ($true) {
                 $age = ($now - $e.Queued).TotalSeconds
                 if (($e.Seen -and (($e.ExitedAt -and ($now - $e.ExitedAt).TotalSeconds -ge $ProbeGapSec) -or ($now - $e.SeenAt).TotalSeconds -ge $ProbeHeadSec)) -or
                     (-not $e.Seen -and $age -ge $ProbeStartSec) -or $age -ge $ProbeWaitSec) {
-                    Log ("queued stage 2 for {0} ({1:N1}s after first open, mediainfo {2})" -f $p, $age, $(if ($e.Seen) { 'seen' } else { 'not seen' }))
+                    Log-Detail ("queued stage 2 for {0} ({1:N1}s after first open, mediainfo {2})" -f $p, $age, $(if ($e.Seen) { 'seen' } else { 'not seen' }))
                     $pending2.Remove($p)
                     $queue.Enqueue(@{ Path = $p; Stage = 2 })
                 }
@@ -640,17 +651,17 @@ while ($true) {
         if ($session -and $session.Held) {
             # Each new mediainfo run while the file is open; the dialog's probe is the first
             if ($probing -and -not $wasProbingSession) { $session.Probes++ }
-            if (-not $session.OkAt -and $session.Probes -ge 2) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (second mediainfo run)" }
+            if (-not $session.OkAt -and $session.Probes -ge 2) { $session.OkAt = $now; Log-Detail "OK clicked for $($session.Leaf) (second mediainfo run)" }
             if (-not $session.OkAt -and $probing) {
                 foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'mediainfo.exe'") {
                     if ($c.CommandLine -match '--Inform' -and $c.CommandLine.ToLower().Contains($session.Leaf.ToLower())) {
-                        $session.OkAt = $now; Log "OK clicked for $($session.Leaf)"; break
+                        $session.OkAt = $now; Log-Detail "OK clicked for $($session.Leaf)"; break
                     }
                 }
             }
             if ($session.Held -and $session.OkAt -and -not $session.Mxf) { End-Session 'OK clicked' }
             $dumping = $session.Held -and [bool](Get-Process -Name mxfdump -ErrorAction SilentlyContinue)
-            if ($dumping -and -not $session.OkAt) { $session.OkAt = $now; Log "OK clicked for $($session.Leaf) (mxfdump)" }
+            if ($dumping -and -not $session.OkAt) { $session.OkAt = $now; Log-Detail "OK clicked for $($session.Leaf) (mxfdump)" }
             if ($session.Held -and $session.OkAt) {
                 if ($dumping) { $session.DumpSeen = $true }
                 elseif ($session.DumpSeen) { End-Session 'mxfdump done' }
@@ -660,7 +671,7 @@ while ($true) {
         }
         $wasProbingSession = $probing
         foreach ($p in @($holds.Keys)) {
-            if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log "released $p (after $HoldMaxSec s)" }
+            if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log-Detail "released $p (after $HoldMaxSec s)" }
         }
         foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
 
@@ -669,12 +680,12 @@ while ($true) {
         if ($main -and -not $main.Done -and $now -ge $nextIrisCheck) {
             $nextIrisCheck = $now.AddSeconds(1)
             if (-not $main.SubAt -and (Read-NewLines $accessTail $irisAccessLogs) -match 'Temp location set to .*\\Subtitles\\') {
-                $main.SubAt = $now; Log "caption pre-processing started for $($main.Leaf)"
+                $main.SubAt = $now; Log-Detail "caption pre-processing started for $($main.Leaf)"
             }
             if ((Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
                 $main.Done = $true
                 $took = if ($main.SubAt) { ' ({0:N0} s after caption pre-processing started)' -f ($now - $main.SubAt).TotalSeconds } else { '' }
-                Log "Iris finished opening $($main.Leaf)$took"
+                Log-Detail "Iris finished opening $($main.Leaf)$took"
                 if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open finished)" }
             }
             elseif ($main.SubAt -and -not $main.Pull -and -not $main.Skipped -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
@@ -683,7 +694,7 @@ while ($true) {
                     $main.Skipped = $true; Log ("caption pre-processing of {0} still running after {1} s; not pulling the file ({2:N0} GB free on D:)" -f $main.Leaf, $CaptionPullSec, ($free / 1GB))
                 } else {
                     Log ("caption pre-processing of {0} still running after {1} s: pulling the whole file ({2:N2} GB)" -f $main.Leaf, $CaptionPullSec, ($main.Size / 1GB))
-                    Log-Warm "Start  $($main.Path)"
+                    Log-Detail "warm start:  $($main.Path)"
                     $rel = $main.Path.Substring($mountRoot.Length + $main.Bucket.Length + 2).Replace('\', '/')
                     $main.Pull = [RcloneWarm]::StartFull($main.Path, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, (Get-RcUrl $main.Bucket), (Get-RcFs $main.Bucket), $rel)
                     $warmPath[$main.Pull.Id] = $main.Path
@@ -713,7 +724,7 @@ while ($true) {
                 if ($lowered.Contains($p.Id)) { continue }
                 [void]$lowered.Add($p.Id)
                 $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)").CommandLine
-                if ($cmd -match 'main\.py') { try { $p.PriorityClass = 'Idle'; Log "whisper python $($p.Id) set to idle priority" } catch { } }
+                if ($cmd -match 'main\.py') { try { $p.PriorityClass = 'Idle'; Log-Detail "whisper python $($p.Id) set to idle priority" } catch { } }
             }
         }
     } catch {
