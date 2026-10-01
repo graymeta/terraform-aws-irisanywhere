@@ -64,10 +64,8 @@ if ($s3_enterprise -eq "true" -and "${file_warm}" -eq "true") {
     try {
         $warmDir = "C:\rclone\warm"
         New-Item -ItemType Directory -Force -Path $warmDir | Out-Null
-        foreach ($f in @(@('rclone-autowarm.ps1', '${rclone_warm_watcher}'), @('rclone-prewarm.ps1', '${rclone_warm_prewarm}'))) {
-            $gz = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String($f[1]))), [IO.Compression.CompressionMode]::Decompress)
-            $out = [IO.File]::Create((Join-Path $warmDir $f[0])); $gz.CopyTo($out); $out.Close(); $gz.Close()
-        }
+        $gz = New-Object IO.Compression.GZipStream((New-Object IO.MemoryStream(,[Convert]::FromBase64String('${rclone_warm_watcher}'))), [IO.Compression.CompressionMode]::Decompress)
+        $out = [IO.File]::Create((Join-Path $warmDir 'rclone-autowarm.ps1')); $gz.CopyTo($out); $out.Close(); $gz.Close()
 
         #Mount flags; --rc (one localhost port per bucket, 5572 up) lets the watcher lower --buffer-size while it warms
         $flags = @{ 'vfs-cache-max-age' = '${rclone_warm_max_age}'; 'vfs-read-chunk-size' = '64K'; 'vfs-read-chunk-size-limit' = '2M'

@@ -28,6 +28,7 @@
 $metaRoot  = "D:\rclone-cache\vfsMeta\S3BUCKETS"
 $mountRoot = "D:\IrisAnywhere"
 $log       = "C:\Logs\rclone-autowarm.log"
+$warmLog   = "C:\Logs\rclone-prewarm.log"
 $MaxWarms  = 4
 $MinSizeGB = 1
 $RecentSec = 120
@@ -44,6 +45,87 @@ $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap',
 $SkipExt   = @('.dpx', '.exr', '.tif', '.tiff', '.png', '.jpg', '.jpeg', '.tga', '.cin', '.j2c', '.j2k', '.jp2', '.ari', '.dng')
 
 function Log($m) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
+function Log-Warm($m) { Add-Content -Path $warmLog -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
+
+# Warms run on background tasks in this process (compiled once here, no PowerShell start per warm).
+# Reads go through the mount and bypass the Windows file cache so they reach rclone; a failed read is
+# skipped and counted. MXF: one read from -BeforeKB to +AfterKB at every partition in the Random Index
+# Pack, end to start (the order Iris walks them); Iris's Open dialog reads 32 KB at every other partition
+# start and 32 KB from 12.8 KB before the next one. Other files: the first HeadMB in 16 MB reads.
+Add-Type -TypeDefinition @'
+using System; using System.IO; using System.Threading; using System.Threading.Tasks; using System.Collections.Generic;
+public class RcloneWarm {
+    const FileOptions NoBuffering = (FileOptions)0x20000000;
+    static int ids;
+    public int Id; public string Path; public string What = ""; public string Error;
+    public long Bytes, Failed; public string FirstError;
+    public System.Diagnostics.Stopwatch Watch = System.Diagnostics.Stopwatch.StartNew();
+    public Task Work;
+    public bool HasExited { get { return Work.IsCompleted; } }
+    public static RcloneWarm Start(string path, bool mxf, int headMB, int workers, int beforeKB, int afterKB) {
+        var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path;
+        w.Work = Task.Run(() => {
+            try {
+                long len = new FileInfo(path).Length;
+                var offs = new List<long>();
+                if (mxf) {
+                    var parts = Partitions(path); parts.Sort(); parts.Reverse();
+                    foreach (long p in parts) { long o = Math.Max(0L, p - beforeKB * 1024L) / 4096 * 4096; if (o < len) offs.Add(o); }
+                    w.What = string.Format("{0} MXF partitions x -{1}..+{2} KB", offs.Count, beforeKB, afterKB);
+                    if (offs.Count > 0) w.Read(offs.ToArray(), workers, (beforeKB + afterKB) * 1024);
+                } else {
+                    long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
+                    for (long i = 0; i < n; i++) offs.Add(i * 16777216);
+                    w.What = string.Format("first {0} MB", headMB);
+                    w.Read(offs.ToArray(), workers, 16777216);
+                }
+            } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
+            w.Watch.Stop();
+        });
+        return w;
+    }
+    void Read(long[] offsets, int workers, int length) {
+        long next = -1;
+        Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, k => {
+            var buf = new byte[length];
+            FileStream fs = null;
+            long i;
+            while ((i = Interlocked.Increment(ref next)) < offsets.Length) {
+                try {
+                    if (fs == null) fs = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, NoBuffering);
+                    fs.Seek(offsets[i], SeekOrigin.Begin);
+                    int got = 0, r;
+                    while (got < length && (r = fs.Read(buf, got, length - got)) > 0) got += r;
+                    Interlocked.Add(ref Bytes, got);
+                } catch (Exception e) {
+                    Interlocked.Increment(ref Failed);
+                    Interlocked.CompareExchange(ref FirstError, e.GetType().Name + ": " + e.Message, null);
+                    if (fs != null) { fs.Dispose(); fs = null; }   // reopen for the next piece
+                }
+            }
+            if (fs != null) fs.Dispose();
+        });
+    }
+    // Partition offsets from the MXF Random Index Pack at the end of the file (empty if there is none)
+    static List<long> Partitions(string path) {
+        var parts = new List<long>();
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+            var b = new byte[4]; fs.Seek(-4, SeekOrigin.End); fs.Read(b, 0, 4);
+            long ripLen = ((long)b[0] << 24) | ((long)b[1] << 16) | ((long)b[2] << 8) | b[3];
+            if (ripLen < 21 || ripLen > 16777216 || ripLen > fs.Length) return parts;
+            var rip = new byte[ripLen]; fs.Seek(-ripLen, SeekOrigin.End);
+            int got = 0, r; while (got < ripLen && (r = fs.Read(rip, got, (int)ripLen - got)) > 0) got += r;
+            if (rip[0] != 0x06 || rip[1] != 0x0E || rip[2] != 0x2B || rip[3] != 0x34 || rip[13] != 0x11) return parts;
+            int pos = 16; pos += (rip[pos] & 0x80) != 0 ? 1 + (rip[pos] & 0x7F) : 1;   // BER length
+            while (pos + 12 <= ripLen - 4) {
+                long off = 0; for (int k = 4; k < 12; k++) off = (off << 8) | rip[pos + k];   // skip 4-byte BodySID
+                parts.Add(off); pos += 12;
+            }
+        }
+        return parts;
+    }
+}
+'@
 
 function Get-Meta {
     if (-not (Test-Path $metaRoot)) { return @() }
@@ -124,14 +206,13 @@ function Release-Holds($except, $why) {
 }
 
 function Start-Warm($path, $stage) {
-    $warmArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\rclone-prewarm.ps1", '-Path', "`"$path`"")
-    if ($stage -eq 1) { $warmArgs += @('-HeadMB', '512') }                              # first 512 MB
-    else              { $warmArgs += @('-Mxf', '-MxfStreams', '8', '-MxfKB', '32') }   # MXF partitions, -16..+32 KB
     $bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]
     Hold-File $path
     $held = ($stage -eq 2) -and (Hold-Buffer $bucket 'partition warm')
     Log "stage $stage warming $path"
-    $p = Start-Process -FilePath powershell.exe -WindowStyle Hidden -PassThru -ArgumentList $warmArgs
+    Log-Warm "Start  $path"
+    if ($stage -eq 1) { $p = [RcloneWarm]::Start($path, $false, 512, 16, 0, 0) }   # first 512 MB
+    else              { $p = [RcloneWarm]::Start($path, $true, 0, 8, 16, 32) }      # MXF partitions, -16..+32 KB
     if ($held) { $warmOf[$p.Id] = $bucket }
     $warmPath[$p.Id] = $path
     $p
@@ -243,6 +324,12 @@ while ($true) {
     foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
 
     foreach ($p in @($running | Where-Object { $_.HasExited })) {
+        $name = [IO.Path]::GetFileName($p.Path)
+        if ($p.Error) { Log-Warm "Failed $name ($($p.What)): $($p.Error)" }
+        else {
+            $failed = if ($p.Failed) { "  ($($p.Failed) reads failed, first: $($p.FirstError))" } else { '' }
+            Log-Warm ("Done   {0}  {1:N0} MB in {2:N1}s  ({3}){4}" -f $name, ($p.Bytes / 1MB), $p.Watch.Elapsed.TotalSeconds, $p.What, $failed)
+        }
         if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
         $warmPath.Remove($p.Id)
     }

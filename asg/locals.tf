@@ -6,11 +6,8 @@ locals {
 
   merged_tags = merge(var.tags, local.default_tags)
 
-  # rclone warm scripts, with comment and blank lines stripped to keep the user data under 16 KB
-  rclone_warm_scripts = {
-    for f in ["rclone-autowarm.ps1", "rclone-prewarm.ps1"] :
-    f => replace(replace(file("${path.module}/rclone-warm/${f}"), "/(?m)^[ \\t]*#.*\\r?\\n/", ""), "/(?m)^[ \\t]*\\r?\\n/", "")
-  }
+  # rclone warm watcher, with comment and blank lines stripped to keep the user data under 16 KB
+  rclone_warm_watcher = replace(replace(file("${path.module}/rclone-warm/rclone-autowarm.ps1"), "/(?m)^[ \\t]*#.*\\r?\\n/", ""), "/(?m)^[ \\t]*\\r?\\n/", "")
 
   iris_user_data = join("\n", ["<powershell>", templatefile("${path.module}/cloud_local.ps1", {
     name                      = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
@@ -37,7 +34,6 @@ locals {
     wasabi                    = var.wasabi
     file_warm                 = var.file_warm
     rclone_warm_max_age       = var.rclone_warm_max_age
-    rclone_warm_watcher       = var.s3_enterprise && var.file_warm ? base64gzip(local.rclone_warm_scripts["rclone-autowarm.ps1"]) : ""
-    rclone_warm_prewarm       = var.s3_enterprise && var.file_warm ? base64gzip(local.rclone_warm_scripts["rclone-prewarm.ps1"]) : ""
+    rclone_warm_watcher       = var.s3_enterprise && var.file_warm ? base64gzip(local.rclone_warm_watcher) : ""
   }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"])
 }
