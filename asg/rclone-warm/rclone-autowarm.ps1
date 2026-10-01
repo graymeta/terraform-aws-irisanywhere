@@ -26,6 +26,14 @@
 # drops closed files) keeps the warm while the Open dialog is up and until Iris plays it. Holds are released
 # when the next main file (MXF or >= $MinSizeGB, not a caption/audio/xml sidecar) is opened, or after
 # $HoldMaxSec.
+# Captions carried inside the video (e.g. in every frame of an MXF) make Iris's caption pre-processing read
+# the whole file front to back, a few KB per frame. That touches every MB, so rclone downloads the whole file
+# anyway, one piece at a time behind Iris (~6 min for 61 GB, against ~1 min with the file local). Iris logs
+# the start of that step (its access log: "Temp location set to ...\Subtitles\...") and the end of the open
+# (its app log: Asset_Package_Opened with the file). When the step is still running $CaptionPullSec after it
+# started, the main file is pulled whole into the cache, front to back, many pieces at once, staying ahead
+# of Iris. The pull stops when the open finishes or the next main file is opened. Caption steps that finish
+# quickly (sidecars, MP4 caption tracks, no captions) never start a pull.
 $metaRoot  = "D:\rclone-cache\vfsMeta\S3BUCKETS"
 $mountRoot = "D:\IrisAnywhere"
 $log       = "C:\Logs\rclone-autowarm.log"
@@ -40,6 +48,12 @@ $ProbeGapSec = 0.5    # otherwise this long after it exits (Iris's dialog walk r
 $HoldMaxSec = 900
 $AfterOkSec = 20
 $OpenBufferMaxSec = 120   # buffer back regardless this long after the first open (OK not seen)
+$CaptionPullSec = 10      # Iris's caption pre-processing still running this long: pull the whole file
+$CaptionPullMB = 64       # in pieces this big, $CaptionPullWorkers at once (that many x MB of buffers in rclone)
+$CaptionPullWorkers = 32
+$CaptionPullFreeGB = 20   # and only with the file's size plus this much free on the cache disk
+$irisAccessLogs = 'C:\Users\*\AppData\Roaming\Graymeta\Iris QC Anywhere\Log\access_*.log'
+$irisAppLogs = 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\log\app-*.log'
 $PlayBuffer = 64MB   # --buffer-size for playback
 $OpenBuffer = 0      # --buffer-size while an MXF is being opened (the mounts rest at $PlayBuffer)
 $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap', '.sub', '.ass', '.ssa', '.sbv', '.itt', '.mcc',
@@ -117,6 +131,32 @@ public class RcloneWarm {
                     }
                     w.Fetch(offs.ToArray(), lens.ToArray(), workers, len < 16777216 ? FileOptions.None : NoBuffering);
                 }
+            } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
+            w.Watch.Stop();
+        });
+        return w;
+    }
+    // The whole file, front to back in chunkMB pieces, batch pieces per call so it can stop between calls
+    // (Cancel) and each call stays well inside WebClient's 100 s timeout
+    public volatile bool Cancel;
+    public static RcloneWarm StartFull(string path, int chunkMB, int workers, int batch, string rcUrl = null, string rcFs = null, string rcPath = null) {
+        var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path; w.rcUrl = rcUrl; w.rcFs = rcFs; w.rcPath = rcPath;
+        w.Work = Task.Run(() => {
+            try {
+                long len = new FileInfo(path).Length, chunk = chunkMB * 1048576L;
+                var offs = new List<long>(); var lens = new List<int>();
+                for (long o = 0; o < len; o += chunk) { offs.Add(o); lens.Add((int)Math.Min(chunk, len - o)); }
+                w.What = string.Format("whole file, {0} x {1} MB", offs.Count, chunkMB);
+                for (int i = 0; i < offs.Count && !w.Cancel; i += batch) {
+                    int n = Math.Min(batch, offs.Count - i);
+                    long[] o = offs.GetRange(i, n).ToArray(); int[] l = lens.GetRange(i, n).ToArray();
+                    if (w.rcUrl != null) {
+                        try { w.Prefetch(o, l, Math.Min(workers, n)); if (!w.What.Contains("via rc")) w.What += " via rc"; continue; }
+                        catch (Exception e) { w.What += " (rc " + e.Message + ", read through the mount)"; w.rcUrl = null; }
+                    }
+                    w.Read(o, l, Math.Min(workers, n), NoBuffering);
+                }
+                if (w.Cancel) w.What += ", stopped early";
             } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
             w.Watch.Stop();
         });
@@ -371,6 +411,26 @@ function Release-Buffer($bucket) {
     }
 }
 
+# New lines appended to the newest file matching a pattern since the last call (none on the first call, so
+# old lines aren't replayed); the file may be renamed daily or by session
+function Read-NewLines($tail, $pattern) {
+    $f = Get-ChildItem $pattern -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
+    if (-not $f) { return @() }
+    $first = -not $tail.Path
+    if ($tail.Path -ne $f.FullName) { $tail.Path = $f.FullName; $tail.Pos = if ($first) { $f.Length } else { 0 } }
+    if ($f.Length -lt $tail.Pos) { $tail.Pos = 0 }
+    if ($f.Length -eq $tail.Pos) { return @() }
+    try {
+        $s = [IO.File]::Open($f.FullName, 'Open', 'Read', 'ReadWrite')
+        [void]$s.Seek($tail.Pos, 'Begin'); $r = New-Object IO.StreamReader($s)
+        $text = $r.ReadToEnd(); $tail.Pos = $s.Position; $r.Close()
+        $text -split "`r?`n"
+    } catch { @() }
+}
+$accessTail = @{ Path = $null; Pos = 0 }
+$appTail = @{ Path = $null; Pos = 0 }
+$main = $null   # the last main file opened: @{ Path; Leaf; Bucket; Size; SubAt; Done; Pull }
+
 $holds = @{}   # path -> @{ Stream; Since }
 $session = $null   # the main file being opened: @{ Path; Leaf; Bucket; Mxf; Held; Since; OkAt; DumpSeen; Probes }
 
@@ -427,6 +487,8 @@ $recent   = @{}                                                   # path -> time
 $running  = @()
 $wasProbing = $false
 $wasProbingSession = $false
+$nextIrisCheck = Get-Date
+[void](Read-NewLines $accessTail $irisAccessLogs); [void](Read-NewLines $appTail $irisAppLogs)   # start at the logs' ends
 $tick = 0
 $lowered = New-Object System.Collections.Generic.HashSet[int]
 # Wake as soon as rclone creates a cache entry (an open) instead of only every 200 ms
@@ -509,6 +571,9 @@ while ($true) {
                 if ($isMxf -or ($size -ge $MinSizeGB * 1GB -and $AlwaysExt -notcontains $ext)) {
                     Release-Holds $path 'next file opened'
                     End-Session 'next file opened'
+                    if ($main -and $main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (next file opened)" }
+                    $main = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]; Size = $size; SubAt = $null; Done = $false; Pull = $null; Skipped = $false }
+                    [void](Read-NewLines $accessTail $irisAccessLogs); [void](Read-NewLines $appTail $irisAppLogs)   # earlier opens' lines don't count
                 }
                 # Only MXF opens jump around the file (hundreds of partition reads); other files keep the full buffer
                 if ($isMxf) {
@@ -575,6 +640,34 @@ while ($true) {
             if (($now - $holds[$p].Since).TotalSeconds -ge $HoldMaxSec) { try { $holds[$p].Stream.Dispose() } catch { }; $holds.Remove($p); Log "released $p (after $HoldMaxSec s)" }
         }
         foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
+
+        # Iris's caption pre-processing for the main file: started (access log), open finished (app log), and a
+        # whole-file pull once it has run $CaptionPullSec
+        if ($main -and -not $main.Done -and $now -ge $nextIrisCheck) {
+            $nextIrisCheck = $now.AddSeconds(1)
+            if (-not $main.SubAt -and (Read-NewLines $accessTail $irisAccessLogs) -match 'Temp location set to .*\\Subtitles\\') {
+                $main.SubAt = $now; Log "caption pre-processing started for $($main.Leaf)"
+            }
+            if ((Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
+                $main.Done = $true
+                $took = if ($main.SubAt) { ' ({0:N0} s after caption pre-processing started)' -f ($now - $main.SubAt).TotalSeconds } else { '' }
+                Log "Iris finished opening $($main.Leaf)$took"
+                if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open finished)" }
+            }
+            elseif ($main.SubAt -and -not $main.Pull -and -not $main.Skipped -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
+                $free = (Get-PSDrive D -ErrorAction SilentlyContinue).Free
+                if ($free -lt $main.Size + $CaptionPullFreeGB * 1GB) {
+                    $main.Skipped = $true; Log ("caption pre-processing of {0} still running after {1} s; not pulling the file ({2:N0} GB free on D:)" -f $main.Leaf, $CaptionPullSec, ($free / 1GB))
+                } else {
+                    Log ("caption pre-processing of {0} still running after {1} s: pulling the whole file ({2:N2} GB)" -f $main.Leaf, $CaptionPullSec, ($main.Size / 1GB))
+                    Log-Warm "Start  $($main.Path)"
+                    $rel = $main.Path.Substring($mountRoot.Length + $main.Bucket.Length + 2).Replace('\', '/')
+                    $main.Pull = [RcloneWarm]::StartFull($main.Path, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, (Get-RcUrl $main.Bucket), (Get-RcFs $main.Bucket), $rel)
+                    $warmPath[$main.Pull.Id] = $main.Path
+                    $running += $main.Pull
+                }
+            }
+        }
 
         foreach ($p in @($running | Where-Object { $_.HasExited })) {
             $name = [IO.Path]::GetFileName($p.Path)
