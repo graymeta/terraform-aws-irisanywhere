@@ -50,8 +50,9 @@ function Log($m) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd
 function Log-Warm($m) { Add-Content -Path $warmLog -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
 
 # Warms run on background tasks in this process (compiled once here, no PowerShell start per warm).
-# Reads go through the mount and bypass the Windows file cache so they reach rclone; a failed read is
-# skipped and counted. MXF: one read from -BeforeKB to +AfterKB at every partition in the Random Index
+# Reads go through the mount and bypass the Windows file cache so they reach rclone (files under 16 MB,
+# e.g. caption sidecars, are read normally); a failed read is retried once on a new handle, then skipped
+# and counted. MXF: one read from -BeforeKB to +AfterKB at every partition in the Random Index
 # Pack, end to start (the order Iris walks them); Iris's Open dialog reads 32 KB at every other partition
 # start and 32 KB from 12.8 KB before the next one. Other files: the first HeadMB in 16 MB reads.
 Add-Type -TypeDefinition @'
@@ -60,7 +61,7 @@ public class RcloneWarm {
     const FileOptions NoBuffering = (FileOptions)0x20000000;
     static int ids;
     public int Id; public string Path; public string What = ""; public string Error;
-    public long Bytes, Failed; public string FirstError;
+    public long Bytes, Failed, Retried; public string FirstError, FirstRetry;
     public System.Diagnostics.Stopwatch Watch = System.Diagnostics.Stopwatch.StartNew();
     public Task Work;
     public bool HasExited { get { return Work.IsCompleted; } }
@@ -72,37 +73,49 @@ public class RcloneWarm {
                 var offs = new List<long>();
                 if (mxf) {
                     var parts = Partitions(path); parts.Sort(); parts.Reverse();
-                    foreach (long p in parts) { long o = Math.Max(0L, p - beforeKB * 1024L) / 4096 * 4096; if (o < len) offs.Add(o); }
+                    foreach (long p in parts) { long o = Math.Max(0L, p - beforeKB * 1024L) / 4096 * 4096; if (o < len && !offs.Contains(o)) offs.Add(o); }
                     w.What = string.Format("{0} MXF partitions x -{1}..+{2} KB", offs.Count, beforeKB, afterKB);
-                    if (offs.Count > 0) w.Read(offs.ToArray(), workers, (beforeKB + afterKB) * 1024);
+                    if (offs.Count > 0) w.Read(offs.ToArray(), workers, (beforeKB + afterKB) * 1024, NoBuffering);
                 } else {
                     long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
                     for (long i = 0; i < n; i++) offs.Add(i * 16777216);
                     w.What = string.Format("first {0} MB", headMB);
-                    w.Read(offs.ToArray(), workers, 16777216);
+                    w.Read(offs.ToArray(), workers, (int)Math.Min(16777216L, Math.Max(len, 4096L)), len < 16777216 ? FileOptions.None : NoBuffering);
                 }
             } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
             w.Watch.Stop();
         });
         return w;
     }
-    void Read(long[] offsets, int workers, int length) {
+    void Read(long[] offsets, int workers, int length, FileOptions opts) {
         long next = -1;
         Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, k => {
             var buf = new byte[length];
             FileStream fs = null;
             long i;
             while ((i = Interlocked.Increment(ref next)) < offsets.Length) {
-                try {
-                    if (fs == null) fs = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, NoBuffering);
-                    fs.Seek(offsets[i], SeekOrigin.Begin);
-                    int got = 0, r;
-                    while (got < length && (r = fs.Read(buf, got, length - got)) > 0) got += r;
-                    Interlocked.Add(ref Bytes, got);
-                } catch (Exception e) {
-                    Interlocked.Increment(ref Failed);
-                    Interlocked.CompareExchange(ref FirstError, e.GetType().Name + ": " + e.Message, null);
-                    if (fs != null) { fs.Dispose(); fs = null; }   // reopen for the next piece
+                for (int attempt = 0; ; attempt++) {
+                    bool opening = fs == null;
+                    try {
+                        if (fs == null) fs = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, opts);
+                        opening = false;
+                        fs.Seek(offsets[i], SeekOrigin.Begin);
+                        // Stop at the end of the file: an unbuffered read continuing after the short last one
+                        // is unaligned (ERROR_INVALID_PARAMETER, which .NET reports as "Handle does not support
+                        // synchronous operations"); requests stay whole 4 KB pages
+                        long left = fs.Length - offsets[i];
+                        int want = (int)Math.Min((long)length, left), ask = (int)Math.Min((long)length, (left + 4095) / 4096 * 4096);
+                        int got = 0, r;
+                        while (got < want && (r = fs.Read(buf, got, ask - got)) > 0) got += r;
+                        Interlocked.Add(ref Bytes, got);
+                        break;
+                    } catch (Exception e) {
+                        if (fs != null) { fs.Dispose(); fs = null; }   // new handle for the retry and the next piece
+                        string where = string.Format("{0}: {1} ({2} at {3:N0})", e.GetType().Name, e.Message, opening ? "opening" : "reading", offsets[i]);
+                        if (attempt == 0) { Interlocked.Increment(ref Retried); Interlocked.CompareExchange(ref FirstRetry, where, null); continue; }
+                        Interlocked.Increment(ref Failed); Interlocked.CompareExchange(ref FirstError, where, null);
+                        break;
+                    }
                 }
             }
             if (fs != null) fs.Dispose();
@@ -341,7 +354,8 @@ while ($true) {
             $name = [IO.Path]::GetFileName($p.Path)
             if ($p.Error) { Log-Warm "Failed $name ($($p.What)): $($p.Error)" }
             else {
-                $failed = if ($p.Failed) { "  ($($p.Failed) reads failed, first: $($p.FirstError))" } else { '' }
+                $failed = if ($p.Retried) { "  ($($p.Retried) reads retried, first: $($p.FirstRetry))" } else { '' }
+            if ($p.Failed) { $failed += "  ($($p.Failed) reads failed, first: $($p.FirstError))" }
                 Log-Warm ("Done   {0}  {1:N0} MB in {2:N1}s  ({3}){4}" -f $name, ($p.Bytes / 1MB), $p.Watch.Elapsed.TotalSeconds, $p.What, $failed)
             }
             if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
