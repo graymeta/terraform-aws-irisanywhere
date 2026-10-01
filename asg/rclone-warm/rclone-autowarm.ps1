@@ -136,8 +136,10 @@ public class RcloneWarm {
         });
         return w;
     }
-    // The whole file, front to back in chunkMB pieces, batch pieces per call so it can stop between calls
-    // (Cancel) and each call stays well inside WebClient's 100 s timeout
+    // The whole file, front to back in chunkMB pieces. Through rc it is one rolling call: each of the workers
+    // takes the next piece in file order as soon as it finishes one, so the pulled part grows steadily from the
+    // front and Iris reads right behind it. Cancel aborts the call (rclone then stops between pieces). Through
+    // the mount (no rc), batch pieces at a time, checking Cancel between batches.
     public volatile bool Cancel;
     public static RcloneWarm StartFull(string path, int chunkMB, int workers, int batch, string rcUrl = null, string rcFs = null, string rcPath = null) {
         var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path; w.rcUrl = rcUrl; w.rcFs = rcFs; w.rcPath = rcPath;
@@ -147,20 +149,36 @@ public class RcloneWarm {
                 var offs = new List<long>(); var lens = new List<int>();
                 for (long o = 0; o < len; o += chunk) { offs.Add(o); lens.Add((int)Math.Min(chunk, len - o)); }
                 w.What = string.Format("whole file, {0} x {1} MB", offs.Count, chunkMB);
-                for (int i = 0; i < offs.Count && !w.Cancel; i += batch) {
-                    int n = Math.Min(batch, offs.Count - i);
-                    long[] o = offs.GetRange(i, n).ToArray(); int[] l = lens.GetRange(i, n).ToArray();
-                    if (w.rcUrl != null) {
-                        try { w.Prefetch(o, l, Math.Min(workers, n)); if (!w.What.Contains("via rc")) w.What += " via rc"; continue; }
-                        catch (Exception e) { w.What += " (rc " + e.Message + ", read through the mount)"; w.rcUrl = null; }
+                if (w.rcUrl != null) {
+                    try { w.PrefetchRolling(offs.ToArray(), lens.ToArray(), workers); w.What += " via rc"; }
+                    catch (Exception e) {
+                        var we = e as WebException;
+                        if (w.Cancel && we != null && we.Status == WebExceptionStatus.RequestCanceled) w.What += " via rc";
+                        else { w.What += " (rc " + e.Message + ", read through the mount)"; w.rcUrl = null; }
                     }
-                    w.Read(o, l, Math.Min(workers, n), NoBuffering);
+                }
+                if (w.rcUrl == null) {
+                    for (int i = 0; i < offs.Count && !w.Cancel; i += batch) {
+                        int n = Math.Min(batch, offs.Count - i);
+                        w.Read(offs.GetRange(i, n).ToArray(), lens.GetRange(i, n).ToArray(), Math.Min(workers, n), NoBuffering);
+                    }
                 }
                 if (w.Cancel) w.What += ", stopped early";
             } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
             w.Watch.Stop();
         });
         return w;
+    }
+    // vfs/prefetch with no time limit, aborted when Cancel is set
+    void PrefetchRolling(long[] offsets, int[] lengths, int workers) {
+        var req = (HttpWebRequest)WebRequest.Create(rcUrl + "/vfs/prefetch");
+        req.Method = "POST"; req.ContentType = "application/json"; req.Timeout = Timeout.Infinite; req.ReadWriteTimeout = Timeout.Infinite;
+        byte[] body = Encoding.UTF8.GetBytes(PrefetchBody(offsets, lengths, workers));
+        using (var s = req.GetRequestStream()) s.Write(body, 0, body.Length);
+        var done = new ManualResetEventSlim();
+        Task.Run(() => { while (!done.Wait(500)) if (Cancel) { try { req.Abort(); } catch { } return; } });
+        try { using (var resp = req.GetResponse()) using (var r = new StreamReader(resp.GetResponseStream())) PrefetchResult(r.ReadToEnd()); }
+        finally { done.Set(); }
     }
     // Through rclone's vfs/prefetch when the mount has it: rclone reads the ranges into its cache itself, 64 at
     // a time, without the Windows file system in between (which passes rclone ~16 reads at once); else, or if
@@ -175,12 +193,17 @@ public class RcloneWarm {
         Read(offsets, lengths, workers, opts);
     }
     static string Json(string v) { return "\"" + v.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""; }
-    void Prefetch(long[] offsets, int[] lengths, int workers) {
+    string PrefetchBody(long[] offsets, int[] lengths, int workers) {
         var sb = new StringBuilder("{\"fs\":" + Json(rcFs) + ",\"path\":" + Json(rcPath) + ",\"workers\":" + workers + ",\"ranges\":[");
         for (int i = 0; i < offsets.Length; i++) sb.Append(i > 0 ? "," : "").Append("[" + offsets[i] + "," + lengths[i] + "]");
-        sb.Append("]}");
+        return sb.Append("]}").ToString();
+    }
+    void Prefetch(long[] offsets, int[] lengths, int workers) {
         string res;
-        using (var c = new WebClient()) { c.Headers[HttpRequestHeader.ContentType] = "application/json"; res = c.UploadString(rcUrl + "/vfs/prefetch", sb.ToString()); }
+        using (var c = new WebClient()) { c.Headers[HttpRequestHeader.ContentType] = "application/json"; res = c.UploadString(rcUrl + "/vfs/prefetch", PrefetchBody(offsets, lengths, workers)); }
+        PrefetchResult(res);
+    }
+    void PrefetchResult(string res) {
         var m = Regex.Match(res, "\"bytes\":\\s*(\\d+)"); if (m.Success) Interlocked.Add(ref Bytes, long.Parse(m.Groups[1].Value));
         m = Regex.Match(res, "\"failed\":\\s*(\\d+)"); if (m.Success) Interlocked.Add(ref Failed, long.Parse(m.Groups[1].Value));
         m = Regex.Match(res, "\"firstError\":\\s*\"((?:[^\"\\\\]|\\\\.)*)\""); if (m.Success) Interlocked.CompareExchange(ref FirstError, m.Groups[1].Value, null);
