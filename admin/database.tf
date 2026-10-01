@@ -71,7 +71,7 @@ removed {
 
 variable "db_endpoint" {
   type        = string
-  description = "(Optional) Hostname of an RDS PostgreSQL instance, without the port, for example the address output of the rds module. Applies when enterprise_ha = true. Leave empty to install PostgreSQL locally on the Iris Admin instance."
+  description = "(Required when enterprise_ha = true) Hostname of an RDS PostgreSQL instance, without the port, for example the address output of the rds module."
   default     = ""
 }
 

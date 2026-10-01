@@ -65,6 +65,11 @@ resource "aws_ssm_association" "iris_admin_install" {
 
   lifecycle {
     precondition {
+      condition     = !var.enterprise_ha || trimspace(var.db_endpoint) != ""
+      error_message = "db_endpoint must be set to the RDS hostname when enterprise_ha = true. For a local PostgreSQL installation, set enterprise_ha = false."
+    }
+
+    precondition {
       condition     = length(try(data.aws_db_instances.legacy[0].instance_identifiers, [])) == 0
       error_message = "RDS instance '${local.legacy_db_identifier}' exists but db_endpoint is empty, so Iris Admin would switch to a local PostgreSQL. Set db_endpoint to that instance's address (aws rds describe-db-instances --db-instance-identifier ${local.legacy_db_identifier} --query 'DBInstances[0].Endpoint.Address')."
     }
