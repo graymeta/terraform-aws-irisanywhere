@@ -37,7 +37,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_rdp" {
 
 # Allow Postgres inbound traffic
 resource "aws_vpc_security_group_ingress_rule" "allow_postgresql" {
-  for_each          = toset(var.api_console_access_cidr)
+  for_each          = var.enterprise_ha ? toset([]) : toset(var.api_console_access_cidr)
   security_group_id = aws_security_group.iris_adm.id
   description       = "Allow Postgresql"
   from_port         = 5432
