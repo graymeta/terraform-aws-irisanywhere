@@ -296,7 +296,7 @@ function Start-Warm($path, $stage) {
     Log "stage $stage warming $path"
     Log-Warm "Start  $path"
     if ($stage -eq 1) { $p = [RcloneWarm]::Start($path, $false, 512, 16, 0, 0) }   # first 512 MB
-    else              { $p = [RcloneWarm]::Start($path, $true, 0, 16, 16, 32) }     # MXF partitions, -16..+32 KB, 16 at once (rclone tops out at ~60-65 new reads/s per file)
+    else              { $p = [RcloneWarm]::Start($path, $true, 0, 32, 16, 32) }     # MXF partitions, -16..+32 KB, 32 at once
     if ($held) { $warmOf[$p.Id] = $bucket }
     $warmPath[$p.Id] = $path
     $p
