@@ -70,27 +70,40 @@ public class RcloneWarm {
         w.Work = Task.Run(() => {
             try {
                 long len = new FileInfo(path).Length;
-                var offs = new List<long>();
+                var offs = new List<long>(); var lens = new List<int>();
                 if (mxf) {
-                    var parts = Partitions(path); parts.Sort(); parts.Reverse();
-                    foreach (long p in parts) { long o = Math.Max(0L, p - beforeKB * 1024L) / 4096 * 4096; if (o < len && !offs.Contains(o)) offs.Add(o); }
-                    w.What = string.Format("{0} MXF partitions x -{1}..+{2} KB", offs.Count, beforeKB, afterKB);
-                    if (offs.Count > 0) w.Read(offs.ToArray(), workers, (beforeKB + afterKB) * 1024, NoBuffering);
+                    // One window per partition (4 KB pages); windows that overlap or touch are merged into one
+                    // read (many files pair each body partition with a small index partition a few KB later)
+                    var parts = Partitions(path); parts.Sort();
+                    long cs = -1, ce = -1;
+                    foreach (long p in parts) {
+                        long s = Math.Max(0L, p - beforeKB * 1024L) / 4096 * 4096, e = (p + afterKB * 1024L + 4095) / 4096 * 4096;   // the read stops at the end of the file
+                        if (s >= len) continue;
+                        if (cs >= 0 && s <= ce && e - cs <= 1048576) { ce = Math.Max(ce, e); continue; }
+                        if (cs >= 0) { offs.Add(cs); lens.Add((int)(ce - cs)); }
+                        cs = s; ce = e;
+                    }
+                    if (cs >= 0) { offs.Add(cs); lens.Add((int)(ce - cs)); }
+                    offs.Reverse(); lens.Reverse();   // end to start, the order Iris walks them
+                    w.What = string.Format("{0} MXF partitions in {1} reads, -{2}..+{3} KB", parts.Count, offs.Count, beforeKB, afterKB);
+                    if (offs.Count > 0) w.Read(offs.ToArray(), lens.ToArray(), workers, NoBuffering);
                 } else {
                     long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
-                    for (long i = 0; i < n; i++) offs.Add(i * 16777216);
+                    int size = (int)Math.Min(16777216L, Math.Max(len, 4096L));
+                    for (long i = 0; i < n; i++) { offs.Add(i * 16777216); lens.Add(size); }
                     w.What = string.Format("first {0} MB", headMB);
-                    w.Read(offs.ToArray(), workers, (int)Math.Min(16777216L, Math.Max(len, 4096L)), len < 16777216 ? FileOptions.None : NoBuffering);
+                    w.Read(offs.ToArray(), lens.ToArray(), workers, len < 16777216 ? FileOptions.None : NoBuffering);
                 }
             } catch (Exception e) { w.Error = e.GetType().Name + ": " + e.Message; }
             w.Watch.Stop();
         });
         return w;
     }
-    void Read(long[] offsets, int workers, int length, FileOptions opts) {
+    void Read(long[] offsets, int[] lengths, int workers, FileOptions opts) {
         long next = -1;
+        int max = 0; foreach (int l in lengths) max = Math.Max(max, l);
         Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, k => {
-            var buf = new byte[length];
+            var buf = new byte[max];
             FileStream fs = null;
             long i;
             while ((i = Interlocked.Increment(ref next)) < offsets.Length) {
@@ -103,7 +116,7 @@ public class RcloneWarm {
                         // Stop at the end of the file: an unbuffered read continuing after the short last one
                         // is unaligned (ERROR_INVALID_PARAMETER, which .NET reports as "Handle does not support
                         // synchronous operations"); requests stay whole 4 KB pages
-                        long left = fs.Length - offsets[i];
+                        long left = fs.Length - offsets[i]; int length = lengths[i];
                         int want = (int)Math.Min((long)length, left), ask = (int)Math.Min((long)length, (left + 4095) / 4096 * 4096);
                         int got = 0, r;
                         while (got < want && (r = fs.Read(buf, got, ask - got)) > 0) got += r;
