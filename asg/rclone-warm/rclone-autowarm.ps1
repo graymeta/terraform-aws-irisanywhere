@@ -87,6 +87,14 @@ public class RcloneWarm {
                     offs.Reverse(); lens.Reverse();   // end to start, the order Iris walks them
                     w.What = string.Format("{0} MXF partitions in {1} reads, -{2}..+{3} KB", parts.Count, offs.Count, beforeKB, afterKB);
                     if (offs.Count > 0) w.Read(offs.ToArray(), lens.ToArray(), workers, NoBuffering);
+                    // Then 32 MB around 1/3, 1/2 and 2/3 of the duration, where Iris decodes frames after OK
+                    // (from the index tables the partition warm just cached)
+                    var spots = new List<long>();
+                    try { foreach (long t in TimeOffsets(path, parts, new[] { 1 / 3.0, 0.5, 2 / 3.0 })) spots.Add(Math.Max(0L, t - 8388608) / 4096 * 4096); } catch { }
+                    if (spots.Count > 0) {
+                        w.What += string.Format(", {0} frame spots", spots.Count);
+                        w.Read(spots.ToArray(), spots.ConvertAll(x => 33554432).ToArray(), spots.Count, NoBuffering);
+                    }
                 } else {
                     long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
                     int size = (int)Math.Min(16777216L, Math.Max(len, 4096L));
@@ -135,6 +143,54 @@ public class RcloneWarm {
         });
     }
     // Partition offsets from the MXF Random Index Pack at the end of the file (empty if there is none)
+    // File offsets of the frames at the given fractions of the duration: index table segments give each
+    // edit unit's offset in the essence stream (or a fixed size per unit), and each body partition's
+    // BodyOffset maps the stream to the file
+    static long BE(byte[] b, int o, int n) { long v = 0; for (int i = 0; i < n; i++) v = (v << 8) | b[o + i]; return v; }
+    static long Ber(byte[] b, ref int p) { if ((b[p] & 0x80) == 0) return b[p++]; int n = b[p++] & 0x7f; long v = BE(b, p, n); p += n; return v; }
+    static bool Is(byte[] b, int o, params int[] k) { if (b.Length < o + 16) return false; for (int i = 0; i < k.Length; i++) if (k[i] >= 0 && b[o + i] != k[i]) return false; return true; }
+    static bool IsFill(byte[] b, int o) { return Is(b, o, 6, 14, 43, 52, 1, 1, 1, -1, 3, 1, 2, 16, 1); }
+    static byte[] At(FileStream fs, long off, int n) { var b = new byte[n]; fs.Seek(off, SeekOrigin.Begin); int got = 0, r; while (got < n && (r = fs.Read(b, got, n - got)) > 0) got += r; if (got < n) Array.Resize(ref b, got); return b; }
+    static List<long> TimeOffsets(string path, List<long> parts, double[] fracs) {
+        var body = new List<long[]>(); var segs = new List<long[]>(); var arrs = new List<long[]>();
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536)) {
+            foreach (long p in parts) {
+                var h = At(fs, p, 128); if (!Is(h, 0, 6, 14, 43, 52, 2, 5, 1, 1, 13, 1, 2, 1, 1)) continue;
+                int q = 16; long plen = Ber(h, ref q);
+                long hbc = BE(h, q + 32, 8), ibc = BE(h, q + 40, 8), bodyOff = BE(h, q + 52, 8), bodySid = BE(h, q + 60, 4), cur = p + q + plen;
+                if (hbc == 0) { var c = At(fs, cur, 32); if (IsFill(c, 0)) { int k = 16; long fl = Ber(c, ref k); cur += k + fl; } }
+                cur += hbc;
+                if (ibc > 0 && ibc < 64 << 20) {
+                    var ix = At(fs, cur, (int)ibc); int o = 0;
+                    while (o + 17 <= ix.Length) {
+                        bool idx = Is(ix, o, 6, 14, 43, 52, 2, 83, 1, 1, 13, 1, 2, 1, 1, 16, 1, 0); int k = o + 16; long vl = Ber(ix, ref k); int end = (int)Math.Min(ix.Length, k + vl);
+                        if (idx) {
+                            long start = 0, dur = 0, eubc = 0; long[] so = null;
+                            for (int v = k; v + 4 <= end; ) { int tag = (int)BE(ix, v, 2), tl = (int)BE(ix, v + 2, 2), d = v + 4;
+                                if (tag == 0x3F0C) start = BE(ix, d, 8); else if (tag == 0x3F0D) dur = BE(ix, d, 8); else if (tag == 0x3F05) eubc = BE(ix, d, 4);
+                                else if (tag == 0x3F0A) { int n = (int)BE(ix, d, 4), il = (int)BE(ix, d + 4, 4); so = new long[n]; for (int e = 0; e < n; e++) so[e] = BE(ix, d + 8 + e * il + 3, 8); }
+                                v = d + tl; }
+                            segs.Add(new[] { start, dur, eubc }); arrs.Add(so);
+                        }
+                        o = end;
+                    }
+                    cur += ibc;
+                }
+                if (bodySid != 0) { var e2 = At(fs, cur, 32); if (IsFill(e2, 0)) { int k = 16; long fl = Ber(e2, ref k); cur += k + fl; } body.Add(new[] { bodyOff, cur }); }
+            }
+        }
+        body.Sort((a, b) => a[0].CompareTo(b[0]));
+        long total = 0, eu = 0; foreach (var g in segs) { total = Math.Max(total, g[0] + g[1]); if (g[2] > 0) eu = g[2]; }
+        var res = new List<long>();
+        foreach (double f in fracs) {
+            long fr = (long)(total * f), so = -1;
+            if (eu > 0) so = fr * eu;
+            else for (int i = 0; i < segs.Count; i++) { var a = arrs[i]; if (a != null && fr >= segs[i][0] && fr - segs[i][0] < a.Length) { so = a[fr - segs[i][0]]; break; } }
+            long file = -1; if (so >= 0) foreach (var b in body) if (b[0] <= so) file = b[1] + (so - b[0]);
+            if (file > 0 && !res.Contains(file)) res.Add(file);
+        }
+        return res;
+    }
     static List<long> Partitions(string path) {
         var parts = new List<long>();
         using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
@@ -257,6 +313,9 @@ $wasProbing = $false
 $wasProbingSession = $false
 $tick = 0
 $lowered = New-Object System.Collections.Generic.HashSet[int]
+# Wake as soon as rclone creates a cache entry (an open) instead of only every 200 ms
+$fsw = $null
+try { if (Test-Path $metaRoot) { $fsw = New-Object IO.FileSystemWatcher $metaRoot; $fsw.IncludeSubdirectories = $true } } catch { $fsw = $null }
 Log "watching $metaRoot ($($known.Count) files already cached, two-stage, min $MinSizeGB GB, max $MaxWarms at once)"
 
 # A watcher killed mid-open (no finally) leaves a mount at the open buffer: back to the playback buffer
@@ -391,7 +450,7 @@ while ($true) {
         Log "error: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
         Start-Sleep -Seconds 1
     }
-    Start-Sleep -Milliseconds 200
+    if ($fsw) { [void]$fsw.WaitForChanged([IO.WatcherChangeTypes]::Created, 200) } else { Start-Sleep -Milliseconds 200 }
 }
 } finally {
     foreach ($b in @($bufHold.Keys)) { if (Set-Buffer $bufHold[$b].Url $bufHold[$b].Saved) { Log "buffer $($bufHold[$b].Saved / 1MB)M restored on $b (watcher exiting)" } }

@@ -6,10 +6,11 @@ locals {
 
   merged_tags = merge(var.tags, local.default_tags)
 
-  # rclone warm watcher, with comment and blank lines stripped to keep the user data under 16 KB
-  rclone_warm_watcher = replace(replace(file("${path.module}/rclone-warm/rclone-autowarm.ps1"), "/(?m)^[ \\t]*#.*\\r?\\n/", ""), "/(?m)^[ \\t]*\\r?\\n/", "")
+  # The launch script and the rclone warm watcher go in with whole-line # and // comments, indentation and blank
+  # lines stripped to keep the user data under 16 KB (neither has a here-string whose indentation matters)
+  rclone_warm_watcher = replace(replace(replace(file("${path.module}/rclone-warm/rclone-autowarm.ps1"), "/(?m)^[ \\t]*(#|//).*\\r?\\n/", ""), "/(?m)^[ \\t]+/", ""), "/(?m)^\\r?\\n/", "")
 
-  iris_user_data = join("\n", ["<powershell>", templatefile("${path.module}/cloud_local.ps1", {
+  iris_user_data = join("\n", ["<powershell>", replace(replace(replace(templatefile("${path.module}/cloud_local.ps1", {
     name                      = replace("${var.hostname_prefix}-${var.deployment_name != "1" ? var.deployment_name : var.instance_type}", ".", "")
     metric_check_interval     = var.asg_check_interval
     health_check_interval     = var.lb_check_interval
@@ -35,5 +36,5 @@ locals {
     file_warm                 = var.file_warm
     rclone_warm_max_age       = var.rclone_warm_max_age
     rclone_warm_watcher       = var.s3_enterprise && var.file_warm ? base64gzip(local.rclone_warm_watcher) : ""
-  }), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"])
+  }), "/(?m)^[ \\t]*#.*\\r?\\n/", ""), "/(?m)^[ \\t]+/", ""), "/(?m)^\\r?\\n/", ""), var.user_init, "\n", "Restart-Computer -Force", "\n", "</powershell>"])
 }
