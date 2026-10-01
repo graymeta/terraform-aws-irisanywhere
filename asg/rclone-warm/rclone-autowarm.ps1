@@ -4,8 +4,9 @@
 # (image-sequence frames are skipped):
 #   stage 1  non-MXF only, right away: the first 512 MB (front only)
 #   stage 2  MXF only, $ProbeHeadSec after mediainfo.exe (the probe behind the Open dialog) starts, or
-#            when it exits if sooner, so most of its reads are done before the warm's queue up (rclone
-#            starts new reads in a file about one at a time): every MXF partition, which Iris walks one
+#            $ProbeGapSec after it exits if sooner, so its reads and the dialog's partition walk right after
+#            are mostly done before the warm's queue up (rclone starts new reads in a file about one at a
+#            time); with no probe, right away: every MXF partition, which Iris walks one
 #            by one when it opens the file after OK.
 # An MXF reopened within $RecentSec after the cache dropped it goes straight to stage 2.
 # At most $MaxWarms warms run at once.
@@ -34,7 +35,8 @@ $MinSizeGB = 1
 $RecentSec = 120
 $ProbeWaitSec = 20
 $ProbeStartSec = 0
-$ProbeHeadSec = 1
+$ProbeHeadSec = 2     # mediainfo still running this long after it started: warm anyway
+$ProbeGapSec = 0.5    # otherwise this long after it exits (Iris's dialog walk runs right after)
 $HoldMaxSec = 900
 $AfterOkSec = 20
 $OpenBufferMaxSec = 120   # buffer back regardless this long after the first open (OK not seen)
@@ -289,15 +291,16 @@ while ($true) {
         # Entries rclone evicted drop out, so the next open is seen again
         $known = $current
 
-        # Stage 2 $ProbeHeadSec after the media probe (mediainfo.exe) starts, or when it exits if sooner;
+        # Stage 2 $ProbeHeadSec after the media probe (mediainfo.exe) starts, or $ProbeGapSec after it exits if sooner;
         # if none shows up within $ProbeStartSec, start anyway
         $probing = [bool](Get-Process -Name mediainfo -ErrorAction SilentlyContinue)
         if ($probing -ne $wasProbing) { Log ("mediainfo {0}" -f $(if ($probing) { 'started' } else { 'exited' })); $wasProbing = $probing }
         if ($pending2.Count -gt 0) {
             foreach ($p in @($pending2.Keys)) {
                 $e = $pending2[$p]; if ($probing -and -not $e.Seen) { $e.Seen = $true; $e.SeenAt = $now }
+                if ($e.Seen -and -not $probing -and -not $e.ExitedAt) { $e.ExitedAt = $now }
                 $age = ($now - $e.Queued).TotalSeconds
-                if (($e.Seen -and (-not $probing -or ($now - $e.SeenAt).TotalSeconds -ge $ProbeHeadSec)) -or
+                if (($e.Seen -and (($e.ExitedAt -and ($now - $e.ExitedAt).TotalSeconds -ge $ProbeGapSec) -or ($now - $e.SeenAt).TotalSeconds -ge $ProbeHeadSec)) -or
                     (-not $e.Seen -and $age -ge $ProbeStartSec) -or $age -ge $ProbeWaitSec) {
                     Log ("queued stage 2 for {0} ({1:N1}s after first open, mediainfo {2})" -f $p, $age, $(if ($e.Seen) { 'seen' } else { 'not seen' }))
                     $pending2.Remove($p)
