@@ -441,6 +441,44 @@ foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'") {
         if ((Get-Buffer $u) -eq $OpenBuffer -and (Set-Buffer $u $PlayBuffer)) { Log "buffer $($PlayBuffer / 1MB)M reset on $u (left at $($OpenBuffer / 1MB)M)" }
     }
 }
+
+# Once per boot, in the background: prime what the first open on a new instance waits on. Reads the Iris
+# programs and rclone (an instance's disk loads from its AMI snapshot on first touch), starts MediaInfo
+# and mxfdump once so their DLLs are loaded, and lists each mount so rclone has its S3 connections and
+# top-level folders ready. Media files aren't touched.
+$primeMark = "C:\rclone\warm\primed.txt"
+$boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('s')
+if ((Get-Content $primeMark -ErrorAction SilentlyContinue) -ne $boot) {
+    Set-Content $primeMark $boot
+    Start-Job -ArgumentList $mountRoot, $log -ScriptBlock {
+        param($mountRoot, $log)
+        function Log($m) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
+        [Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'
+        $sw = [Diagnostics.Stopwatch]::StartNew(); $bytes = 0L; $buf = New-Object byte[] (1MB)
+        $files = @(Get-ChildItem 'C:\Program Files\GrayMeta\Iris Anywhere', 'C:\Program Files\GrayMeta\Iris QC Anywhere' -Recurse -File -ErrorAction SilentlyContinue) + @(Get-Item C:\rclone\rclone.exe -ErrorAction SilentlyContinue)
+        foreach ($f in $files) {
+            try { $s = [IO.File]::OpenRead($f.FullName); while (($n = $s.Read($buf, 0, $buf.Length)) -gt 0) { $bytes += $n }; $s.Close() } catch { }
+        }
+        $qc = 'C:\Program Files\GrayMeta\Iris QC Anywhere'
+        foreach ($exe in @(@("$qc\MediaInfo.exe", '--Version'), @("$qc\mxfdump.exe", '--help'))) {
+            try { $p = Start-Process $exe[0] -ArgumentList $exe[1] -WindowStyle Hidden -PassThru; if (-not $p.WaitForExit(30000)) { $p.Kill() } } catch { }
+        }
+        Log ("primed {0} program files ({1:N0} MB) in {2:N1}s" -f $files.Count, ($bytes / 1MB), $sw.Elapsed.TotalSeconds)
+        # Mounts come up after the watcher on a fresh boot: list each as it appears, for up to 5 minutes
+        $sw.Restart(); $listed = @{}
+        while ($sw.Elapsed.TotalMinutes -lt 5) {
+            foreach ($c in Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'") {
+                if ($c.CommandLine -notmatch 'S3BUCKETS:(\S+)') { continue }
+                $b = $Matches[1].Trim("'", '"'); $d = Join-Path $mountRoot $b
+                if ($listed[$b] -or -not (Test-Path $d)) { continue }
+                $t = [Diagnostics.Stopwatch]::StartNew(); $n = @(Get-ChildItem $d -Force -ErrorAction SilentlyContinue).Count
+                $listed[$b] = $true; Log ("primed mount {0} ({1} entries in {2:N1}s)" -f $b, $n, $t.Elapsed.TotalSeconds)
+            }
+            if ($listed.Count -and $listed.Count -ge @(Get-CimInstance Win32_Process -Filter "Name = 'rclone.exe'").Count) { break }
+            Start-Sleep 5
+        }
+    } | Out-Null
+}
 # An error in one pass is logged and the loop carries on; on any exit the script controls, lowered buffers
 # go back and held files are closed
 try {
