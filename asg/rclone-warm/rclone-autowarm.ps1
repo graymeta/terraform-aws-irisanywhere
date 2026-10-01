@@ -97,16 +97,20 @@ public class RcloneWarm {
                         w.Fetch(spots.ToArray(), spots.ConvertAll(x => 33554432).ToArray(), spots.Count, NoBuffering);
                     }
                 } else {
-                    long n = (Math.Min(len, headMB * 1048576L) + 16777215) / 16777216;
+                    // QuickTime/MP4: the head is the first HeadSeconds of video (Iris reads ~5.5-7 s of it while
+                    // opening, ~0.7-1 GB of ProRes 4444), and right after its first 16 MB, 96 MB from the frames at
+                    // 1/3, 1/2 and 2/3 of the duration, where Iris decodes ~10 frames (offsets from the moov index)
+                    long head = headMB * 1048576L; var spots = new List<long>();
+                    string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+                    bool mov = (ext == ".mov" || ext == ".mp4" || ext == ".m4v") && len >= 1073741824;
+                    if (mov) {
+                        try { long h; spots = MovTimeOffsets(path, new[] { 1 / 3.0, 0.5, 2 / 3.0 }, HeadSeconds, out h); if (h > 0) head = Math.Max(h, 16777216L); } catch { }
+                    }
+                    long n = (Math.Min(len, head) + 16777215) / 16777216;
                     int size = (int)Math.Min(16777216L, Math.Max(len, 4096L));
                     for (long i = 0; i < n; i++) { offs.Add(i * 16777216); lens.Add(size); }
-                    w.What = string.Format("first {0} MB", headMB);
-                    // QuickTime/MP4: right after the first 16 MB, 96 MB from the frames at 1/3, 1/2 and 2/3 of the
-                    // duration, where Iris decodes ~10 frames when it opens the file (offsets from the moov index)
-                    string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
-                    if ((ext == ".mov" || ext == ".mp4" || ext == ".m4v") && len >= 1073741824) {
-                        var spots = new List<long>();
-                        try { spots = MovTimeOffsets(path, new[] { 1 / 3.0, 0.5, 2 / 3.0 }); } catch { }
+                    w.What = head == headMB * 1048576L ? string.Format("first {0} MB", headMB) : string.Format("first {0} s ({1} MB)", HeadSeconds, n * 16);
+                    if (mov) {
                         int at = Math.Min(1, offs.Count);
                         foreach (long t in spots) for (long o = t / 4096 * 4096; o < t + 100663296 && o < len; o += 16777216) { offs.Insert(at, o); lens.Insert(at, 16777216); at++; }
                         if (spots.Count > 0) w.What += string.Format(", {0} frame spots", spots.Count);
@@ -242,8 +246,9 @@ public class RcloneWarm {
         foreach (var a in Atoms(b, parent[1], parent[2])) if (Encoding.ASCII.GetString(b, a[0] + 4, 4) == type) return a;
         return null;
     }
-    static List<long> MovTimeOffsets(string path, double[] fracs) {
-        var res = new List<long>();
+    public const double HeadSeconds = 8;
+    static List<long> MovTimeOffsets(string path, double[] fracs, double headSec, out long headEnd) {
+        var res = new List<long>(); headEnd = -1;
         using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536)) {
             long len = fs.Length, pos = 0, moovPos = -1, moovSize = 0;
             while (pos + 8 <= len) {
@@ -260,15 +265,18 @@ public class RcloneWarm {
                 if (Encoding.ASCII.GetString(m, trak[0] + 4, 4) != "trak") continue;
                 var mdia = Atom(m, trak, "mdia"); var hdlr = Atom(m, mdia, "hdlr");
                 if (hdlr == null || Encoding.ASCII.GetString(m, hdlr[1] + 8, 4) != "vide") continue;
-                var stbl = Atom(m, Atom(m, mdia, "minf"), "stbl");
+                var stbl = Atom(m, Atom(m, mdia, "minf"), "stbl"); var mdhd = Atom(m, mdia, "mdhd");
                 var stts = Atom(m, stbl, "stts"); var stsc = Atom(m, stbl, "stsc"); var stsz = Atom(m, stbl, "stsz");
                 var co = Atom(m, stbl, "stco"); int cw = 4; if (co == null) { co = Atom(m, stbl, "co64"); cw = 8; }
                 if (stts == null || stsc == null || stsz == null || co == null) continue;
                 int nch = (int)BE(m, co[1] + 4, 4), ne = (int)BE(m, stts[1] + 4, 4), nsc = (int)BE(m, stsc[1] + 4, 4);
                 long usz = BE(m, stsz[1] + 4, 4), total = 0;
                 for (int i = 0; i < ne; i++) total += BE(m, stts[1] + 8 + i * 8, 4) * BE(m, stts[1] + 12 + i * 8, 4);
-                foreach (double f in fracs) {
-                    long t = (long)(total * f), acc = 0, n = 0;
+                long scale = mdhd == null ? 0 : (m[mdhd[1]] == 1 ? BE(m, mdhd[1] + 20, 4) : BE(m, mdhd[1] + 12, 4));
+                var times = new List<long>(); foreach (double f in fracs) times.Add((long)(total * f));
+                if (scale > 0 && (long)(headSec * scale) < total) times.Add((long)(headSec * scale));   // last: the head's end
+                for (int ti = 0; ti < times.Count; ti++) {
+                    long t = times[ti], acc = 0, n = 0;
                     for (int i = 0; i < ne; i++) { long c = BE(m, stts[1] + 8 + i * 8, 4), d = BE(m, stts[1] + 12 + i * 8, 4); if (d > 0 && acc + c * d > t) { n += (t - acc) / d; break; } acc += c * d; n += c; }
                     long first = 0;
                     for (int i = 0; i < nsc; i++) {
@@ -277,7 +285,8 @@ public class RcloneWarm {
                         if (spc > 0 && n < first + run) {
                             long ci = fc + (n - first) / spc, s0 = first + ((n - first) / spc) * spc, off = BE(m, co[1] + 8 + (int)ci * cw, cw);
                             for (long k = s0; k < n; k++) off += usz != 0 ? usz : BE(m, stsz[1] + 12 + (int)k * 4, 4);
-                            if (off > 0 && off < len && !res.Contains(off)) res.Add(off);
+                            if (ti >= fracs.Length) headEnd = off;
+                            else if (off > 0 && off < len && !res.Contains(off)) res.Add(off);
                             break;
                         }
                         first += run;
