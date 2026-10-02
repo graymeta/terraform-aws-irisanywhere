@@ -79,8 +79,7 @@ resource "aws_lambda_function" "update-es-index-lambda" {
 
   environment {
     variables = {
-      domain = local.lambda_os_endpoint
-      region = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
+      domain = var.custom_endpoint_enabled ? var.custom_endpoint : aws_opensearch_domain.es.endpoint
     }
   }
 }
@@ -88,8 +87,6 @@ resource "aws_lambda_function" "update-es-index-lambda" {
 
 locals {
   secret_json = jsondecode(nonsensitive(data.aws_secretsmanager_secret_version.os-secret.secret_string))
-  secret_os_endpoint = try(trimspace(local.secret_json.os_endpoint), "")
-  lambda_os_endpoint = local.secret_os_endpoint != "" ? local.secret_os_endpoint : aws_opensearch_domain.es.endpoint
 
   # unwrap the nested JSON string stored in s3_enterprise.
   # If a bucket entry omits `region`, default to the provider's active region.

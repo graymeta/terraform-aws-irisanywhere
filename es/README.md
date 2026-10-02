@@ -104,7 +104,7 @@ Required only for specific deployment modes:
 After deployment, update the Iris Anywhere secret with the OpenSearch connection values used by the application:
 
 * `os_region`
-* `os_endpoint` optional for this module's indexing Lambda; defaults to this module's OpenSearch domain endpoint when missing, null, or blank.
+* `os_endpoint` is not read by this module's indexing Lambda; it uses `custom_endpoint` when enabled, otherwise the domain endpoint created by this module.
 * `os_accessid`
 * `os_secretkey`
 
