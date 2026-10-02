@@ -33,7 +33,7 @@
 # the end of the open (its app log: Asset_Package_Opened with the file). When a step is still running
 # $CaptionPullSec after it started and rclone downloaded at least $CaptionPullMinGB on that bucket meanwhile,
 # the main file is pulled whole into the cache, front to back, many pieces at once, staying ahead of Iris. The
-# pull stops when the open finishes (for a step that started during the open) or the next main file is opened.
+# pull stops when Iris logs the open or the caption step as finished (also on ESC) or the next main file is opened.
 # Caption steps that finish quickly or barely read (sidecars, MP4 caption tracks, no captions) never pull.
 $metaRoot  = "D:\rclone-cache\vfsMeta\S3BUCKETS"
 $mountRoot = "D:\IrisAnywhere"
@@ -49,8 +49,8 @@ $ProbeGapSec = 0.5    # otherwise this long after it exits (Iris's dialog walk r
 $HoldMaxSec = 900
 $AfterOkSec = 20
 $OpenBufferMaxSec = 120   # buffer back regardless this long after the first open (OK not seen)
-$CaptionPullSec = 10      # Iris's caption step still running this long,
-$CaptionPullMinGB = 0.5   # and rclone downloaded at least this much for it meanwhile: pull the whole file
+$CaptionPullSec = 5       # Iris's caption step still running this long,
+$CaptionPullMinGB = 0.25  # and rclone downloaded at least this much for it meanwhile: pull the whole file
 $CaptionPullMB = 64       # in pieces this big, $CaptionPullWorkers at once (that many x MB of buffers in rclone)
 $CaptionPullWorkers = 16
 $CaptionPullFreeGB = 20   # and only with the file's size plus this much free on the cache disk
@@ -699,7 +699,7 @@ while ($true) {
                 $m = Get-ChildItem $metaRoot -Recurse -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
                 if ($m) {
                     $p = Join-Path $mountRoot $m.FullName.Substring($metaRoot.Length + 1)
-                    $main = @{ Path = $p; Leaf = [IO.Path]::GetFileName($p); Bucket = $p.Substring($mountRoot.Length + 1).Split('\')[0]; Size = (Get-Item -LiteralPath $p -ErrorAction SilentlyContinue).Length; RcUrl = $null; SubAt = $null; SubBytes = -1; Decided = $true; Done = $true; Pull = $null }
+                    $main = @{ Path = $p; Leaf = [IO.Path]::GetFileName($p); Bucket = $p.Substring($mountRoot.Length + 1).Split('\')[0]; Size = (Get-Item -LiteralPath $p -ErrorAction SilentlyContinue).Length; RcUrl = $null; SubAt = $null; SubBytes = -1; Decided = $true; Done = $false; Pull = $null }
                     Log-Detail "caption step with no file seen opening: using $p"
                 }
             }
@@ -709,10 +709,12 @@ while ($true) {
                     $main.SubAt = $now; $main.SubBytes = Get-CacheBytes $main.RcUrl; $main.Decided = $false
                     Log-Detail "caption step started for $($main.Leaf)"
                 }
-                if (-not $main.Done -and (Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
-                    $main.Done = $true; $main.Decided = $true   # a caption step running during the open ended with it
-                    Log-Detail "Iris finished opening $($main.Leaf)"
-                    if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open finished)" }
+                # Iris logs Asset_Package_Opened when a caption step ends, finished or cancelled (ESC), and at the end
+                # of an open; either way the step is over
+                if ((Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
+                    $main.Done = $true; $main.Decided = $true
+                    Log-Detail "Iris finished opening $($main.Leaf) (or its caption step ended)"
+                    if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (caption step ended)" }
                 }
                 if ($main.SubAt -and -not $main.Decided -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
                     $main.Decided = $true
