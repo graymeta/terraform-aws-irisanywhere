@@ -26,14 +26,15 @@
 # drops closed files) keeps the warm while the Open dialog is up and until Iris plays it. Holds are released
 # when the next main file (MXF or >= $MinSizeGB, not a caption/audio/xml sidecar) is opened, or after
 # $HoldMaxSec.
-# Captions carried inside the video (e.g. in every frame of an MXF) make Iris's caption pre-processing read
-# the whole file front to back, a few KB per frame. That touches every MB, so rclone downloads the whole file
-# anyway, one piece at a time behind Iris (~6 min for 61 GB, against ~1 min with the file local). Iris logs
-# the start of that step (its access log: "Temp location set to ...\Subtitles\...") and the end of the open
-# (its app log: Asset_Package_Opened with the file). When the step is still running $CaptionPullSec after it
-# started, the main file is pulled whole into the cache, front to back, many pieces at once, staying ahead
-# of Iris. The pull stops when the open finishes or the next main file is opened. Caption steps that finish
-# quickly (sidecars, MP4 caption tracks, no captions) never start a pull.
+# Captions carried inside the video (in every frame of an MXF or MOV) make Iris's caption extraction read the
+# whole file front to back, a few KB per frame. That touches every MB, so rclone downloads the whole file anyway,
+# one piece at a time behind Iris (~6 min for 61 GB, against ~1 min with the file local). Iris logs the start of
+# each caption step (its access log: "Temp location set to ...\Subtitles\..."), during the open or after it, and
+# the end of the open (its app log: Asset_Package_Opened with the file). When a step is still running
+# $CaptionPullSec after it started and rclone downloaded at least $CaptionPullMinGB on that bucket meanwhile,
+# the main file is pulled whole into the cache, front to back, many pieces at once, staying ahead of Iris. The
+# pull stops when the open finishes (for a step that started during the open) or the next main file is opened.
+# Caption steps that finish quickly or barely read (sidecars, MP4 caption tracks, no captions) never pull.
 $metaRoot  = "D:\rclone-cache\vfsMeta\S3BUCKETS"
 $mountRoot = "D:\IrisAnywhere"
 $log       = "C:\Logs\rclone-autowarm.log"
@@ -48,7 +49,8 @@ $ProbeGapSec = 0.5    # otherwise this long after it exits (Iris's dialog walk r
 $HoldMaxSec = 900
 $AfterOkSec = 20
 $OpenBufferMaxSec = 120   # buffer back regardless this long after the first open (OK not seen)
-$CaptionPullSec = 10      # Iris's caption pre-processing still running this long: pull the whole file
+$CaptionPullSec = 10      # Iris's caption step still running this long,
+$CaptionPullMinGB = 0.5   # and rclone downloaded at least this much for it meanwhile: pull the whole file
 $CaptionPullMB = 64       # in pieces this big, $CaptionPullWorkers at once (that many x MB of buffers in rclone)
 $CaptionPullWorkers = 16
 $CaptionPullFreeGB = 20   # and only with the file's size plus this much free on the cache disk
@@ -60,9 +62,10 @@ $AlwaysExt = @('.srt', '.scc', '.vtt', '.ttml', '.dfxp', '.xml', '.stl', '.cap',
                '.wav', '.bwf', '.w64', '.aif', '.aiff', '.mp3', '.aac', '.m4a', '.flac', '.ac3', '.ec3', '.eac3', '.dts', '.mp2', '.ogg', '.opus')
 $SkipExt   = @('.dpx', '.exr', '.tif', '.tiff', '.png', '.jpg', '.jpeg', '.tga', '.cin', '.j2c', '.j2k', '.jp2', '.ari', '.dng')
 
-# Logs roll over to <name>.1 at 5 MB. $LogDetail adds each open's steps (mediainfo runs, holds, buffer
-# changes, OK clicks, warm starts) for troubleshooting.
-$LogDetail = $false
+# Silent by default: only errors (something failing, which shouldn't happen) go to $log. $LogAll = $true logs
+# everything for troubleshooting: what the watcher does and why ($log), each open's steps, and each warm and
+# pull with its size and time ($warmLog). Logs roll over to <name>.1 at 5 MB.
+$LogAll = $false
 function Write-Log($file, $m) {
     try {
         $f = Get-Item $file -ErrorAction SilentlyContinue
@@ -70,9 +73,10 @@ function Write-Log($file, $m) {
         Add-Content -Path $file -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m"
     } catch { }
 }
-function Log($m) { Write-Log $log $m }
-function Log-Detail($m) { if ($LogDetail) { Write-Log $log $m } }
-function Log-Warm($m) { Write-Log $warmLog $m }
+function Log-Error($m) { Write-Log $log $m }
+function Log($m) { if ($LogAll) { Write-Log $log $m } }
+function Log-Detail($m) { if ($LogAll) { Write-Log $log $m } }
+function Log-Warm($m) { if ($LogAll) { Write-Log $warmLog $m } }
 
 # Warms run on background tasks in this process (compiled once here, no PowerShell start per warm).
 # Reads go through the mount and bypass the Windows file cache so they reach rclone (files under 16 MB,
@@ -410,6 +414,11 @@ function Get-RcFs($bucket) {
     if ($c -match "\s(\S+:$([regex]::Escape($bucket)))\s") { $Matches[1] }
 }
 
+# Bytes in the mount's cache (rclone's own count; files are sparse), -1 if rc doesn't answer
+function Get-CacheBytes($url) {
+    try { [long](Invoke-RestMethod -Method Post -Uri "$url/vfs/stats" -TimeoutSec 5).diskCache.bytesUsed } catch { -1 }
+}
+
 function Get-Buffer($url) {
     try { [long](Invoke-RestMethod -Method Post -Uri "$url/options/get" -TimeoutSec 5).main.BufferSize } catch { -1 }
 }
@@ -418,7 +427,7 @@ function Set-Buffer($url, $bytes) {
     try {
         Invoke-RestMethod -Method Post -Uri "$url/options/set" -ContentType 'application/json' -Body "{`"main`":{`"BufferSize`":$bytes}}" -TimeoutSec 5 | Out-Null
         $true
-    } catch { Log "rc $url set buffer $bytes failed: $($_.Exception.Message)"; $false }
+    } catch { Log-Error "rc $url set buffer $bytes failed: $($_.Exception.Message)"; $false }
 }
 
 $bufHold = @{}   # bucket -> @{ Url; Count; Saved }  (stage 2 warms running with buffer 0)
@@ -463,7 +472,7 @@ function Read-NewLines($tail, $pattern) {
 }
 $accessTail = @{ Path = $null; Pos = 0 }
 $appTail = @{ Path = $null; Pos = 0 }
-$main = $null   # the last main file opened: @{ Path; Leaf; Bucket; Size; SubAt; Done; Pull }
+$main = $null   # the last main file opened: @{ Path; Leaf; Bucket; Size; RcUrl; SubAt; SubBytes; Decided; Done; Pull }
 
 $holds = @{}   # path -> @{ Stream; Since }
 $session = $null   # the main file being opened: @{ Path; Leaf; Bucket; Mxf; Held; Since; OkAt; DumpSeen; Probes }
@@ -484,7 +493,7 @@ function Hold-File($path) {
         [void]$fs.Read((New-Object byte[] 4096), 0, 4096)
         $holds[$path] = @{ Stream = $fs; Since = Get-Date }
         Log-Detail "holding open $path"
-    } catch { Log "hold failed for ${path}: $($_.Exception.Message)" }
+    } catch { Log-Error "hold failed for ${path}: $($_.Exception.Message)" }
 }
 
 function Release-Holds($except, $why) {
@@ -546,9 +555,10 @@ $primeMark = "C:\rclone\warm\primed.txt"
 $boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToString('s')
 if ((Get-Content $primeMark -ErrorAction SilentlyContinue) -ne $boot) {
     Set-Content $primeMark $boot
-    Start-Job -ArgumentList $mountRoot, $log -ScriptBlock {
+    if ($LogAll) { $primeLog = $log } else { $primeLog = $null }
+    Start-Job -ArgumentList $mountRoot, $primeLog -ScriptBlock {
         param($mountRoot, $log)
-        function Log($m) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" }
+        function Log($m) { if ($log) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $m" } }
         [Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'
         $sw = [Diagnostics.Stopwatch]::StartNew(); $bytes = 0L; $buf = New-Object byte[] (1MB)
         $files = @(Get-ChildItem 'C:\Program Files\GrayMeta\Iris Anywhere', 'C:\Program Files\GrayMeta\Iris QC Anywhere' -Recurse -File -ErrorAction SilentlyContinue) + @(Get-Item C:\rclone\rclone.exe -ErrorAction SilentlyContinue)
@@ -606,7 +616,7 @@ while ($true) {
                     Release-Holds $path 'next file opened'
                     End-Session 'next file opened'
                     if ($main -and $main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (next file opened)" }
-                    $main = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]; Size = $size; SubAt = $null; Done = $false; Pull = $null; Skipped = $false }
+                    $main = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]; Size = $size; RcUrl = $null; SubAt = $null; SubBytes = -1; Decided = $true; Done = $false; Pull = $null }
                     [void](Read-NewLines $accessTail $irisAccessLogs); [void](Read-NewLines $appTail $irisAppLogs)   # earlier opens' lines don't count
                 }
                 # Only MXF opens jump around the file (hundreds of partition reads); other files keep the full buffer
@@ -675,37 +685,59 @@ while ($true) {
         }
         foreach ($p in @($recent.Keys)) { if (($now - $recent[$p]).TotalSeconds -ge $RecentSec) { $recent.Remove($p) } }
 
-        # Iris's caption pre-processing for the main file: started (access log), open finished (app log), and a
-        # whole-file pull once it has run $CaptionPullSec
-        if ($main -and -not $main.Done -and $now -ge $nextIrisCheck) {
+        # Iris's caption steps for the main file. Each "Temp location set to ...\Subtitles\..." line in its access log
+        # starts one, during the open or after it (some files only extract captions once the open is done). A step
+        # that started during the open ends with the open (Asset_Package_Opened in the app log). $CaptionPullSec after
+        # a step starts, if it hasn't ended and rclone downloaded at least $CaptionPullMinGB on that bucket meanwhile
+        # (Iris is reading the file front to back), the file is pulled whole
+        if ($now -ge $nextIrisCheck) {
             $nextIrisCheck = $now.AddSeconds(1)
-            if (-not $main.SubAt -and (Read-NewLines $accessTail $irisAccessLogs) -match 'Temp location set to .*\\Subtitles\\') {
-                $main.SubAt = $now; Log-Detail "caption pre-processing started for $($main.Leaf)"
+            $subStarted = [bool]((Read-NewLines $accessTail $irisAccessLogs) -match 'Temp location set to .*\\Subtitles\\')
+            if ($subStarted -and -not $main) {
+                # A caption step with no main file seen opening (a file already cached when the watcher started, or a
+                # reopen while still cached): the file whose cache entry was written last, the one Iris just opened
+                $m = Get-ChildItem $metaRoot -Recurse -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
+                if ($m) {
+                    $p = Join-Path $mountRoot $m.FullName.Substring($metaRoot.Length + 1)
+                    $main = @{ Path = $p; Leaf = [IO.Path]::GetFileName($p); Bucket = $p.Substring($mountRoot.Length + 1).Split('\')[0]; Size = (Get-Item -LiteralPath $p -ErrorAction SilentlyContinue).Length; RcUrl = $null; SubAt = $null; SubBytes = -1; Decided = $true; Done = $true; Pull = $null }
+                    Log-Detail "caption step with no file seen opening: using $p"
+                }
             }
-            if ((Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
-                $main.Done = $true
-                $took = if ($main.SubAt) { ' ({0:N0} s after caption pre-processing started)' -f ($now - $main.SubAt).TotalSeconds } else { '' }
-                Log-Detail "Iris finished opening $($main.Leaf)$took"
-                if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open finished)" }
-            }
-            elseif ($main.SubAt -and -not $main.Pull -and -not $main.Skipped -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
-                $free = (Get-PSDrive D -ErrorAction SilentlyContinue).Free
-                if ($free -lt $main.Size + $CaptionPullFreeGB * 1GB) {
-                    $main.Skipped = $true; Log ("caption pre-processing of {0} still running after {1} s; not pulling the file ({2:N0} GB free on D:)" -f $main.Leaf, $CaptionPullSec, ($free / 1GB))
-                } else {
-                    Log ("caption pre-processing of {0} still running after {1} s: pulling the whole file ({2:N2} GB)" -f $main.Leaf, $CaptionPullSec, ($main.Size / 1GB))
-                    Log-Detail "warm start:  $($main.Path)"
-                    $rel = $main.Path.Substring($mountRoot.Length + $main.Bucket.Length + 2).Replace('\', '/')
-                    $main.Pull = [RcloneWarm]::StartFull($main.Path, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, (Get-RcUrl $main.Bucket), (Get-RcFs $main.Bucket), $rel)
-                    $warmPath[$main.Pull.Id] = $main.Path
-                    $running += $main.Pull
+            if ($main) {
+                if ($subStarted) {
+                    if (-not $main.RcUrl) { $main.RcUrl = Get-RcUrl $main.Bucket }
+                    $main.SubAt = $now; $main.SubBytes = Get-CacheBytes $main.RcUrl; $main.Decided = $false
+                    Log-Detail "caption step started for $($main.Leaf)"
+                }
+                if (-not $main.Done -and (Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
+                    $main.Done = $true; $main.Decided = $true   # a caption step running during the open ended with it
+                    Log-Detail "Iris finished opening $($main.Leaf)"
+                    if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open finished)" }
+                }
+                if ($main.SubAt -and -not $main.Decided -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
+                    $main.Decided = $true
+                    $nowBytes = Get-CacheBytes $main.RcUrl; $read = $nowBytes - $main.SubBytes
+                    $free = (Get-PSDrive D -ErrorAction SilentlyContinue).Free
+                    if ($main.Pull -and -not $main.Pull.HasExited) { }   # already pulling
+                    elseif ($main.SubBytes -lt 0 -or $nowBytes -lt 0 -or $read -lt $CaptionPullMinGB * 1GB) {
+                        Log-Detail ("caption step of {0} after {1} s: {2:N2} GB downloaded, not a whole-file read; no pull" -f $main.Leaf, $CaptionPullSec, ($read / 1GB))
+                    } elseif ($free -lt $main.Size + $CaptionPullFreeGB * 1GB) {
+                        Log ("caption step of {0} reading the whole file; not pulling it ({1:N0} GB free on D:)" -f $main.Leaf, ($free / 1GB))
+                    } else {
+                        Log ("caption step of {0} reading the whole file ({1:N1} GB in {2} s): pulling the whole file ({3:N2} GB)" -f $main.Leaf, ($read / 1GB), $CaptionPullSec, ($main.Size / 1GB))
+                        Log-Detail "warm start:  $($main.Path)"
+                        $rel = $main.Path.Substring($mountRoot.Length + $main.Bucket.Length + 2).Replace('\', '/')
+                        $main.Pull = [RcloneWarm]::StartFull($main.Path, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, $main.RcUrl, (Get-RcFs $main.Bucket), $rel)
+                        $warmPath[$main.Pull.Id] = $main.Path
+                        $running += $main.Pull
+                    }
                 }
             }
         }
 
         foreach ($p in @($running | Where-Object { $_.HasExited })) {
             $name = [IO.Path]::GetFileName($p.Path)
-            if ($p.Error) { Log-Warm "Failed $name ($($p.What)): $($p.Error)" }
+            if ($p.Error) { Log-Error "warm failed: $name ($($p.What)): $($p.Error)" }
             else {
                 $failed = if ($p.Retried) { "  ($($p.Retried) reads retried, first: $($p.FirstRetry))" } else { '' }
             if ($p.Failed) { $failed += "  ($($p.Failed) reads failed, first: $($p.FirstError))" }
@@ -728,7 +760,7 @@ while ($true) {
             }
         }
     } catch {
-        Log "error: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
+        Log-Error "error: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"
         Start-Sleep -Seconds 1
     }
     if ($fsw) { [void]$fsw.WaitForChanged([IO.WatcherChangeTypes]::Created, 200) } else { Start-Sleep -Milliseconds 200 }
