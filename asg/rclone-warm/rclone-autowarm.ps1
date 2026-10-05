@@ -472,6 +472,7 @@ function Read-NewLines($tail, $pattern) {
 }
 $accessTail = @{ Path = $null; Pos = 0 }
 $appTail = @{ Path = $null; Pos = 0 }
+$dovi = $null   # Iris's Dolby Vision step in progress: @{ Path; Pull }
 $main = $null   # the last main file opened: @{ Path; Leaf; Bucket; Size; RcUrl; SubAt; SubBytes; Decided; Done; Pull }
 
 $holds = @{}   # path -> @{ Stream; Since }
@@ -616,6 +617,7 @@ while ($true) {
                     Release-Holds $path 'next file opened'
                     End-Session 'next file opened'
                     if ($main -and $main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (next file opened)" }
+                    if ($dovi -and $dovi.Pull -and -not $dovi.Pull.HasExited -and $dovi.Path -ne $path) { $dovi.Pull.Cancel = $true; Log "stopping the whole-file pull of $([IO.Path]::GetFileName($dovi.Path)) (next file opened)" }
                     $main = @{ Path = $path; Leaf = [IO.Path]::GetFileName($path); Bucket = $path.Substring($mountRoot.Length + 1).Split('\')[0]; Size = $size; RcUrl = $null; SubAt = $null; SubBytes = -1; Decided = $true; Done = $false; Pull = $null }
                     [void](Read-NewLines $accessTail $irisAccessLogs); [void](Read-NewLines $appTail $irisAppLogs)   # earlier opens' lines don't count
                 }
@@ -690,6 +692,36 @@ while ($true) {
         # that started during the open ends with the open (Asset_Package_Opened in the app log). $CaptionPullSec after
         # a step starts, if it hasn't ended and rclone downloaded at least $CaptionPullMinGB on that bucket meanwhile
         # (Iris is reading the file front to back), the file is pulled whole
+        # Iris's Dolby Vision step (DoviXML.exe, which runs mxfsplit.exe on the file) walks every frame header of the
+        # whole file in reads of a few bytes, so it is slow over the mount and needs the whole file anyway: pull it
+        # as soon as the step starts, and stop the pull if the step ends first (ESC) or the next file is opened
+        if ($now -ge $nextIrisCheck) {
+            $doviProcs = @(Get-Process -Name DoviXML, mxfsplit -ErrorAction SilentlyContinue)
+            if ($doviProcs.Count -and -not $dovi) {
+                $cmd = (Get-CimInstance Win32_Process -Filter "Name = 'DoviXML.exe' OR Name = 'mxfsplit.exe'" | Select-Object -First 1).CommandLine
+                if ($cmd -match '(?i)"([A-Z]:\\IrisAnywhere\\[^"]+)"') {
+                    $p = $Matches[1]; $f = Get-Item -LiteralPath $p -ErrorAction SilentlyContinue
+                    $dovi = @{ Path = $p; Pull = $null }
+                    if ($f) {
+                        $b = $p.Substring($mountRoot.Length + 1).Split('\')[0]
+                        if ($main -and $main.Path -eq $p -and $main.Pull -and -not $main.Pull.HasExited) { $dovi.Pull = $main.Pull }
+                        elseif ((Get-PSDrive D -ErrorAction SilentlyContinue).Free -lt $f.Length + $CaptionPullFreeGB * 1GB) { Log "Dolby Vision step on $($f.Name); not pulling it (not enough free on D:)" }
+                        else {
+                            Log ("Dolby Vision step on {0}: pulling the whole file ({1:N2} GB)" -f $f.Name, ($f.Length / 1GB))
+                            Log-Detail "warm start:  $p"
+                            $rel = $p.Substring($mountRoot.Length + $b.Length + 2).Replace('\', '/')
+                            $dovi.Pull = [RcloneWarm]::StartFull($p, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, (Get-RcUrl $b), (Get-RcFs $b), $rel)
+                            $warmPath[$dovi.Pull.Id] = $p
+                            $running += $dovi.Pull
+                            if ($main -and $main.Path -eq $p) { $main.Pull = $dovi.Pull }
+                        }
+                    }
+                }
+            } elseif (-not $doviProcs.Count -and $dovi) {
+                if ($dovi.Pull -and -not $dovi.Pull.HasExited) { $dovi.Pull.Cancel = $true; Log "stopping the whole-file pull of $([IO.Path]::GetFileName($dovi.Path)) (Dolby Vision step ended)" }
+                $dovi = $null
+            }
+        }
         if ($now -ge $nextIrisCheck) {
             $nextIrisCheck = $now.AddSeconds(1)
             $subStarted = [bool]((Read-NewLines $accessTail $irisAccessLogs) -match 'Temp location set to .*\\Subtitles\\')
