@@ -53,7 +53,13 @@ $CaptionPullSec = 5       # Iris's caption step still running this long,
 $CaptionPullMinGB = 0.25  # and rclone downloaded at least this much for it meanwhile: pull the whole file
 $CaptionPullMB = 64       # in pieces this big, $CaptionPullWorkers at once (that many x MB of buffers in rclone)
 $CaptionPullWorkers = 16
+$PullFrontMB = 16         # whole-file pulls use smaller pieces for the first $PullFrontGB, where Iris is reading as the
+$PullFrontGB = 2          # pull starts: its reads wait at most on a 16 MB piece, not a 64 MB one (ESC answers sooner)
 $CaptionPullFreeGB = 20   # and only with the file's size plus this much free on the cache disk
+$PullDuringOpen = $true   # gentle whole-file pull from the main file's warm until Iris's open ends: a head start for a
+$PullEarlyWorkers = 2     # caption or Dolby pull (which takes it over); this many pieces at once leaves Iris's open reads
+                          # room (8 slowed the open). Every pull stops when the open or caption step ends: pulling while
+                          # playing gave small skips (even 1 x 16 MB), and playback doesn't need it
 $irisAccessLogs = 'C:\Users\*\AppData\Roaming\Graymeta\Iris QC Anywhere\Log\access_*.log'
 $irisAppLogs = 'C:\Users\Public\Documents\GrayMeta\Iris Anywhere\log\app-*.log'
 $PlayBuffer = 64MB   # --buffer-size for playback
@@ -155,15 +161,18 @@ public class RcloneWarm {
     // takes the next piece in file order as soon as it finishes one, so the pulled part grows steadily from the
     // front and Iris reads right behind it. Cancel aborts the call (rclone then stops between pieces). Through
     // the mount (no rc), batch pieces at a time, checking Cancel between batches.
+    // The first FrontBytes go in FrontMB pieces: Iris is reading there when a pull starts, and a read inside a
+    // piece still downloading waits for that piece.
     public volatile bool Cancel;
+    public static int FrontMB = 0; public static long FrontBytes = 0;
     public static RcloneWarm StartFull(string path, int chunkMB, int workers, int batch, string rcUrl = null, string rcFs = null, string rcPath = null) {
         var w = new RcloneWarm(); w.Id = Interlocked.Increment(ref ids); w.Path = path; w.rcUrl = rcUrl; w.rcFs = rcFs; w.rcPath = rcPath;
         w.Work = Task.Run(() => {
             try {
-                long len = new FileInfo(path).Length, chunk = chunkMB * 1048576L;
+                long len = new FileInfo(path).Length, chunk = chunkMB * 1048576L, small = FrontMB > 0 ? Math.Min(chunk, FrontMB * 1048576L) : chunk;
                 var offs = new List<long>(); var lens = new List<int>();
-                for (long o = 0; o < len; o += chunk) { offs.Add(o); lens.Add((int)Math.Min(chunk, len - o)); }
-                w.What = string.Format("whole file, {0} x {1} MB", offs.Count, chunkMB);
+                for (long o = 0; o < len; ) { long c = o < FrontBytes ? small : chunk; offs.Add(o); lens.Add((int)Math.Min(c, len - o)); o += c; }
+                w.What = string.Format("whole file, {0} pieces of {1}-{2} MB", offs.Count, small / 1048576, chunkMB);
                 if (w.rcUrl != null) {
                     try { w.PrefetchRolling(offs.ToArray(), lens.ToArray(), workers); w.What += " via rc"; }
                     catch (Exception e) {
@@ -394,6 +403,7 @@ public class RcloneWarm {
     }
 }
 '@
+[RcloneWarm]::FrontMB = $PullFrontMB; [RcloneWarm]::FrontBytes = [long]($PullFrontGB * 1GB)
 
 function Get-Meta {
     if (-not (Test-Path $metaRoot)) { return @() }
@@ -520,6 +530,19 @@ function Start-Warm($path, $stage) {
     if ($held) { $warmOf[$p.Id] = $bucket }
     $warmPath[$p.Id] = $path
     $p
+}
+
+# The gentle whole-file pull of the main file during its open ($PullDuringOpen), $workers pieces at once
+function Start-MainPull($why, $workers) {
+    $m = $script:main
+    if ((Get-PSDrive D -ErrorAction SilentlyContinue).Free -lt $m.Size + $CaptionPullFreeGB * 1GB) { Log "$($m.Leaf) $why; not pulling it (not enough free on D:)"; return }
+    if (-not $m.RcUrl) { $m.RcUrl = Get-RcUrl $m.Bucket }
+    Log ("{0} {1}: pulling the whole file ({2:N2} GB, {3} at once)" -f $m.Leaf, $why, ($m.Size / 1GB), $workers)
+    Log-Detail "warm start:  $($m.Path)"
+    $rel = $m.Path.Substring($mountRoot.Length + $m.Bucket.Length + 2).Replace('\', '/')
+    $m.Pull = [RcloneWarm]::StartFull($m.Path, $CaptionPullMB, $workers, $workers, $m.RcUrl, (Get-RcFs $m.Bucket), $rel); $m.PullEarly = $false
+    $script:warmPath[$m.Pull.Id] = $m.Path
+    $script:running += $m.Pull
 }
 
 # Files already cached when the watcher starts are not warmed again
@@ -704,7 +727,7 @@ while ($true) {
                     $dovi = @{ Path = $p; Pull = $null }
                     if ($f) {
                         $b = $p.Substring($mountRoot.Length + 1).Split('\')[0]
-                        if ($main -and $main.Path -eq $p -and $main.Pull -and -not $main.Pull.HasExited) { $dovi.Pull = $main.Pull }
+                        if ($main -and $main.Path -eq $p -and $main.Pull -and -not $main.Pull.HasExited -and -not $main.PullEarly) { $dovi.Pull = $main.Pull }
                         elseif ((Get-PSDrive D -ErrorAction SilentlyContinue).Free -lt $f.Length + $CaptionPullFreeGB * 1GB) { Log "Dolby Vision step on $($f.Name); not pulling it (not enough free on D:)" }
                         else {
                             Log ("Dolby Vision step on {0}: pulling the whole file ({1:N2} GB)" -f $f.Name, ($f.Length / 1GB))
@@ -713,7 +736,10 @@ while ($true) {
                             $dovi.Pull = [RcloneWarm]::StartFull($p, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, (Get-RcUrl $b), (Get-RcFs $b), $rel)
                             $warmPath[$dovi.Pull.Id] = $p
                             $running += $dovi.Pull
-                            if ($main -and $main.Path -eq $p) { $main.Pull = $dovi.Pull }
+                            if ($main -and $main.Path -eq $p) {
+                                if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true }   # the gentle pull, replaced
+                                $main.Pull = $dovi.Pull; $main.PullEarly = $false; $main.EarlyPaused = $false
+                            }
                         }
                     }
                 }
@@ -738,22 +764,31 @@ while ($true) {
             if ($main) {
                 if ($subStarted) {
                     if (-not $main.RcUrl) { $main.RcUrl = Get-RcUrl $main.Bucket }
+                    if ($main.PullEarly -and $main.Pull -and -not $main.Pull.HasExited) {
+                        $main.Pull.Cancel = $true; $main.EarlyPaused = $true   # resumed after the check unless a full pull starts
+                        Log-Detail "pausing the gentle pull of $($main.Leaf) for its caption step"
+                    }
                     $main.SubAt = $now; $main.SubBytes = Get-CacheBytes $main.RcUrl; $main.Decided = $false
                     Log-Detail "caption step started for $($main.Leaf)"
                 }
                 # Iris logs Asset_Package_Opened when a caption step ends, finished or cancelled (ESC), and at the end
-                # of an open; either way the step is over
+                # of an open; either way the step is over and any pull stops, so playback has D: and the network
+                # (a caption pull still running after ESC gave audio and video errors)
                 if ((Read-NewLines $appTail $irisAppLogs) -match ('Asset_Package_Opened.*' + [regex]::Escape($main.Leaf))) {
                     $main.Done = $true; $main.Decided = $true
                     Log-Detail "Iris finished opening $($main.Leaf) (or its caption step ended)"
-                    if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (caption step ended)" }
+                    if ($main.Pull -and -not $main.Pull.HasExited -and -not $main.Pull.Cancel) { $main.Pull.Cancel = $true; Log "stopping the whole-file pull of $($main.Leaf) (open or caption step ended)" }
+                    $main.EarlyPaused = $false
                 }
                 if ($main.SubAt -and -not $main.Decided -and ($now - $main.SubAt).TotalSeconds -ge $CaptionPullSec) {
                     $main.Decided = $true
                     $nowBytes = Get-CacheBytes $main.RcUrl; $read = $nowBytes - $main.SubBytes
                     $free = (Get-PSDrive D -ErrorAction SilentlyContinue).Free
-                    if ($main.Pull -and -not $main.Pull.HasExited) { }   # already pulling
-                    elseif ($main.SubBytes -lt 0 -or $nowBytes -lt 0 -or $read -lt $CaptionPullMinGB * 1GB) {
+                    $full = $false
+                    if ($main.Pull -and -not $main.Pull.HasExited -and -not $main.PullEarly) { $full = $true }   # already pulling in full
+                    # a gentle pull already pulled the front of the file, so Iris's scan hits the cache and downloads
+                    # little: a step still running is reason enough, the file was being pulled anyway
+                    elseif (-not $main.EarlyPaused -and ($main.SubBytes -lt 0 -or $nowBytes -lt 0 -or $read -lt $CaptionPullMinGB * 1GB)) {
                         Log-Detail ("caption step of {0} after {1} s: {2:N2} GB downloaded, not a whole-file read; no pull" -f $main.Leaf, $CaptionPullSec, ($read / 1GB))
                     } elseif ($free -lt $main.Size + $CaptionPullFreeGB * 1GB) {
                         Log ("caption step of {0} reading the whole file; not pulling it ({1:N0} GB free on D:)" -f $main.Leaf, ($free / 1GB))
@@ -761,9 +796,15 @@ while ($true) {
                         Log ("caption step of {0} reading the whole file ({1:N1} GB in {2} s): pulling the whole file ({3:N2} GB)" -f $main.Leaf, ($read / 1GB), $CaptionPullSec, ($main.Size / 1GB))
                         Log-Detail "warm start:  $($main.Path)"
                         $rel = $main.Path.Substring($mountRoot.Length + $main.Bucket.Length + 2).Replace('\', '/')
+                        if ($main.Pull -and -not $main.Pull.HasExited) { $main.Pull.Cancel = $true }
                         $main.Pull = [RcloneWarm]::StartFull($main.Path, $CaptionPullMB, $CaptionPullWorkers, $CaptionPullWorkers, $main.RcUrl, (Get-RcFs $main.Bucket), $rel)
+                        $main.PullEarly = $false; $main.EarlyPaused = $false; $full = $true
                         $warmPath[$main.Pull.Id] = $main.Path
                         $running += $main.Pull
+                    }
+                    if (-not $full -and $main.EarlyPaused) {
+                        $main.EarlyPaused = $false
+                        if (-not $main.Done) { Start-MainPull 'warmed' $PullEarlyWorkers; $main.PullEarly = $true }
                     }
                 }
             }
@@ -779,6 +820,8 @@ while ($true) {
             }
             if ($warmOf.ContainsKey($p.Id)) { Release-Buffer $warmOf[$p.Id]; $warmOf.Remove($p.Id) }
             $warmPath.Remove($p.Id)
+            if ($PullDuringOpen -and $main -and -not $main.Done -and $p.Path -eq $main.Path -and -not $p.What.StartsWith('whole file') -and
+                -not $main.Pull -and $main.Size -ge $MinSizeGB * 1GB) { Start-MainPull 'warmed' $PullEarlyWorkers; $main.PullEarly = $true }
         }
         $running = @($running | Where-Object { -not $_.HasExited })
         while ($queue.Count -gt 0 -and $running.Count -lt $MaxWarms) {
