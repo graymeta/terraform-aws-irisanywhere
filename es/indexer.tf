@@ -14,9 +14,9 @@ locals {
 
     $buckets = @(
     ${join("\n", [
-      for bucket in sort(tolist(local.current_region_buckets)) :
-      "    '${bucket}'"
-    ])}
+  for bucket in sort(tolist(local.current_region_buckets)) :
+  "    '${bucket}'"
+])}
     )
 
     $region    = "${data.aws_region.current.region}"
@@ -42,7 +42,7 @@ locals {
         Write-Host "Indexing bucket: $bucket"
 
         & $indexer `
-            --region $region `
+          --region $region `
             --bucket $bucket `
             --domain $domain `
             --osRoleArn $osRoleArn

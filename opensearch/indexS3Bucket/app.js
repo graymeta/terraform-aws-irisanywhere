@@ -6,7 +6,7 @@
  * the copyright owners is prohibited.
  *
  * Copyright (C) 2021 GrayMeta, Inc. All rights reserved.
- * Original Author: Scott Sharp
+ * Author: Graymeta Development Team
  *
  **************************/
 
@@ -27,13 +27,15 @@ const folderMap = new Map();
 var awsProfile = 'default';
 var credentialsDurationSecs = 10800;
 
-var numberFileObjectsUpdated = 0;
-var numberFileObjectsUpdateFailed = 0;
+var numberFileObjectsIndexed = 0;
+var numberFileObjectsIndexFailed = 0;
+var indexFailureMessages = [];
 
 const main = async () => {
 
   if (args['region'] != null) {
     process.env.AWS_REGION = args['region'];
+    AWS.config.update({ region: args['region'] });
   } else {
     throw '\'--region\' parameter is required!';
   }
@@ -76,17 +78,41 @@ const main = async () => {
         sessionToken: data.Credentials.SessionToken
       });
     } catch (err) {
-      console.log('Cannot assume role');
-      console.log(err, err.stack);
+      throw new Error(`Could not assume the AWS role: ${err.message || err}`);
     }
    })();
 
-  const s3Client = new AWS.S3( {credentials: AWS.config.credentials } );
+  let s3Client = new AWS.S3({ credentials: AWS.config.credentials, region: process.env.AWS_REGION });
 
   console.log("\nSyncing Bucket:" + process.env.bucket + "\n\nOpenSearch Domain Endpoint:" + process.env.domain + "\n\nRegion:" + process.env.AWS_REGION);
 
   //Runtime timer begin
   console.time('indexS3Bucket');
+
+  let bucketRegion = process.env.AWS_REGION;
+  let bucketValidated = false;
+  try {
+    const bucketResponse = await s3Client.headBucket({ Bucket: process.env.bucket }).promise();
+    bucketValidated = true;
+    bucketRegion = getS3BucketRegion(bucketResponse) || bucketRegion;
+  } catch (error) {
+    bucketRegion = getS3BucketRegion(error);
+    if (!bucketRegion) {
+      throw new Error(formatS3Error(error));
+    }
+  }
+
+  if (bucketRegion !== process.env.AWS_REGION) {
+    console.log(`S3 bucket region: ${bucketRegion}; OpenSearch region: ${process.env.AWS_REGION}`);
+    s3Client = new AWS.S3({ credentials: AWS.config.credentials, region: bucketRegion });
+  }
+  if (!bucketValidated) {
+    try {
+      await s3Client.headBucket({ Bucket: process.env.bucket }).promise();
+    } catch (error) {
+      throw new Error(formatS3Error(error));
+    }
+  }
 
   // Prefixes are used to fetch data in parallel.
   const numbers = '0123456789'.split('');
@@ -100,10 +126,14 @@ const main = async () => {
   });
 
   // delete bucket index if exists
+  let indexDeleted;
   try {
-    await openSearchClient('DELETE', process.env.bucket, '');
+    indexDeleted = await openSearchClient('DELETE', process.env.bucket, '', { notFoundIsExpected: true });
   } catch (error) {
-    console.log("DELETE bucket index ERROR: " +error)
+    throw new Error(formatOpenSearchError('connect to', error));
+  }
+  if (!indexDeleted) {
+    console.log(`Index ${process.env.bucket} does not yet exist, we will create it now`);
   }
 
   // Take a breath after a deleting the index
@@ -113,21 +143,45 @@ const main = async () => {
   try {
     await openSearchClient('PUT', process.env.bucket, JSON.stringify(indexCreationJson));
   } catch (error) {
-    console.log("DELETE bucket index ERROR: " +error)
+    throw new Error(formatOpenSearchError('create the index in', error));
   }
 
   await new Promise(r => setTimeout(r, 1000));
 
-  try {
-      await Promise.all(arrayOfParams.map(params => getAllKeys(params, s3Client)));
-  } catch (error) {
-      console.log("Promise was rejected within getAllKeys method: "+error);
+  const progressInterval = setInterval(() => {
+    const progress = `File Objects Indexed: ${numberFileObjectsIndexed}`;
+    console.log(numberFileObjectsIndexFailed > 0
+      ? `${progress} Failed: ${numberFileObjectsIndexFailed}`
+      : progress);
+  }, 5000);
+
+  const scanResults = await Promise.allSettled(
+    arrayOfParams.map(params => getAllKeys(params, s3Client))
+  );
+  clearInterval(progressInterval);
+  const failedScans = scanResults.filter(result => result.status === 'rejected');
+
+  scanResults.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error(`Failed to scan S3 prefix ${prefixes[index]}: ${formatS3Error(result.reason)}`);
+    }
+  });
+
+  if (indexFailureMessages.length > 0) {
+    console.error(indexFailureMessages.join('\n'));
   }
-  
+  if (failedScans.length > 0) {
+    console.error(`Failed S3 prefix scans: ${failedScans.length}`);
+  }
+
+  const indexSummary = `Total File Objects Indexed: ${numberFileObjectsIndexed}`;
+  console.log(numberFileObjectsIndexFailed > 0
+    ? `${indexSummary} Failed: ${numberFileObjectsIndexFailed}`
+    : indexSummary);
 
   console.timeEnd('indexS3Bucket')
 
-  return 0;
+  return failedScans.length > 0 ? 1 : 0;
 };
 
 /*
@@ -141,10 +195,9 @@ Of course, the only way to upload such an object with the console is to "create"
 */
 
 async function getAllKeys(params, s3Client) {
-
   var fileObjects = [];
   const response = await s3Client.listObjectsV2(params).promise();
-  response.Contents.forEach(async function(obj) {
+  (response.Contents || []).forEach(function(obj) {
     if (!obj.Key.endsWith('/')) {
       var folderName = obj.Key.substring(0,obj.Key.lastIndexOf("/")+1);
       fileObjects.push(
@@ -165,7 +218,7 @@ async function getAllKeys(params, s3Client) {
       var pathComponents = folderName.split('/');
       if (pathComponents.length > 1) {
         var syntheticPath = "";
-        pathComponents.forEach(async function(pathComponent) {
+        pathComponents.forEach(function(pathComponent) {
           if (pathComponent != "") {
             syntheticPath += pathComponent + "/";
             if (!folderMap.has(syntheticPath)) {
@@ -189,16 +242,23 @@ async function getAllKeys(params, s3Client) {
   });
 
 
-  var bulkUpdateResponse = indexBucketMetadata(fileObjects, process.env.bucket);
+  if (fileObjects.length > 0) {
+    let indexResult;
+    try {
+      indexResult = await indexBucketMetadata(fileObjects);
+    } catch (error) {
+      numberFileObjectsIndexFailed += fileObjects.length;
+      const objectKeys = fileObjects.map(obj => JSON.stringify(obj.s3key)).join(', ');
+      indexFailureMessages.push(`Could not confirm indexing for ${fileObjects.length} file objects (${objectKeys}): ${error.message || error}`);
+      indexResult = null;
+    }
 
-  if (bulkUpdateResponse) {
-    numberFileObjectsUpdated += fileObjects.length;
-  } else {
-    numberFileObjectsUpdateFailed += fileObjects.length;
+    if (indexResult) {
+      numberFileObjectsIndexed += indexResult.indexed;
+      numberFileObjectsIndexFailed += indexResult.failures.length;
+      indexFailureMessages.push(...indexResult.failures);
+    }
   }
-
-  console.log("Total File Objects Updated:" + numberFileObjectsUpdated + " Failed:"  + numberFileObjectsUpdateFailed);
-  console.timeLog("indexS3Bucket");
 
   if (response.NextContinuationToken) {
     params.ContinuationToken = response.NextContinuationToken;
@@ -208,18 +268,33 @@ async function getAllKeys(params, s3Client) {
 
 // Load file data, save to OpenSearch Domain Instance
 const indexBucketMetadata = async (payload) => {
-
   if (payload.length > 0) {
     var bulkRequestBody = '';
-    payload.forEach(async function(obj) {
+    payload.forEach(function(obj) {
       bulkRequestBody += '{"index":{"_index":"' + process.env.bucket + '"}}\n';
       bulkRequestBody += JSON.stringify(obj) + '\n';
     });
-    return await openSearchClient('PUT', '_bulk', bulkRequestBody, payload.length);
-  }
-}
 
-const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) => {
+    const bulkResponse = await openSearchClient('PUT', '_bulk', bulkRequestBody, { parseJsonResponse: true });
+    if (!Array.isArray(bulkResponse.items) || bulkResponse.items.length !== payload.length) {
+      throw new Error(`Expected ${payload.length} bulk item results`);
+    }
+
+    const failures = [];
+    bulkResponse.items.forEach((item, index) => {
+      const result = item && item.index;
+      if (!result || result.error || !Number.isInteger(result.status) || result.status < 200 || result.status >= 300) {
+        const status = result && Number.isInteger(result.status) ? `HTTP ${result.status}` : 'status unavailable';
+        const details = result && result.error ? JSON.stringify(result.error) : 'No successful item result returned';
+        failures.push(`Failed to index S3 object ${JSON.stringify(payload[index].s3key)} (${status}): ${details}`);
+      }
+    });
+
+    return { indexed: payload.length - failures.length, failures };
+  }
+};
+
+const openSearchClient = async (httpMethod, path, requestBody, options = {}) => {
   return new Promise((resolve, reject) => {
     const endpoint = new AWS.Endpoint(process.env.domain)
     let request = new AWS.HttpRequest(endpoint, process.env.AWS_REGION)
@@ -243,17 +318,66 @@ const openSearchClient = async (httpMethod, path, requestBody, fileObjectCount) 
         responseBody += chunk;
       });
       response.on('end', function (chunk) {
+        if (response.statusCode === 404 && options.notFoundIsExpected) {
+          resolve(false);
+          return;
+        }
         if (response.statusCode != 200) {
-          console.log('Response body: ' + responseBody);
-          reject(false);
+          const error = new Error(`OpenSearch request failed with HTTP ${response.statusCode}: ${responseBody}`);
+          reject(error);
+          return;
+        }
+        if (options.parseJsonResponse) {
+          try {
+            resolve(JSON.parse(responseBody));
+          } catch (error) {
+            reject(new Error(`Invalid OpenSearch bulk response: ${error.message}`));
+          }
+          return;
         }
         resolve(true)
       });
     }, function(error) {
-      console.log('Error: ' + error)
-      reject(false)
+      reject(error);
     })
   })
 }
 
-main().catch(error => console.error(error))
+function formatS3Error(error) {
+  const errorCode = error && (error.code || error.name);
+  if (errorCode === 'NoSuchBucket' || errorCode === 'InvalidBucketName' || errorCode === 'NotFound' || (error && error.statusCode === 404)) {
+    return `S3 bucket "${process.env.bucket}" was not found or is inaccessible. Check the bucket name and AWS permissions.`;
+  }
+  if (errorCode === 'PermanentRedirect' || (error && error.statusCode === 301)) {
+    return `Could not reach S3 bucket "${process.env.bucket}" in its reported region. Check the bucket name, AWS permissions, and network access.`;
+  }
+  if (errorCode === 'AccessDenied' || errorCode === 'Forbidden' || (error && error.statusCode === 403)) {
+    return `Access denied while reading S3 bucket "${process.env.bucket}". Check the AWS role permissions.`;
+  }
+  return `S3 request failed: ${(error && error.message) || error}`;
+}
+
+function getS3BucketRegion(response) {
+  if (response && response.region) {
+    return response.region;
+  }
+  const headers = response && response.$response && response.$response.httpResponse && response.$response.httpResponse.headers;
+  return headers && (headers['x-amz-bucket-region'] || headers['X-Amz-Bucket-Region']);
+}
+
+function formatOpenSearchError(action, error) {
+  const details = (error && error.message) || String(error);
+  if ((error && (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN')) || /getaddrinfo ENOTFOUND|EAI_AGAIN/i.test(details)) {
+    return `Could not resolve the OpenSearch domain "${process.env.domain}". Check the --domain value and DNS/network access.`;
+  }
+  return `Could not ${action} OpenSearch domain "${process.env.domain}": ${details}`;
+}
+
+main().then(exitCode => {
+  if (exitCode !== 0) {
+    process.exitCode = exitCode;
+  }
+}).catch(error => {
+  console.error(error.message || error);
+  process.exitCode = 1;
+})
