@@ -7,6 +7,8 @@ This module deploys the search domain used by Iris Anywhere. The Terraform direc
 * Terraform 1.8.x or compatible.
 * Two or more subnets when using the default zone-aware HA configuration.
 * Secrets Manager entries ready to store the OpenSearch connection details used by Iris Anywhere.
+* An `s3_enterprise` secret field containing a JSON-encoded string with a `buckets` array (see Bucket Indexing Workflow).
+* An SSM-managed Windows Iris Admin instance with `C:\ProgramData\GrayMeta\functions\s3-index.exe` installed and credentials able to assume the indexing role.
 * `search_enabled = true` in the Iris Anywhere ASG deployment when you want the application tier to use this search domain.
 
 ## Example Usage
@@ -24,7 +26,7 @@ module "ia_search" {
   instance_type                   = "t2.small.elasticsearch"
   subnet_id                       = ["subnet-foo1", "subnet-foo2"]
   ia_secret_arn                   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-anywhere"
-  bucketlist                      = "media-bucket-1,media-bucket-2"
+  admin_instance_id               = "i-0123456789abcdef0"
   arn_of_indexresource            = "arn:aws:iam::123456789012:role/indexer-role"
   custom_endpoint                 = "search.example.com"
   custom_endpoint_certificate_arn = "arn:aws:acm:us-west-2:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -35,21 +37,22 @@ module "ia_search" {
 
 Use this module only when the customer deployment requires search integration.
 
-Required for a first successful apply:
+Required inputs for a first successful apply:
 
-* `domain`
 * `subnet_id`
 * `ia_secret_arn`
-* `bucketlist`
 * `arn_of_indexresource`
+* `admin_instance_id`
 
 Usually optional on the first apply:
 
+* `domain`
 * `instance_type`
 * `instance_count`
 * `allowed_cidr_blocks`
 * `advanced_options`
 * `security_groups`
+* `manage_bucket_notifications`
 
 Required only for specific deployment modes:
 
@@ -61,7 +64,7 @@ Required only for specific deployment modes:
 
 * `domain` optional, default `irisanywhere-es`. Search domain name.
 * `instance_type` optional, default `t2.small.elasticsearch`. Search node instance type.
-* `es_version` optional, default `OpenSearch_1.0`. Engine version.
+* `es_version` optional, default `OpenSearch_3.5`. Engine version.
 * `tag_domain` optional, default `var.domain`. Tag value used by the module.
 * `volume_type` optional, default `gp3`. EBS volume type.
 * `ebs_volume_size` optional, default `10`. EBS volume size in GiB.
@@ -84,8 +87,15 @@ Required only for specific deployment modes:
 * `security_groups` optional, default `[]`. Additional security groups allowed to connect.
 * `allowed_cidr_blocks` optional, default `["0.0.0.0/0"]`. Allowed CIDR blocks.
 * `ia_secret_arn` required. Secrets Manager ARN used by the indexing Lambda and integration flow.
-* `bucketlist` required. Comma-separated bucket list used by the indexing workflow.
+* `manage_bucket_notifications` optional, default `false`. Creates S3 notifications and Lambda invocation permissions for enabled enterprise buckets in the provider's active region. Enabling this gives Terraform ownership of each bucket's notification configuration; coordinate with any existing notification management before enabling it.
 * `arn_of_indexresource` required. ARN of the trusted indexing role or resource.
+* `admin_instance_id` required. Iris Admin EC2 instance ID targeted by the SSM association for initial S3 indexing.
+
+## Removed Input: bucketlist
+
+`bucketlist` is no longer accepted by this module. Remove it from module calls to avoid an `Unsupported argument` error. Bucket selection now comes from the `s3_enterprise` field in the secret referenced by `ia_secret_arn`, as described below.
+
+Terraform input variables have no native `deprecated` attribute. For a backward-compatible deprecation period, retain the old variable with its existing type, make it optional with a suitable default, and mark its description and documentation as deprecated with migration instructions. Explicitly document whether it is ignored or still used as a fallback. Remove it only in a breaking release. A variable validation that rejects the old input is a breaking change, not a deprecation warning.
 
 ## Outputs
 
@@ -112,8 +122,16 @@ Then redeploy or update the Iris Anywhere ASG with `search_enabled = true` and `
 
 ## Bucket Indexing Workflow
 
-The repository also contains helper content for indexing S3 buckets into the search domain. To use that workflow:
+The module reads bucket configuration from the Iris Anywhere secret. The `s3_enterprise` field must be a JSON-encoded string, not a nested JSON object. For example, the secret contains this field alongside its other settings:
 
-* Install the indexing utility on the Iris Admin server.
-* Configure AWS credentials with access to the target bucket and search domain.
-* Run the indexing command with the correct region, bucket, and domain values.
+```json
+{
+  "s3_enterprise": "{\"buckets\":[{\"name\":\"media-bucket-1\",\"enabled\":true,\"region\":\"us-west-2\"},{\"name\":\"media-bucket-2\",\"enabled\":true}]}"
+}
+```
+
+Only buckets with `enabled = true` in the provider's active region are selected. If `enabled` is omitted, the bucket is excluded. If `region` is omitted, it defaults to the provider's active region.
+
+An SSM association runs initial indexing on `admin_instance_id` using `C:\ProgramData\GrayMeta\functions\s3-index.exe` and the module's indexing role. Terraform waits up to 3600 seconds for the association to succeed. Ensure the instance is managed by SSM, the utility is installed, and its credentials can assume the indexing role and access the selected buckets and search domain.
+
+Set `manage_bucket_notifications = true` to let this module configure ongoing S3 object-created and object-removed notifications to the indexing Lambda. The default is `false`; initial indexing still runs, but ongoing notifications must be managed separately.

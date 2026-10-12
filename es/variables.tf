@@ -20,12 +20,12 @@ variable "tag_domain" {
   type    = string
   default = "var.domain"
 }
+
 variable "volume_type" {
   type        = string
   default     = "gp3"
   description = "Storage type of EBS volumes"
 }
-
 
 variable "ebs_volume_size" {
   type        = number
