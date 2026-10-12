@@ -1,6 +1,6 @@
 # Deploying GrayMeta Iris Admin with Terraform
 
-This module deploys GrayMeta Iris Admin into AWS. It supports a standalone deployment and an enterprise HA deployment that adds a load balancer. By default Iris Admin installs PostgreSQL locally on the instance. To use an RDS PostgreSQL database instead, create it with the `rds` module, in its own Terraform state so destroying Iris Admin never affects it, and pass its hostname as `db_endpoint`.
+This module deploys GrayMeta Iris Admin into AWS. It supports a standalone deployment and an enterprise HA deployment that adds a load balancer. By default Iris Admin installs PostgreSQL locally on the instance. This module no longer creates or manages the RDS database. To use RDS with enterprise HA, manage the database with the [rds module](../rds/variables.tf) in its own Terraform state, and pass its hostname as `db_endpoint`. Destroying Iris Admin does not destroy that database; the Admin-managed PostgreSQL access rule is removed.
 
 Note: IAM resources are account-scoped, not regional. If you reuse the same role or policy names across regional deployments, manage them from one Terraform state or use region-specific names so one region does not delete resources another region still needs.
 
@@ -137,7 +137,27 @@ HA database input:
 
 * `db_endpoint` optional, default `""`. Applies when `enterprise_ha = true`. Hostname of an RDS PostgreSQL instance, without the port (the `address` output of the `rds` module). The module looks up the instance and adds a rule to its security group allowing PostgreSQL from the Iris Admin instances; destroying Iris Admin removes only that rule. Leave empty to install PostgreSQL locally on the Iris Admin instance. As an upgrade safeguard, the plan fails if `db_endpoint` is empty but an RDS instance named like one created by earlier versions of this module (`hostname_prefix`, plus `-deployment_name` when set) exists.
 
-Deprecated inputs, accepted but ignored (the database is managed by the `rds` module): `create_rds`, `apply_immediately`, `allocated_storage`, `db_backup_retention`, `db_backup_window`, `db_instance_size`, `db_kms_key_id`, `db_multi_az`, `db_snapshot`, `db_storage_encrypted`, `db_version`.
+## Deprecated Database Inputs
+
+The following inputs are retained in `/admin` for backward compatibility. They are optional, default to `null`, and are ignored regardless of the supplied value. Existing module calls can still pass them, but changing them does not create, upgrade, resize, restore, or otherwise configure a database. Remove them from Admin module calls and configure the separate `/rds` module instead.
+
+| Deprecated Admin input | Type | Replacement in the RDS module |
+| --- | --- | --- |
+| `create_rds` | `bool` | No replacement flag. Declare a separate RDS module to manage a database. |
+| `apply_immediately` | `bool` | `apply_immediately` |
+| `allocated_storage` | `number` | `allocated_storage` |
+| `db_backup_retention` | `number` | `db_backup_retention` |
+| `db_backup_window` | `string` | `db_backup_window` |
+| `db_instance_size` | `string` | `db_instance_size` |
+| `db_kms_key_id` | `string` | `db_kms_key_id` |
+| `db_multi_az` | `bool` | `db_multi_az` |
+| `db_snapshot` | `string` | `snapshot_identifier` (for restoring a snapshot when creating a database) |
+| `db_storage_encrypted` | `bool` | `db_storage_encrypted` |
+| `db_version` | `string` | `db_version` |
+
+For example, set `db_version` on the RDS module to manage the PostgreSQL engine version, not on the Admin module. The RDS module requires an explicit `db_version`; when importing an existing database, match its current engine version rather than introducing an upgrade during the state migration.
+
+`db_endpoint` is not deprecated. It remains the connection input for enterprise HA and should be set to the RDS module's `address` output (without a port). Database settings are not automatically transferred from the Admin module to the RDS module.
 
 ## Outputs
 
@@ -156,10 +176,10 @@ Earlier versions of this module created the RDS database. This version stops man
 2. Record the database hostname from your current state:
    `terraform state show 'module.<name>.aws_db_instance.default[0]' | grep -E '^\s+address'`
 3. Update `source` to this version and set `db_endpoint` to that hostname.
-4. Run `terraform plan`. Every `aws_db_instance`, `aws_db_subnet_group`, and `aws_security_group.rds` entry must say "will no longer be managed by Terraform, but will not be destroyed". If any says "will be destroyed" or "must be replaced", stop.
+4. Run `terraform plan`. The legacy resources `aws_db_instance.default`, `aws_db_subnet_group.default`, `aws_security_group.rds`, and `aws_vpc_security_group_ingress_rule.rds_postgresql`, if present in the Admin state, must say "will no longer be managed by Terraform, but will not be destroyed". If any says "will be destroyed" or "must be replaced", stop.
 5. Run `terraform apply`.
 
-To manage the database with Terraform again, import it into a separate root module that uses the `rds` module, and check that its first plan replaces nothing.
+To manage the database with Terraform again, import it and its supporting resources into a separate root module that uses the `rds` module after the Admin state has relinquished ownership. Carry over the existing database settings using the replacement inputs above, and check that the first RDS plan neither destroys nor replaces existing resources. Do not manage the same resources in both states. Remove the deprecated inputs from the Admin module call; keep `db_endpoint` set to the existing database hostname.
 
 ## Licensing
 
