@@ -91,7 +91,7 @@ data "aws_network_interface" "nlb_eni_details" {
 resource "aws_route53_record" "nlb_internal" {
   count   = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
   zone_id = aws_route53_zone.private.0.zone_id
-  name    = "nlb.${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
+  name    = "nlb.${var.hostname_prefix}-${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
   type    = "A"
   ttl     = 60
   records = [for eni in data.aws_network_interface.nlb_eni_details : eni.private_ip]
