@@ -90,8 +90,14 @@ variable "base_ami" {
 
 variable "disk_data_iops" {
   type        = number
-  description = "(Optional) The amount of provisioned for IOPS in EBS. This must be set with a volume_type of io1/io2."
+  description = "(Optional) The amount of provisioned IOPS in EBS. Used with a volume_type of io1/io2/gp3 (gp3: 3000-80000)."
   default     = 3000
+}
+
+variable "disk_data_throughput" {
+  type        = number
+  description = "(Optional) gp3 throughput in MB/s (125-2000, at most disk_data_iops / 4). Ignored for other volume types. Without it gp3 runs at 125 MB/s."
+  default     = 750
 }
 
 variable "disk_data_size" {

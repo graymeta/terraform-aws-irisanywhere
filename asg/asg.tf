@@ -134,6 +134,7 @@ resource "aws_launch_template" "iris" {
       volume_type           = var.disk_data_type
       volume_size           = var.disk_data_size
       iops                  = var.disk_data_iops
+      throughput            = var.disk_data_type == "gp3" ? var.disk_data_throughput : null
       encrypted             = true
       delete_on_termination = true
     }
