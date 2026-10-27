@@ -107,6 +107,7 @@ Core inputs:
 * `asg_size_min` optional, default `1`. Minimum ASG size.
 * `base_ami` optional, default `""`. Override AMI ID for the application instances.
 * `disk_data_iops` optional, default `3000`. Provisioned IOPS for the data volume when supported.
+* `gp3_throughput` optional, default `750`. gp3 data volume throughput in MB/s (125-2000, at most `disk_data_iops` / 4). Ignored for other volume types. 125 is free; each MB/s above it is billed.
 * `disk_data_size` optional, default `300`. Data EBS volume size in GiB.
 * `disk_data_type` optional, default `io2`. Data EBS volume type.
 * `disk_os_size` optional, default `60`. Root EBS volume size in GiB.
