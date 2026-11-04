@@ -37,10 +37,6 @@ resource "aws_instance" "iris_adm" {
     volume_size           = var.volume_size
     delete_on_termination = "true"
   }
-
-  depends_on = [
-    aws_db_instance.default
-  ]
 }
 
 resource "aws_ssm_association" "iris_admin_install" {
@@ -55,7 +51,7 @@ resource "aws_ssm_association" "iris_admin_install" {
     commands = templatefile("${path.module}/cloud_init.ps1", {
       ia_secret_arn      = var.ia_secret_arn
       enterprise_ha      = var.enterprise_ha
-      dbserver           = var.enterprise_ha && var.create_rds ? element(split(":", aws_db_instance.default[0].endpoint), 0) : ""
+      dbserver           = local.dbserver
       https_console_port = var.https_console_port
       http_console_port  = var.http_console_port
       iris_admin_ver     = var.iris_admin_ver
@@ -65,6 +61,18 @@ resource "aws_ssm_association" "iris_admin_install" {
   targets {
     key    = "InstanceIds"
     values = aws_instance.iris_adm[*].id
+  }
+
+  lifecycle {
+    precondition {
+      condition     = !var.enterprise_ha || trimspace(var.db_endpoint) != ""
+      error_message = "db_endpoint must be set to the RDS hostname when enterprise_ha = true. For a local PostgreSQL installation, set enterprise_ha = false."
+    }
+
+    precondition {
+      condition     = length(try(data.aws_db_instances.legacy[0].instance_identifiers, [])) == 0
+      error_message = "RDS instance '${local.legacy_db_identifier}' exists but db_endpoint is empty, so Iris Admin would switch to a local PostgreSQL. Set db_endpoint to that instance's address (aws rds describe-db-instances --db-instance-identifier ${local.legacy_db_identifier} --query 'DBInstances[0].Endpoint.Address')."
+    }
   }
 
   depends_on = [aws_instance.iris_adm]

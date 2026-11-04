@@ -5,6 +5,8 @@ data "aws_secretsmanager_secret_version" "os-secret" {
   secret_id = data.aws_secretsmanager_secret.secret-arn.id
 }
 
+data "aws_region" "current" {}
+
 locals {
   update_es_index_lambda_zip = "outputs/updateesindex.zip"
 }
@@ -71,34 +73,58 @@ resource "aws_lambda_function" "update-es-index-lambda" {
   timeout       = 30
 
   vpc_config {
-    #subnet_ids         = [var.subnet_id[0], var.subnet_id[1]]
-    subnet_ids         = length(var.subnet_id) > 1 ? [var.subnet_id[0], var.subnet_id[1]] : [var.subnet_id[0]]
+    subnet_ids         = var.subnet_id
     security_group_ids = [aws_security_group.es.id]
   }
 
   environment {
     variables = {
-      domain = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_endpoint"]
-      region = jsondecode(data.aws_secretsmanager_secret_version.os-secret.secret_string)["os_region"]
+      domain = var.custom_endpoint_enabled ? var.custom_endpoint : aws_opensearch_domain.es.endpoint
     }
   }
 }
 
-resource "aws_s3_bucket_notification" "s3object-events" {
-  bucket = var.bucketlist
+
+locals {
+  secret_json = jsondecode(nonsensitive(data.aws_secretsmanager_secret_version.os-secret.secret_string))
+
+  # unwrap the nested JSON string stored in s3_enterprise.
+  # If a bucket entry omits `region`, default to the provider's active region.
+  enterprise_buckets = jsondecode(nonsensitive(local.secret_json.s3_enterprise)).buckets
+
+  enabled_buckets = [
+    for b in local.enterprise_buckets : {
+      name   = b.name
+      region = try(b.region, data.aws_region.current.region)
+    }
+    if try(b.enabled, false)
+  ]
+
+  current_region_buckets = toset([
+    for b in local.enabled_buckets : b.name
+    if b.region == data.aws_region.current.region
+  ])
+}
+
+resource "aws_s3_bucket_notification" "s3object_events" {
+  for_each = var.manage_bucket_notifications ? local.current_region_buckets : toset([])
+  bucket   = each.value
 
   lambda_function {
     lambda_function_arn = aws_lambda_function.update-es-index-lambda.arn
     events              = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
   }
+
+  depends_on = [aws_lambda_permission.s3objectperm]
 }
 
 resource "aws_lambda_permission" "s3objectperm" {
-  statement_id  = "AllowS3Invoke-${var.bucketlist}"
+  for_each      = var.manage_bucket_notifications ? local.current_region_buckets : toset([])
+  statement_id  = "AllowS3Invoke-${substr(sha1(each.value), 0, 16)}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.update-es-index-lambda.arn
   principal     = "s3.amazonaws.com"
-  source_arn    = "arn:aws:s3:::${var.bucketlist}"
+  source_arn    = "arn:aws:s3:::${each.value}"
 }
 
 resource "aws_cloudwatch_log_group" "update-es-index" {

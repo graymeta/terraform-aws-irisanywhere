@@ -56,7 +56,8 @@ resource "aws_opensearch_domain" "es" {
     kms_key_id = var.encrypt_at_rest_kms_key_id
   }
 
-  #ES domain policy bug in TF creates an issue with changes when none are presented setting this value for that purpose.
+  #ES domain policy bug in TF creates an issue with changes when none 
+  #are presented setting this value for that purpose.
   lifecycle {
     ignore_changes = [advanced_options, tags]
   }
@@ -90,6 +91,12 @@ resource "aws_opensearch_domain_policy" "iris_s3" {
                     "aws:PrincipalType": "AssumedRole"
                   }
                 }
+            },
+            {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "es:ESHttp*",
+                "Resource": "${aws_opensearch_domain.es.arn}/*"
             }
         ]
     }

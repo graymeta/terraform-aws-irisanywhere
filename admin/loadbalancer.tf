@@ -25,18 +25,6 @@ resource "aws_lb_listener" "porthttps" {
   }
 }
 
-resource "aws_lb_listener" "port5432" {
-  count             = var.enterprise_ha ? 1 : 0
-  load_balancer_arn = aws_lb.irisadmin.0.arn
-  port              = "5432"
-  protocol          = "TCP"
-
-  default_action {
-    target_group_arn = aws_lb_target_group.iadm.0.arn
-    type             = "forward"
-  }
-}
-
 resource "aws_lb_target_group" "iadm" {
   count    = var.enterprise_ha ? 1 : 0
   name     = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
@@ -65,7 +53,7 @@ resource "aws_alb_target_group_attachment" "instance_attach" {
 
 resource "aws_route53_zone" "private" {
   count = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
-  name  = "${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
+  name  = "${var.hostname_prefix}-${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
 
   vpc {
     vpc_id = data.aws_subnet.subnet.0.vpc_id
@@ -103,7 +91,8 @@ data "aws_network_interface" "nlb_eni_details" {
 resource "aws_route53_record" "nlb_internal" {
   count   = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
   zone_id = aws_route53_zone.private.0.zone_id
-  name    = "nlb.${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
+  name    = "nlb.${var.hostname_prefix}-${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
+  
   type    = "A"
   ttl     = 60
   records = [for eni in data.aws_network_interface.nlb_eni_details : eni.private_ip]
