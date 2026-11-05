@@ -70,6 +70,16 @@ module "irisadmin_ha" {
   instance_count          = 2
   https_console_port      = 8021
 }
+
+output "alb_dns_name" {
+  value       = module.irisadmin_ha.alb_dns_name_none
+  description = "AWS DNS hostname of the Admin load balancer."
+}
+
+output "nlb_record_name" {
+  value       = module.irisadmin_ha.nlb_record_name
+  description = "Private DNS record name of the Admin load balancer."
+}
 ```
 
 Replace the example CIDRs and resource identifiers with your deployment values. Use an Iris Admin-compatible Windows AMI available in the target region and the endpoint of your separately deployed RDS database.
