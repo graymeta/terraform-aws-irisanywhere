@@ -80,7 +80,7 @@ variable "ia_secret_arn" {
 variable "iris_admin_ver" {
   type        = string
   description = "GrayMeta Iris Admin version to download and install, for example 9.7.5.205."
-  default     = "9.7.5.205"
+  default     = "9.7.7.208"
   validation {
     condition     = can(regex("^[0-9]+(\\.[0-9]+){3}$", var.iris_admin_ver))
     error_message = "iris_admin_ver must use a four-part version such as 9.7.5.205."
