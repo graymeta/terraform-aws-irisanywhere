@@ -25,35 +25,23 @@ provider "aws" {
 module "irisadmin" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=<tag>"
 
-  hostname_prefix     = "iris-admin"
-  instance_type       = "t3.xlarge"
-  subnet_id           = ["subnet-foo1"]
-  key_name            = "my-key"
-  ia_secret_arn       = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
-  associate_public_ip = true
+  hostname_prefix         = "iris-admin"
+  instance_type           = "t3.xlarge"
+  subnet_id               = ["subnet-foo1"]
+  key_name                = "my-key"
+  ia_secret_arn           = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
+  associate_public_ip     = true
+  rdp_access_cidr         = ["cidr1/32", "cidr2/32"]
+  api_console_access_cidr = ["ia-subnet-1/24", "ia-subnet-2/24", "mycidr1/32"]
+  iris_admin_ver          = "9.7.7.208"
 }
 ```
+
+Replace the CIDR placeholders with actual IPv4 CIDR blocks for the permitted RDP clients, Iris Anywhere subnets, and API/Admin UI clients.
 
 ## Enterprise HA Example
 
-Without `db_endpoint`, Iris Admin installs PostgreSQL locally. To use RDS, create the database first, in its own root module and state:
-
-```hcl
-module "irisadmin_rds" {
-  source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=<tag>"
-
-  hostname_prefix = "iris-admin-ha"
-  subnet_id       = ["subnet-foo1", "subnet-foo2"]
-  ia_secret_arn   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
-  db_version      = "17.9"
-}
-
-output "db_endpoint" {
-  value = module.irisadmin_rds.address
-}
-```
-
-Then deploy Iris Admin in a separate root module, using that output as `db_endpoint` (omit it for local PostgreSQL):
+For RDS deployment and snapshot restore instructions, see the [RDS README](../rds/README.md).
 
 ```hcl
 provider "aws" {
@@ -64,18 +52,39 @@ provider "aws" {
 module "irisadmin_ha" {
   source = "github.com/graymeta/terraform-aws-irisanywhere//admin?ref=<tag>"
 
+  rdp_access_cidr         = ["203.0.113.10/32", "203.0.113.20/32"]
+  api_console_access_cidr = ["10.0.1.0/24", "10.0.2.0/24", "203.0.113.10/32"]
   hostname_prefix         = "iris-admin-ha"
-  instance_count          = 2
-  instance_type           = "t3.xlarge"
+  deployment_name         = "example"
+  instance_type           = "t3.medium"
   subnet_id               = ["subnet-foo1", "subnet-foo2"]
   key_name                = "my-key"
+  associate_public_ip     = true
   ia_secret_arn           = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
+  ami                     = "ami-0123456789abcdef0"
+  iris_admin_ver          = "9.7.7.208"
+
   enterprise_ha           = true
+  db_endpoint             = "iris-postgres.abc123.us-west-2.rds.amazonaws.com"
   enterprise_ha_lb_public = true
-  https_console_port      = 443
-  db_endpoint             = "iris-admin-ha.abc123.us-west-2.rds.amazonaws.com"
+  instance_count          = 2
+  https_console_port      = 8021
+}
+
+output "alb_dns_name" {
+  value       = module.irisadmin_ha.alb_dns_name_none
+  description = "AWS DNS hostname of the Admin load balancer."
+}
+
+output "nlb_record_name" {
+  value       = module.irisadmin_ha.nlb_record_name
+  description = "Private DNS record name of the Admin load balancer."
 }
 ```
+
+Replace the example CIDRs and resource identifiers with your deployment values. Use an Iris Admin-compatible Windows AMI available in the target region and the endpoint of your separately deployed RDS database.
+
+The NLB and target group are named using `hostname_prefix`, with `-deployment_name` appended when `deployment_name` is not `"1"`. Names are truncated to 32 characters; ensure the resulting names are unique in the account and region when old and new HA deployments coexist. Upgrading an existing HA deployment from the previous `iadm` naming scheme can replace its NLB and target group and change its endpoint; review the Terraform plan and DNS cutover before applying.
 
 ## Minimum Root Module
 
@@ -155,7 +164,7 @@ The following inputs are retained in `/admin` for backward compatibility. They a
 | `db_storage_encrypted` | `bool` | `db_storage_encrypted` |
 | `db_version` | `string` | `db_version` |
 
-For example, set `db_version` on the RDS module to manage the PostgreSQL engine version, not on the Admin module. The RDS module requires an explicit `db_version`; when importing an existing database, match its current engine version rather than introducing an upgrade during the state migration.
+For example, set `db_version` on the RDS module to manage the PostgreSQL engine version, not on the Admin module. The RDS module requires an explicit `db_version`; when restoring a snapshot, select a version compatible with the snapshot and AWS restore requirements.
 
 `db_endpoint` is not deprecated. It remains the connection input for enterprise HA and should be set to the RDS module's `address` output (without a port). Database settings are not automatically transferred from the Admin module to the RDS module.
 
@@ -166,20 +175,50 @@ For example, set `db_version` on the RDS module to manage the PostgreSQL engine 
 * `private_ip` Private IP addresses of the Admin instances.
 * `alb_dns_name` Load balancer DNS name list when HA is enabled.
 * `alb_dns_name_none` Joined load balancer DNS name when HA is enabled.
+* `nlb_record_name` Private NLB DNS record name, or empty when HA or private hosted zone creation is disabled.
 * `endpoint` Database hostname used by Iris Admin (the value of `db_endpoint`), or empty when PostgreSQL is installed locally.
 
 ## Upgrading an HA Deployment That Created Its Own Database
 
-Earlier versions of this module created the RDS database. This version stops managing it without deleting it. Deployments that use local PostgreSQL need no changes.
+Earlier versions of this module created the RDS database. The recommended migration creates a new RDS database from a snapshot and launches a new Admin deployment in separate Terraform states. Keep the old deployment on its original module version and state until it is retired; do not upgrade it in place for this workflow. Deployments that use local PostgreSQL do not need this RDS migration.
 
-1. Take a manual RDS snapshot.
-2. Record the database hostname from your current state:
-   `terraform state show 'module.<name>.aws_db_instance.default[0]' | grep -E '^\s+address'`
-3. Update `source` to this version and set `db_endpoint` to that hostname.
-4. Run `terraform plan`. The legacy resources `aws_db_instance.default`, `aws_db_subnet_group.default`, `aws_security_group.rds`, and `aws_vpc_security_group_ingress_rule.rds_postgresql`, if present in the Admin state, must say "will no longer be managed by Terraform, but will not be destroyed". If any says "will be destroyed" or "must be replaced", stop.
-5. Run `terraform apply`.
+1. Create a manual snapshot of your current RDS database using the AWS console or CLI. Choose any snapshot name. For a database named `iris-postgres`, an example is:
 
-To manage the database with Terraform again, import it and its supporting resources into a separate root module that uses the `rds` module after the Admin state has relinquished ownership. Carry over the existing database settings using the replacement inputs above, and check that the first RDS plan neither destroys nor replaces existing resources. Do not manage the same resources in both states. Remove the deprecated inputs from the Admin module call; keep `db_endpoint` set to the existing database hostname.
+  ```shell
+  aws rds create-db-snapshot \
+    --db-instance-identifier iris-postgres \
+    --db-snapshot-identifier iris-postgres-migration \
+    --region us-west-2
+  ```
+
+  Larger databases take longer to snapshot. You can prepare the configuration in Step 2 while the snapshot is being created. Schedule the cutover and stop writes to the old database before taking the final migration snapshot; writes made afterward will not be restored. Keep writes stopped until the new deployment is ready to serve them.
+
+2. In your Terraform editor, create a new `rds` folder with a `main.tf` file containing the RDS deployment code. Use the snapshot from Step 1 as `snapshot_identifier`. To avoid a conflict with the existing database identifier, use a unique `hostname_prefix` and/or `deployment_name`. See the [RDS README](../rds/README.md) for example code and restore requirements. Keep this root module in its own Terraform state. Wait until the snapshot status is `available`, then run `terraform init`, `terraform plan`, and `terraform apply` from this folder. Confirm the new RDS database is available and record its endpoint before continuing.
+
+3. After the RDS deployment succeeds, create a new `admin` folder with its own `main.tf` and separate Terraform state. Use the [Enterprise HA example](#enterprise-ha-example) and the latest released GrayMeta `/admin` module version. Set `db_endpoint` to the new RDS hostname and use the appropriate application secret. Inputs have changed in the latest version, so run `terraform init` and `terraform plan` before `terraform apply`. Confirm the plan creates the new Admin infrastructure without modifying the old deployment.
+
+4. Configure the newly launched Iris Admin server. If applicable, update Route 53 DNS to point to the new Admin server or load balancer. Contact GrayMeta for a new license and concurrent key, if required. Iris Admin serves API requests from Iris Anywhere, so update the Iris Anywhere Server Settings > API Server Location URL to the new Admin API location, for example `nlb.{hostname_prefix}-{deployment_name}-iris-admin.internal`. Use the actual hostname, protocol, and port configured for your deployment.
+
+5. Update the `admin_server` field in the existing AWS Secrets Manager application secret to reference the new RDS endpoint, using the AWS console or your preferred method. The existing Iris Anywhere Terraform deployment must be destroyed and relaunched for this initialization setting to take effect. Review `terraform plan -destroy` in the Iris Anywhere root module before running `terraform destroy`, then `terraform apply` to relaunch it. Confirm the plan does not include the new RDS or Admin resources, verify connectivity and application data, and resume writes only after the cutover is verified.
+
+### Retiring the Old Deployment
+
+Once you are satisfied with the new Iris Admin and Iris Anywhere deployment, retire the previously installed Admin module. Retain the migration snapshot and any required backups.
+
+1. Disable termination protection on each old Admin EC2 instance using the AWS console or CLI. Replace the example instance ID and region:
+
+  ```shell
+  aws ec2 modify-instance-attribute \
+    --instance-id "i-0123456789abcdef0" \
+    --disable-api-termination '{"Value": false}' \
+    --region us-west-2
+  ```
+
+  Disable deletion protection on the old RDS database if enabled, and ensure the original Terraform configuration will not re-enable protection before deletion. Review final snapshot settings before destroying the database.
+
+2. Navigate to the old Admin root module, using its original module version and Terraform state. Run `terraform plan -destroy` to preview removal of the old RDS database, Admin instances, and load balancer. This command does not delete resources. Confirm only the old infrastructure is included, then run `terraform destroy` and review the confirmation before approving deletion. If the old RDS resources have already been relinquished from this state, Terraform will not delete them; inventory and retire those resources separately.
+
+3. Once the old infrastructure is destroyed and the new deployment is verified, the migration is complete. Continue managing the new RDS and Admin deployments independently in their respective root modules and Terraform states.
 
 ## Licensing
 

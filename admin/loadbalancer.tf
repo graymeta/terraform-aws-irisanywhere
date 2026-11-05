@@ -1,14 +1,18 @@
+locals {
+  admin_lb_name = substr("${var.hostname_prefix}${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
+}
+
 resource "aws_lb" "irisadmin" {
   count                            = var.enterprise_ha ? 1 : 0
   enable_deletion_protection       = false
   load_balancer_type               = "network"
   internal                         = var.enterprise_ha_lb_public ? false : true
-  name                             = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
+  name                             = local.admin_lb_name
   subnets                          = var.subnet_id
   enable_cross_zone_load_balancing = true
 
   tags = {
-    Name            = "IrisAdmin-LB${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}"
+    Name            = local.admin_lb_name
     ApplicationName = "IrisAdmin"
   }
 }
@@ -27,7 +31,7 @@ resource "aws_lb_listener" "porthttps" {
 
 resource "aws_lb_target_group" "iadm" {
   count    = var.enterprise_ha ? 1 : 0
-  name     = substr("iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}", 0, 32)
+  name     = local.admin_lb_name
   port     = var.https_console_port
   protocol = "TCP"
   vpc_id   = data.aws_subnet.subnet.0.vpc_id
@@ -75,7 +79,7 @@ data "aws_network_interfaces" "nlb_enis" {
 
   filter {
     name   = "description"
-    values = ["ELB net/iadm${var.deployment_name != "1" ? "-${var.deployment_name}" : ""}*"]
+    values = ["ELB net/${aws_lb.irisadmin[0].name}/*"]
   }
 
   depends_on = [aws_lb.irisadmin]
@@ -92,7 +96,7 @@ resource "aws_route53_record" "nlb_internal" {
   count   = var.create_private_hosted_zone && var.enterprise_ha ? 1 : 0
   zone_id = aws_route53_zone.private.0.zone_id
   name    = "nlb.${var.hostname_prefix}-${var.deployment_name != "1" ? "${var.deployment_name}-" : ""}${var.internal_domain}"
-  
+
   type    = "A"
   ttl     = 60
   records = [for eni in data.aws_network_interface.nlb_eni_details : eni.private_ip]
