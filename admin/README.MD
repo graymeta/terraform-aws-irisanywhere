@@ -165,6 +165,7 @@ For example, set `db_version` on the RDS module to manage the PostgreSQL engine 
 * `private_ip` Private IP addresses of the Admin instances.
 * `alb_dns_name` Load balancer DNS name list when HA is enabled.
 * `alb_dns_name_none` Joined load balancer DNS name when HA is enabled.
+* `nlb_record_name` Private NLB DNS record name, or empty when HA or private hosted zone creation is disabled.
 * `endpoint` Database hostname used by Iris Admin (the value of `db_endpoint`), or empty when PostgreSQL is installed locally.
 
 ## Upgrading an HA Deployment That Created Its Own Database

@@ -20,3 +20,8 @@ output "alb_dns_name_none" {
   value       = join("", aws_lb.irisadmin.*.dns_name)
 }
 
+output "nlb_record_name" {
+  description = "Private NLB DNS record name, or empty when HA or private hosted zone creation is disabled."
+  value       = join("", aws_route53_record.nlb_internal[*].name)
+}
+
