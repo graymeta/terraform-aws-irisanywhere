@@ -43,6 +43,25 @@ Replace the CIDR placeholders with actual IPv4 CIDR blocks for the permitted RDP
 
 For RDS deployment and snapshot restore instructions, see the [RDS README](../rds/README.md).
 
+Without `db_endpoint`, Iris Admin installs PostgreSQL locally. To use RDS, create the database first, in its own root module and state:
+
+```hcl
+module "irisadmin_rds" {
+  source = "github.com/graymeta/terraform-aws-irisanywhere//rds?ref=<tag>"
+
+  hostname_prefix = "iris-admin-ha"
+  subnet_id       = ["subnet-foo1", "subnet-foo2"]
+  ia_secret_arn   = "arn:aws:secretsmanager:us-west-2:123456789012:secret:iris-admin"
+  db_version      = "17.11"
+}
+
+output "db_endpoint" {
+  value = module.irisadmin_rds.address
+}
+```
+
+Then deploy Iris Admin in a separate root module, using that output as `db_endpoint` (omit it for local PostgreSQL):
+
 ```hcl
 provider "aws" {
   region  = "us-west-2"
@@ -164,7 +183,7 @@ The following inputs are retained in `/admin` for backward compatibility. They a
 | `db_storage_encrypted` | `bool` | `db_storage_encrypted` |
 | `db_version` | `string` | `db_version` |
 
-For example, set `db_version` on the RDS module to manage the PostgreSQL engine version, not on the Admin module. The RDS module requires an explicit `db_version`; when restoring a snapshot, select a version compatible with the snapshot and AWS restore requirements.
+For example, set `db_version` on the RDS module to manage the PostgreSQL engine version, not on the Admin module. The RDS module requires an explicit `db_version`; when restoring a snapshot, select a version compatible with the snapshot and AWS restore requirements. When importing an existing database, match its current engine version rather than introducing an upgrade during the state migration.
 
 `db_endpoint` is not deprecated. It remains the connection input for enterprise HA and should be set to the RDS module's `address` output (without a port). Database settings are not automatically transferred from the Admin module to the RDS module.
 
@@ -219,6 +238,8 @@ Once you are satisfied with the new Iris Admin and Iris Anywhere deployment, ret
 2. Navigate to the old Admin root module, using its original module version and Terraform state. Run `terraform plan -destroy` to preview removal of the old RDS database, Admin instances, and load balancer. This command does not delete resources. Confirm only the old infrastructure is included, then run `terraform destroy` and review the confirmation before approving deletion. If the old RDS resources have already been relinquished from this state, Terraform will not delete them; inventory and retire those resources separately.
 
 3. Once the old infrastructure is destroyed and the new deployment is verified, the migration is complete. Continue managing the new RDS and Admin deployments independently in their respective root modules and Terraform states.
+
+Alternatively, to keep the existing database rather than create a snapshot restore, this version can relinquish its legacy RDS resources without deleting them. Set `db_endpoint` to the existing database hostname, then review the Admin plan: the legacy database, subnet group, security group, and ingress rule must no longer be managed but must not be destroyed or replaced. Apply that change before importing the database and supporting resources into a separate root module using the `rds` module. See [Importing an Existing Admin Database](../rds/README.md#importing-an-existing-admin-database) for the import steps. Do not manage the same resources in both Terraform states.
 
 ## Licensing
 
