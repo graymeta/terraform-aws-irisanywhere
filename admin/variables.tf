@@ -105,6 +105,12 @@ variable "enterprise_ha" {
   default     = false
 }
 
+variable "install_windows_updates" {
+  type        = bool
+  description = "(Optional) Installs Windows security and critical updates before installing Iris Admin. Disabled by default for faster launches."
+  default     = false
+}
+
 variable "additional_tags" {
   default     = {}
   description = "Additional resource tags"

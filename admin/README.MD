@@ -137,6 +137,7 @@ Core inputs:
 * `instance_protection` optional, default `true`. Enables EC2 instance protection.
 * `associate_public_ip` optional, default `false`. Associates public IPs to the Admin instances. Typically set to `true` only when you need direct public access to standalone Admin instances.
 * `enterprise_ha` optional, default `false`. Enables the HA topology. When enabled, provide at least two subnet IDs.
+* `install_windows_updates` optional, default `false`. Installs Windows security and critical updates (excluding Defender, SmartScreen, and UAC components) before installing Iris Admin, and restarts the instance afterward if required. Leave `false` for a faster launch.
 * `https_console_port` optional, default `8021`. HTTPS port for the Admin console.
 * `http_console_port` optional, default `8020`. HTTP port for the Admin console.
 * `disable_rdp` optional, default `false`. Disables RDP access in the security group.
