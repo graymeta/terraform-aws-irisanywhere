@@ -48,13 +48,15 @@ resource "aws_ssm_association" "iris_admin_install" {
   max_errors                       = "0"
 
   parameters = {
+    executionTimeout = "14400"
     commands = templatefile("${path.module}/cloud_init.ps1", {
-      ia_secret_arn      = var.ia_secret_arn
-      enterprise_ha      = var.enterprise_ha
-      dbserver           = local.dbserver
-      https_console_port = var.https_console_port
-      http_console_port  = var.http_console_port
-      iris_admin_ver     = var.iris_admin_ver
+      ia_secret_arn           = var.ia_secret_arn
+      enterprise_ha           = var.enterprise_ha
+      dbserver                = local.dbserver
+      https_console_port      = var.https_console_port
+      http_console_port       = var.http_console_port
+      iris_admin_ver          = var.iris_admin_ver
+      install_windows_updates = var.install_windows_updates
     })
   }
 

@@ -5,6 +5,7 @@ $dbserver = "${dbserver}"
 $https_console_port = "${https_console_port}"
 $http_console_port = "${http_console_port}"
 $iris_admin_ver = "${iris_admin_ver}"
+$install_windows_updates = "${install_windows_updates}"
 
 # Ensure temp directory exists and start transcript logging
 $temp_dir = "$($env:systemdrive)\IrisTemp"
@@ -88,56 +89,75 @@ try {
 
 
 
-# Install available Windows updates before installing Iris Admin.
+# Install available Windows updates before installing Iris Admin (only when install_windows_updates = true).
 $windows_update_reboot_required = $false
-try {
-    Write-Log -Message "Searching for available Windows updates..." -Level Information
-    $update_session = New-Object -ComObject Microsoft.Update.Session
-    $update_searcher = $update_session.CreateUpdateSearcher()
-    $update_result = $update_searcher.Search("IsInstalled=0 and IsHidden=0 and Type='Software'")
-    $updates = New-Object -ComObject Microsoft.Update.UpdateColl
-    $allowed_update_categories = @("Security Updates", "Critical Updates")
-    $excluded_update_pattern = "(?i)Microsoft Defender|Windows Defender|SmartScreen|User Account Control|\bUAC\b"
+if ($install_windows_updates -eq "true") {
+    try {
+        Write-Log -Message "Searching for available Windows updates..." -Level Information
+        $update_session = New-Object -ComObject Microsoft.Update.Session
+        $update_searcher = $update_session.CreateUpdateSearcher()
+        $update_result = $update_searcher.Search("IsInstalled=0 and IsHidden=0 and Type='Software'")
+        $updates = New-Object -ComObject Microsoft.Update.UpdateColl
+        $allowed_update_categories = @("Security Updates", "Critical Updates")
+        $excluded_update_pattern = "(?i)Microsoft Defender|Windows Defender|SmartScreen|User Account Control|\bUAC\b"
 
-    foreach ($update in $update_result.Updates) {
-        $categories = @($update.Categories | ForEach-Object { $_.Name })
-        if (($categories | Where-Object { $_ -in $allowed_update_categories }) -and $update.Title -notmatch $excluded_update_pattern) {
-            Write-Log -Message "Selecting Windows update: $($update.Title)" -Level Information
-            if (-not $update.EulaAccepted) {
-                $update.AcceptEula()
+        foreach ($update in $update_result.Updates) {
+            $categories = @($update.Categories | ForEach-Object { $_.Name })
+            if (($categories | Where-Object { $_ -in $allowed_update_categories }) -and $update.Title -notmatch $excluded_update_pattern) {
+                Write-Log -Message "Selecting Windows update: $($update.Title)" -Level Information
+                if (-not $update.EulaAccepted) {
+                    $update.AcceptEula()
+                }
+                [void]$updates.Add($update)
+            } else {
+                Write-Log -Message "Skipping Windows update: $($update.Title) (category or excluded component)" -Level Information
             }
-            [void]$updates.Add($update)
+        }
+
+        if ($updates.Count -eq 0) {
+            Write-Log -Message "No applicable Windows updates found." -Level Information
         } else {
-            Write-Log -Message "Skipping Windows update: $($update.Title) (category or excluded component)" -Level Information
+            Write-Log -Message "Found $($updates.Count) Windows update(s). Downloading..." -Level Information
+            $downloader = $update_session.CreateUpdateDownloader()
+            $downloader.Updates = $updates
+            $downloader.Priority = 3
+            $download_job = $downloader.BeginDownload($null, $null, $null)
+            try {
+                while (-not $download_job.IsCompleted) {
+                    $download_progress = $download_job.GetProgress()
+                    Write-Log -Message "Windows update download is $($download_progress.PercentComplete)% complete." -Level Information
+                    Start-Sleep -Seconds 30
+                }
+                $download_result = $downloader.EndDownload($download_job)
+            } finally {
+                if (-not $download_job.IsCompleted) {
+                    $download_job.RequestAbort()
+                }
+                $download_job.CleanUp()
+            }
+
+            if ($download_result.ResultCode -ne 2) {
+                throw "Windows update download failed with result code $($download_result.ResultCode)."
+            }
+
+            Write-Log -Message "Windows update download is 100% complete." -Level Information
+            Write-Log -Message "Installing $($updates.Count) Windows update(s)..." -Level Information
+            $installer = $update_session.CreateUpdateInstaller()
+            $installer.Updates = $updates
+            $install_result = $installer.Install()
+            $windows_update_reboot_required = $install_result.RebootRequired
+
+            if ($install_result.ResultCode -eq 2) {
+                Write-Log -Message "Windows updates installed successfully. Reboot required: $windows_update_reboot_required" -Level Information
+            } else {
+                Write-Log -Message "Windows update installation completed with result code $($install_result.ResultCode). Reboot required: $windows_update_reboot_required" -Level Warning
+            }
         }
+    } catch {
+        Write-Log -Message "Windows update installation failed; continuing with Iris Admin installation: $($_.Exception.Message)" -Level Warning
     }
-
-    if ($updates.Count -eq 0) {
-        Write-Log -Message "No applicable Windows updates found." -Level Information
-    } else {
-        Write-Log -Message "Found $($updates.Count) Windows update(s). Downloading..." -Level Information
-        $downloader = $update_session.CreateUpdateDownloader()
-        $downloader.Updates = $updates
-        $download_result = $downloader.Download()
-
-        if ($download_result.ResultCode -ne 2) {
-            throw "Windows update download failed with result code $($download_result.ResultCode)."
-        }
-
-        Write-Log -Message "Installing $($updates.Count) Windows update(s)..." -Level Information
-        $installer = $update_session.CreateUpdateInstaller()
-        $installer.Updates = $updates
-        $install_result = $installer.Install()
-        $windows_update_reboot_required = $install_result.RebootRequired
-
-        if ($install_result.ResultCode -eq 2) {
-            Write-Log -Message "Windows updates installed successfully. Reboot required: $windows_update_reboot_required" -Level Information
-        } else {
-            Write-Log -Message "Windows update installation completed with result code $($install_result.ResultCode). Reboot required: $windows_update_reboot_required" -Level Warning
-        }
-    }
-} catch {
-    Write-Log -Message "Windows update installation failed; continuing with Iris Admin installation: $($_.Exception.Message)" -Level Warning
+} else {
+    Write-Log -Message "Skipping Windows updates (install_windows_updates = false)." -Level Information
 }
 
 
